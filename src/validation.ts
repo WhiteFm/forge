@@ -39,7 +39,7 @@ function validateEffect(effect: Effect, entity: ForgeEntity, index: number): Val
   return issues;
 }
 
-export function validateProject(project: ForgeProject): ValidationIssue[] {
+export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en"): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   if (!idPattern.test(project.pack.id)) issues.push({ severity: "error", path: "pack.id", message: "ID пакета имеет неверный формат" });
   if (!semverPattern.test(project.pack.version)) issues.push({ severity: "error", path: "pack.version", message: "Версия должна иметь формат 1.0.0" });
@@ -64,6 +64,8 @@ export function validateProject(project: ForgeProject): ValidationIssue[] {
 
     if (entity.entityType === "class") {
       if ((entity.levels ?? []).length !== 20) issues.push({ severity: "error", entityId: entity.id, path: "levels", message: "Класс должен содержать ровно 20 уровней" });
+      if (entity.classProgression && entity.classProgression.length !== 20) issues.push({ severity: "error", entityId: entity.id, path: "classProgression", message: "Таблица прогрессии класса должна содержать ровно 20 уровней" });
+      for (const [rowIndex, row] of (entity.classProgression ?? []).entries()) if (row.spellSlots.length !== 9) issues.push({ severity: "error", entityId: entity.id, path: `classProgression.${rowIndex}.spellSlots`, message: "Строка прогрессии должна содержать 9 уровней ячеек" });
       if (!entity.primaryAbilities?.length) issues.push({ severity: "error", entityId: entity.id, path: "primaryAbilities", message: "Выберите минимум одну основную характеристику" });
       if (entity.casterProgression !== "none" && !entity.spellcastingAbility) issues.push({ severity: "error", entityId: entity.id, path: "spellcastingAbility", message: "Заклинательному классу нужна базовая характеристика" });
     }
@@ -102,7 +104,49 @@ export function validateProject(project: ForgeProject): ValidationIssue[] {
     if (entity.featId) references.push({ owner: entity, id: entity.featId, path: "featId" });
   }
   for (const reference of references) if (reference.id && !ids.has(reference.id) && !reference.id.startsWith("srd52.")) issues.push({ severity: "warning", entityId: reference.owner.id, path: reference.path, message: `Ссылка ${reference.id} не найдена в этом пакете` });
-  return issues;
+  return locale === "en" ? issues.map((issue) => ({ ...issue, message: translateValidationMessage(issue.message) })) : issues;
+}
+
+const validationTranslations: Record<string, string> = {
+  "ID пакета имеет неверный формат": "Pack ID has an invalid format",
+  "Версия должна иметь формат 1.0.0": "Version must use the 1.0.0 format",
+  "ID должен содержать namespace, тип и машинное имя": "ID must include a namespace, entity type, and machine name",
+  "Такой ID уже существует в пакете": "This ID already exists in the pack",
+  "Русское название обязательно": "Russian name is required",
+  "Английское название обязательно": "English name is required",
+  "Нужны ruleset, источник и лицензия": "Ruleset, source, and license are required",
+  "Класс должен содержать ровно 20 уровней": "A class must contain exactly 20 levels",
+  "Таблица прогрессии класса должна содержать ровно 20 уровней": "The class progression table must contain exactly 20 levels",
+  "Строка прогрессии должна содержать 9 уровней ячеек": "Each progression row must contain all 9 spell-slot levels",
+  "Выберите минимум одну основную характеристику": "Select at least one primary ability",
+  "Заклинательному классу нужна базовая характеристика": "A spellcasting class needs a spellcasting ability",
+  "Подкласс должен ссылаться на базовый класс": "A subclass must reference its base class",
+  "Предыстория должна предлагать ровно 3 характеристики": "A background must offer exactly 3 abilities",
+  "Активному умению нужен ресурс, максимум и восстановление": "A limited-use feature needs a resource, maximum, and recovery",
+  "Вес и стоимость не могут быть отрицательными": "Weight and cost cannot be negative",
+  "Оружию нужен профиль урона": "A weapon needs a damage profile",
+  "Доспеху нужен профиль КД": "Armor needs an AC profile",
+  "Уровень заклинания должен быть от 0 до 9": "Spell level must be between 0 and 9",
+  "Укажите школу заклинания": "Select a spell school",
+  "Для дистанции укажите число футов": "A distance range needs a value in feet",
+  "ID эффекта должен быть стабильным техническим идентификатором": "Effect ID must be a stable technical identifier",
+  "Цель эффекта должна иметь вид combat.initiative": "Effect target must use a path such as combat.initiative",
+  "Укажите значение эффекта": "Enter an effect value",
+  "Ограниченный эффект должен ссылаться на ресурс": "A limited-use effect must reference a resource",
+  "Без группы нельзя надёжно определить дублирование эффекта": "A stacking group is required to detect duplicate effects reliably",
+  "ID эффекта дублируется внутри сущности": "Effect ID is duplicated inside the entity",
+  "Формула не заполнена": "Formula is empty",
+  "Формула содержит запрещённые символы": "Formula contains forbidden characters",
+  "Нарушен порядок скобок": "Parentheses are in the wrong order",
+  "Скобки не сбалансированы": "Parentheses are not balanced"
+};
+
+function translateValidationMessage(message: string) {
+  if (validationTranslations[message]) return validationTranslations[message];
+  if (message.startsWith("Неизвестная функция ")) return message.replace("Неизвестная функция ", "Unknown function ");
+  const missingReference = message.match(/^Ссылка (.+) не найдена в этом пакете$/);
+  if (missingReference) return `Reference ${missingReference[1]} was not found in this pack`;
+  return message;
 }
 
 function canonicalEffect(effect: Effect) {
@@ -144,9 +188,9 @@ export function toCanonicalPack(project: ForgeProject) {
       rulesetId: project.pack.rulesetId,
       kind: project.entities.every((entity) => entity.tags.includes("official")) ? "official" : "homebrew",
       author: project.pack.author,
-      defaultLocale: "ru",
-      locales: ["ru", "en"],
-      license: { id: project.pack.licenseId, name: project.pack.licenseId, attribution: project.pack.author },
+      defaultLocale: project.pack.defaultLocale ?? "en",
+      locales: ["en", "ru"],
+      license: { id: project.pack.licenseId, name: project.pack.licenseId, attribution: project.pack.attribution ?? project.pack.author },
       portability: { embedTechnicalData: true, embedLocalizedText: true, allowDerivativePacks: true, requiresEntitlement: false },
       createdAt: project.updatedAt,
     },

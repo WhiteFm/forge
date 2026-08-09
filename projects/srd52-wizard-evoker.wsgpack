@@ -1,0 +1,2637 @@
+{
+  "manifest": {
+    "schemaVersion": "1.0.0",
+    "packId": "srd52.pack.wizard-evoker",
+    "namespace": "srd52",
+    "version": "1.0.0",
+    "rulesetId": "dnd5e.2024",
+    "kind": "official",
+    "author": "WSGuild",
+    "defaultLocale": "en",
+    "locales": [
+      "en",
+      "ru"
+    ],
+    "license": {
+      "id": "license.cc-by-4.0",
+      "name": "Creative Commons Attribution 4.0 International",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (SRD 5.2.1) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    },
+    "portability": {
+      "embedTechnicalData": true,
+      "embedLocalizedText": true,
+      "allowDerivativePacks": true,
+      "requiresEntitlement": false
+    },
+    "createdAt": "2026-08-09T21:56:29.314Z"
+  },
+  "entities": [
+    {
+      "id": "srd52.class.wizard",
+      "entityType": "class",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "wizard",
+        "full-caster"
+      ],
+      "hitDie": "d6",
+      "primaryAbilities": [
+        "int"
+      ],
+      "multiclassPrerequisite": "ability_score(\"int\") >= 13",
+      "startingHpFormula": "6 + ability_modifier(\"con\")",
+      "levelUpHpFormula": "4 + ability_modifier(\"con\")",
+      "startingProficiencies": [
+        "save.int",
+        "save.wis",
+        "weapon.simple"
+      ],
+      "multiclassProficiencies": [],
+      "spellcastingAbility": "int",
+      "casterProgression": "full",
+      "casterLevelFormula": "class_level(\"srd52.class.wizard\")",
+      "levels": [
+        {
+          "level": 1,
+          "featureIds": [
+            "srd52.feature.wizard-spellcasting",
+            "srd52.feature.ritual-adept",
+            "srd52.feature.arcane-recovery"
+          ]
+        },
+        {
+          "level": 2,
+          "featureIds": [
+            "srd52.feature.scholar"
+          ]
+        },
+        {
+          "level": 3,
+          "featureIds": [
+            "srd52.feature.wizard-subclass"
+          ]
+        },
+        {
+          "level": 4,
+          "featureIds": [
+            "srd52.feature.ability-score-improvement"
+          ]
+        },
+        {
+          "level": 5,
+          "featureIds": [
+            "srd52.feature.memorize-spell"
+          ]
+        },
+        {
+          "level": 6,
+          "featureIds": []
+        },
+        {
+          "level": 7,
+          "featureIds": []
+        },
+        {
+          "level": 8,
+          "featureIds": [
+            "srd52.feature.ability-score-improvement"
+          ]
+        },
+        {
+          "level": 9,
+          "featureIds": []
+        },
+        {
+          "level": 10,
+          "featureIds": []
+        },
+        {
+          "level": 11,
+          "featureIds": []
+        },
+        {
+          "level": 12,
+          "featureIds": [
+            "srd52.feature.ability-score-improvement"
+          ]
+        },
+        {
+          "level": 13,
+          "featureIds": []
+        },
+        {
+          "level": 14,
+          "featureIds": []
+        },
+        {
+          "level": 15,
+          "featureIds": []
+        },
+        {
+          "level": 16,
+          "featureIds": [
+            "srd52.feature.ability-score-improvement"
+          ]
+        },
+        {
+          "level": 17,
+          "featureIds": []
+        },
+        {
+          "level": 18,
+          "featureIds": [
+            "srd52.feature.spell-mastery"
+          ]
+        },
+        {
+          "level": 19,
+          "featureIds": [
+            "srd52.feature.epic-boon"
+          ]
+        },
+        {
+          "level": 20,
+          "featureIds": [
+            "srd52.feature.signature-spells"
+          ]
+        }
+      ],
+      "classProgression": [
+        {
+          "level": 1,
+          "proficiencyBonus": 2,
+          "cantripsKnown": 3,
+          "preparedSpells": 4,
+          "spellSlots": [
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 2,
+          "proficiencyBonus": 2,
+          "cantripsKnown": 3,
+          "preparedSpells": 5,
+          "spellSlots": [
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 3,
+          "proficiencyBonus": 2,
+          "cantripsKnown": 3,
+          "preparedSpells": 6,
+          "spellSlots": [
+            4,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 4,
+          "proficiencyBonus": 2,
+          "cantripsKnown": 4,
+          "preparedSpells": 7,
+          "spellSlots": [
+            4,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 5,
+          "proficiencyBonus": 3,
+          "cantripsKnown": 4,
+          "preparedSpells": 9,
+          "spellSlots": [
+            4,
+            3,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 6,
+          "proficiencyBonus": 3,
+          "cantripsKnown": 4,
+          "preparedSpells": 10,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 7,
+          "proficiencyBonus": 3,
+          "cantripsKnown": 4,
+          "preparedSpells": 11,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 8,
+          "proficiencyBonus": 3,
+          "cantripsKnown": 4,
+          "preparedSpells": 12,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 9,
+          "proficiencyBonus": 4,
+          "cantripsKnown": 4,
+          "preparedSpells": 14,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            1,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 10,
+          "proficiencyBonus": 4,
+          "cantripsKnown": 5,
+          "preparedSpells": 15,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            2,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 11,
+          "proficiencyBonus": 4,
+          "cantripsKnown": 5,
+          "preparedSpells": 16,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            2,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 12,
+          "proficiencyBonus": 4,
+          "cantripsKnown": 5,
+          "preparedSpells": 16,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            2,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 13,
+          "proficiencyBonus": 5,
+          "cantripsKnown": 5,
+          "preparedSpells": 17,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            2,
+            1,
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 14,
+          "proficiencyBonus": 5,
+          "cantripsKnown": 5,
+          "preparedSpells": 18,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            2,
+            1,
+            1,
+            0,
+            0
+          ]
+        },
+        {
+          "level": 15,
+          "proficiencyBonus": 5,
+          "cantripsKnown": 5,
+          "preparedSpells": 19,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            2,
+            1,
+            1,
+            1,
+            0
+          ]
+        },
+        {
+          "level": 16,
+          "proficiencyBonus": 5,
+          "cantripsKnown": 5,
+          "preparedSpells": 21,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            2,
+            1,
+            1,
+            1,
+            0
+          ]
+        },
+        {
+          "level": 17,
+          "proficiencyBonus": 6,
+          "cantripsKnown": 5,
+          "preparedSpells": 22,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            2,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "level": 18,
+          "proficiencyBonus": 6,
+          "cantripsKnown": 5,
+          "preparedSpells": 23,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            3,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "level": 19,
+          "proficiencyBonus": 6,
+          "cantripsKnown": 5,
+          "preparedSpells": 24,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            3,
+            2,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "level": 20,
+          "proficiencyBonus": 6,
+          "cantripsKnown": 5,
+          "preparedSpells": 25,
+          "spellSlots": [
+            4,
+            3,
+            3,
+            3,
+            3,
+            2,
+            2,
+            1,
+            1
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "choice.wizard.skills",
+          "selectionType": "entity",
+          "min": 2,
+          "max": 2,
+          "optionIds": [
+            "skill.arcana",
+            "skill.history",
+            "skill.insight",
+            "skill.investigation",
+            "skill.medicine",
+            "skill.nature",
+            "skill.religion"
+          ],
+          "filter": "referenceCategory == skill"
+        }
+      ],
+      "equipmentOptions": [
+        {
+          "id": "equipment.wizard.a",
+          "items": [
+            {
+              "itemId": "srd52.item.dagger",
+              "quantity": 2
+            },
+            {
+              "itemId": "srd52.item.arcane-focus-staff",
+              "quantity": 1
+            },
+            {
+              "itemId": "srd52.item.robe",
+              "quantity": 1
+            },
+            {
+              "itemId": "srd52.item.spellbook",
+              "quantity": 1
+            },
+            {
+              "itemId": "srd52.item.scholars-pack",
+              "quantity": 1
+            }
+          ],
+          "currencyCp": 500
+        },
+        {
+          "id": "equipment.wizard.b",
+          "items": [],
+          "currencyCp": 5500
+        }
+      ]
+    },
+    {
+      "id": "srd52.subclass.evoker",
+      "entityType": "subclass",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "wizard",
+        "evoker"
+      ],
+      "classId": "srd52.class.wizard",
+      "subclassLevels": [
+        {
+          "level": 3,
+          "featureIds": [
+            "srd52.feature.evocation-savant",
+            "srd52.feature.potent-cantrip"
+          ]
+        },
+        {
+          "level": 6,
+          "featureIds": [
+            "srd52.feature.sculpt-spells"
+          ]
+        },
+        {
+          "level": 10,
+          "featureIds": [
+            "srd52.feature.empowered-evocation"
+          ]
+        },
+        {
+          "level": 14,
+          "featureIds": [
+            "srd52.feature.overchannel"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.wizard-spellcasting",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52"
+      ],
+      "mode": "always_on",
+      "activation": "none",
+      "prerequisites": [],
+      "choices": [
+        {
+          "id": "choice.wizard.cantrips",
+          "selectionType": "entity",
+          "min": 3,
+          "max": 3,
+          "optionIds": [],
+          "filter": "entityType == spell && spellLevel == 0 && spellClassIds contains srd52.class.wizard"
+        },
+        {
+          "id": "choice.wizard.spellbook.level1",
+          "selectionType": "entity",
+          "min": 6,
+          "max": 6,
+          "optionIds": [],
+          "filter": "entityType == spell && spellLevel == 1 && spellClassIds contains srd52.class.wizard"
+        }
+      ],
+      "automationLevel": "partial",
+      "effects": [
+        {
+          "id": "effect.wizard.spellcasting-focus",
+          "target": "spellcasting.focus.allowed",
+          "operation": "grant",
+          "valueType": "string",
+          "value": "arcane-focus-or-spellbook",
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.wizard.spellcasting-focus",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": ""
+        },
+        {
+          "id": "effect.wizard.spellbook-level-up",
+          "target": "spellcasting.spellbook.spells",
+          "operation": "grant",
+          "valueType": "string",
+          "value": "two-eligible-wizard-spells-per-wizard-level",
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.wizard.spellbook-level-up",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "partial",
+          "notes": "Add two Wizard spells after every Wizard level beyond 1."
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.ritual-adept",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52"
+      ],
+      "mode": "always_on",
+      "activation": "none",
+      "prerequisites": [],
+      "choices": [],
+      "automationLevel": "full",
+      "effects": [
+        {
+          "id": "effect.ritual-adept",
+          "target": "spellcasting.rituals.from-spellbook",
+          "operation": "grant",
+          "valueType": "boolean",
+          "value": true,
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.ritual-adept",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.arcane-recovery",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52"
+      ],
+      "mode": "limited_use",
+      "activation": "special",
+      "prerequisites": [],
+      "choices": [],
+      "resource": {
+        "id": "resource.wizard.arcane-recovery",
+        "maximumFormula": "1",
+        "recovery": "long_rest",
+        "recoveryFormula": "1"
+      },
+      "automationLevel": "partial",
+      "effects": [
+        {
+          "id": "effect.arcane-recovery",
+          "target": "spellcasting.slots.expended",
+          "operation": "restore_resource",
+          "valueType": "formula",
+          "value": {
+            "type": "formula",
+            "expression": "ceil(class_level(\"srd52.class.wizard\") / 2)"
+          },
+          "activation": "limited_use",
+          "actionCost": "special",
+          "trigger": "after finishing a Short Rest",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.arcane-recovery",
+          "priority": 100,
+          "resourceId": "resource.wizard.arcane-recovery",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "partial",
+          "notes": "Select slots with combined levels up to the formula; no slot may be level 6+."
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.scholar",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52"
+      ],
+      "mode": "always_on",
+      "activation": "none",
+      "prerequisites": [],
+      "choices": [
+        {
+          "id": "choice.scholar.skill",
+          "selectionType": "entity",
+          "min": 1,
+          "max": 1,
+          "optionIds": [
+            "skill.arcana",
+            "skill.history",
+            "skill.investigation",
+            "skill.medicine",
+            "skill.nature",
+            "skill.religion"
+          ],
+          "filter": "proficient == true"
+        }
+      ],
+      "automationLevel": "partial",
+      "effects": [
+        {
+          "id": "effect.scholar.expertise",
+          "target": "skills.selected.proficiency",
+          "operation": "upgrade_proficiency",
+          "valueType": "string",
+          "value": "expertise",
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.scholar.expertise",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "partial",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.wizard-subclass",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52"
+      ],
+      "mode": "always_on",
+      "activation": "none",
+      "prerequisites": [],
+      "choices": [
+        {
+          "id": "choice.wizard.subclass",
+          "selectionType": "entity",
+          "min": 1,
+          "max": 1,
+          "optionIds": [
+            "srd52.subclass.evoker"
+          ],
+          "filter": "entityType == subclass && classId == srd52.class.wizard"
+        }
+      ],
+      "automationLevel": "full",
+      "effects": []
+    },
+    {
+      "id": "srd52.feature.ability-score-improvement",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52"
+      ],
+      "mode": "always_on",
+      "activation": "none",
+      "prerequisites": [],
+      "choices": [
+        {
+          "id": "choice.wizard.level-feat",
+          "selectionType": "entity",
+          "min": 1,
+          "max": 1,
+          "optionIds": [
+            "srd52.feat.ability-score-improvement"
+          ],
+          "filter": "entityType == feat && prerequisites satisfied"
+        }
+      ],
+      "automationLevel": "partial",
+      "effects": []
+    },
+    {
+      "id": "srd52.feature.memorize-spell",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52"
+      ],
+      "mode": "manual_unlimited",
+      "activation": "special",
+      "prerequisites": [],
+      "choices": [],
+      "automationLevel": "partial",
+      "effects": [
+        {
+          "id": "effect.memorize-spell",
+          "target": "spellcasting.prepared.spells",
+          "operation": "replace_formula",
+          "valueType": "string",
+          "value": "one-spell-from-spellbook",
+          "activation": "manual_unlimited",
+          "actionCost": "none",
+          "trigger": "after finishing a Short Rest",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.memorize-spell",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "partial",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.spell-mastery",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52"
+      ],
+      "mode": "always_on",
+      "activation": "action",
+      "prerequisites": [
+        "class_level(\"srd52.class.wizard\") >= 18"
+      ],
+      "choices": [
+        {
+          "id": "choice.spell-mastery.level1",
+          "selectionType": "entity",
+          "min": 1,
+          "max": 1,
+          "optionIds": [],
+          "filter": "entityType == spell && spellLevel == 1 && casting.actionType == action"
+        },
+        {
+          "id": "choice.spell-mastery.level2",
+          "selectionType": "entity",
+          "min": 1,
+          "max": 1,
+          "optionIds": [],
+          "filter": "entityType == spell && spellLevel == 2 && casting.actionType == action"
+        }
+      ],
+      "automationLevel": "partial",
+      "effects": [
+        {
+          "id": "effect.spell-mastery.cast",
+          "target": "spellcasting.slot-cost.selected",
+          "operation": "set",
+          "valueType": "number",
+          "value": 0,
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.spell-mastery.cast",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "partial",
+          "notes": "Applies only to the two selected spells at their lowest level."
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.epic-boon",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52"
+      ],
+      "mode": "always_on",
+      "activation": "none",
+      "prerequisites": [
+        "class_level(\"srd52.class.wizard\") >= 19"
+      ],
+      "choices": [
+        {
+          "id": "choice.wizard.epic-boon",
+          "selectionType": "entity",
+          "min": 1,
+          "max": 1,
+          "optionIds": [
+            "srd52.feat.boon-of-spell-recall"
+          ],
+          "filter": "entityType == feat && featCategory == epic_boon"
+        }
+      ],
+      "automationLevel": "partial",
+      "effects": []
+    },
+    {
+      "id": "srd52.feature.signature-spells",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52"
+      ],
+      "mode": "limited_use",
+      "activation": "action",
+      "prerequisites": [
+        "class_level(\"srd52.class.wizard\") >= 20"
+      ],
+      "choices": [
+        {
+          "id": "choice.signature-spells",
+          "selectionType": "entity",
+          "min": 2,
+          "max": 2,
+          "optionIds": [],
+          "filter": "entityType == spell && spellLevel == 3 && inSpellbook == true"
+        }
+      ],
+      "resource": {
+        "id": "resource.wizard.signature-spells",
+        "maximumFormula": "2",
+        "recovery": "both",
+        "recoveryFormula": "2"
+      },
+      "automationLevel": "partial",
+      "effects": [
+        {
+          "id": "effect.signature-spells.cast",
+          "target": "spellcasting.slot-cost.selected",
+          "operation": "set",
+          "valueType": "number",
+          "value": 0,
+          "activation": "limited_use",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.signature-spells.cast",
+          "priority": 100,
+          "resourceId": "resource.wizard.signature-spells",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "partial",
+          "notes": "Track one free level-3 cast separately for each selected spell."
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.evocation-savant",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "evoker"
+      ],
+      "mode": "manual_unlimited",
+      "activation": "special",
+      "prerequisites": [
+        "class_level(\"srd52.class.wizard\") >= 3"
+      ],
+      "choices": [
+        {
+          "id": "choice.evocation-savant.initial",
+          "selectionType": "entity",
+          "min": 2,
+          "max": 2,
+          "optionIds": [],
+          "filter": "entityType == spell && schoolId == spell_school.evocation && spellLevel <= 2 && spellClassIds contains srd52.class.wizard"
+        }
+      ],
+      "automationLevel": "partial",
+      "effects": [
+        {
+          "id": "effect.evocation-savant.future",
+          "target": "spellcasting.spellbook.spells",
+          "operation": "grant",
+          "valueType": "string",
+          "value": "one-evocation-spell-on-new-slot-level",
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "when a new Wizard spell-slot level becomes available",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.evocation-savant.future",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "partial",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.potent-cantrip",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "evoker"
+      ],
+      "mode": "manual_unlimited",
+      "activation": "special",
+      "prerequisites": [
+        "class_level(\"srd52.class.wizard\") >= 3"
+      ],
+      "choices": [],
+      "automationLevel": "partial",
+      "effects": [
+        {
+          "id": "effect.potent-cantrip",
+          "target": "spellcasting.cantrip.damage.on-save-or-miss",
+          "operation": "set",
+          "valueType": "string",
+          "value": "half",
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.potent-cantrip",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.sculpt-spells",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "evoker"
+      ],
+      "mode": "manual_unlimited",
+      "activation": "special",
+      "prerequisites": [
+        "class_level(\"srd52.class.wizard\") >= 6"
+      ],
+      "choices": [],
+      "automationLevel": "partial",
+      "effects": [
+        {
+          "id": "effect.sculpt-spells",
+          "target": "spellcasting.evocation.protected-targets",
+          "operation": "set",
+          "valueType": "string",
+          "value": "1-plus-spell-level",
+          "activation": "manual_unlimited",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.sculpt-spells",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "partial",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.empowered-evocation",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "evoker"
+      ],
+      "mode": "manual_unlimited",
+      "activation": "special",
+      "prerequisites": [
+        "class_level(\"srd52.class.wizard\") >= 10"
+      ],
+      "choices": [],
+      "automationLevel": "partial",
+      "effects": [
+        {
+          "id": "effect.empowered-evocation",
+          "target": "spellcasting.evocation.damage.one-roll",
+          "operation": "add",
+          "valueType": "formula",
+          "value": {
+            "type": "formula",
+            "expression": "ability_modifier(\"int\")"
+          },
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.empowered-evocation",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "srd52.feature.overchannel",
+      "entityType": "feature",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "evoker"
+      ],
+      "mode": "manual_unlimited",
+      "activation": "special",
+      "prerequisites": [
+        "class_level(\"srd52.class.wizard\") >= 14"
+      ],
+      "choices": [],
+      "automationLevel": "partial",
+      "effects": [
+        {
+          "id": "effect.overchannel.maximize",
+          "target": "spellcasting.damage.rolls",
+          "operation": "set",
+          "valueType": "string",
+          "value": "maximum",
+          "activation": "manual_unlimited",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [
+            "spell_slot_level >= 1",
+            "spell_slot_level <= 5"
+          ],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.overchannel.maximize",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "partial",
+          "notes": ""
+        },
+        {
+          "id": "effect.overchannel.backlash",
+          "target": "combat.hit_points.current",
+          "operation": "subtract",
+          "valueType": "dice",
+          "value": {
+            "type": "dice",
+            "dice": "2d12-per-slot-level-escalating"
+          },
+          "activation": "manual_unlimited",
+          "actionCost": "none",
+          "trigger": "on each use after the first before a Long Rest",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.overchannel.backlash",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "permanent",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "partial",
+          "notes": "Increase the damage per slot level by 1d12 after each repeated use."
+        }
+      ]
+    },
+    {
+      "id": "srd52.item.dagger",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "weapon",
+      "weightLb": 1,
+      "costCp": 200,
+      "stackable": false,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "weaponProfile": {
+        "category": "simple_melee",
+        "damage": "1d4",
+        "damageTypeId": "damage.piercing",
+        "scalingAbility": "finesse",
+        "rangeNormalFeet": 20,
+        "rangeLongFeet": 60,
+        "propertyIds": [
+          "weapon_property.finesse",
+          "weapon_property.light",
+          "weapon_property.thrown"
+        ],
+        "masteryId": "weapon_mastery.nick"
+      },
+      "effects": []
+    },
+    {
+      "id": "srd52.item.arcane-focus-staff",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "weapon",
+      "weightLb": 4,
+      "costCp": 500,
+      "stackable": false,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "spellcastingFocusFor": [
+        "srd52.class.sorcerer",
+        "srd52.class.warlock",
+        "srd52.class.wizard"
+      ],
+      "weaponProfile": {
+        "category": "simple_melee",
+        "damage": "1d6",
+        "damageTypeId": "damage.bludgeoning",
+        "scalingAbility": "str",
+        "rangeNormalFeet": 0,
+        "rangeLongFeet": 0,
+        "propertyIds": [
+          "weapon_property.versatile-d8"
+        ],
+        "masteryId": "weapon_mastery.topple"
+      },
+      "effects": []
+    },
+    {
+      "id": "srd52.item.robe",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "gear",
+      "weightLb": 4,
+      "costCp": 100,
+      "stackable": false,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [
+        "body.clothing"
+      ],
+      "requirements": [],
+      "effects": []
+    },
+    {
+      "id": "srd52.item.spellbook",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "gear",
+      "weightLb": 3,
+      "costCp": 0,
+      "stackable": false,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "spellcastingFocusFor": [
+        "srd52.class.wizard"
+      ],
+      "effects": []
+    },
+    {
+      "id": "srd52.item.backpack",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "container",
+      "weightLb": 5,
+      "costCp": 200,
+      "stackable": false,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "effects": []
+    },
+    {
+      "id": "srd52.item.book",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "gear",
+      "weightLb": 5,
+      "costCp": 2500,
+      "stackable": false,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "effects": []
+    },
+    {
+      "id": "srd52.item.ink",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "consumable",
+      "weightLb": 0,
+      "costCp": 1000,
+      "stackable": true,
+      "consumable": true,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "effects": []
+    },
+    {
+      "id": "srd52.item.ink-pen",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "tool",
+      "weightLb": 0,
+      "costCp": 2,
+      "stackable": false,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "effects": []
+    },
+    {
+      "id": "srd52.item.lamp",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "gear",
+      "weightLb": 1,
+      "costCp": 50,
+      "stackable": false,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "effects": []
+    },
+    {
+      "id": "srd52.item.oil",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "consumable",
+      "weightLb": 1,
+      "costCp": 10,
+      "stackable": true,
+      "consumable": true,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "effects": []
+    },
+    {
+      "id": "srd52.item.parchment",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "consumable",
+      "weightLb": 0,
+      "costCp": 10,
+      "stackable": true,
+      "consumable": true,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "effects": []
+    },
+    {
+      "id": "srd52.item.tinderbox",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "tool",
+      "weightLb": 1,
+      "costCp": 50,
+      "stackable": false,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "effects": []
+    },
+    {
+      "id": "srd52.item.scholars-pack",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment"
+      ],
+      "itemType": "container",
+      "weightLb": 22,
+      "costCp": 4000,
+      "stackable": false,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "containedItems": [
+        {
+          "itemId": "srd52.item.backpack",
+          "quantity": 1
+        },
+        {
+          "itemId": "srd52.item.book",
+          "quantity": 1
+        },
+        {
+          "itemId": "srd52.item.ink",
+          "quantity": 1
+        },
+        {
+          "itemId": "srd52.item.ink-pen",
+          "quantity": 1
+        },
+        {
+          "itemId": "srd52.item.lamp",
+          "quantity": 1
+        },
+        {
+          "itemId": "srd52.item.oil",
+          "quantity": 10
+        },
+        {
+          "itemId": "srd52.item.parchment",
+          "quantity": 10
+        },
+        {
+          "itemId": "srd52.item.tinderbox",
+          "quantity": 1
+        }
+      ],
+      "effects": []
+    },
+    {
+      "id": "srd52.spell.cure-wounds",
+      "entityType": "spell",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "spell"
+      ],
+      "schoolId": "spell_school.abjuration",
+      "spellClassIds": [
+        "srd52.class.bard",
+        "srd52.class.cleric",
+        "srd52.class.druid",
+        "srd52.class.paladin",
+        "srd52.class.ranger"
+      ],
+      "casting": {
+        "actionType": "action",
+        "value": 1,
+        "reactionTrigger": ""
+      },
+      "range": {
+        "type": "touch",
+        "distanceFeet": 0
+      },
+      "area": {
+        "shape": "none",
+        "sizeFeet": 0
+      },
+      "duration": {
+        "type": "instant",
+        "value": 1,
+        "concentration": false
+      },
+      "components": {
+        "verbal": true,
+        "somatic": true,
+        "material": false,
+        "materialText": "",
+        "materialCostCp": 0,
+        "materialConsumed": false
+      },
+      "ritual": false,
+      "attackType": "none",
+      "savingThrowAbility": "",
+      "scaling": [
+        {
+          "type": "spell_slot_level",
+          "at": 2,
+          "value": "+2d8 per slot level"
+        }
+      ],
+      "automationLevel": "full",
+      "level": 1,
+      "effects": [
+        {
+          "id": "effect.cure-wounds.heal",
+          "target": "combat.hit_points.current",
+          "operation": "add",
+          "valueType": "dice",
+          "value": {
+            "type": "dice",
+            "dice": "2d8 + spellcasting-ability-modifier"
+          },
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.cure-wounds.heal",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "instant",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "srd52.spell.ray-of-frost",
+      "entityType": "spell",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "spell"
+      ],
+      "schoolId": "spell_school.evocation",
+      "spellClassIds": [
+        "srd52.class.sorcerer",
+        "srd52.class.wizard"
+      ],
+      "casting": {
+        "actionType": "action",
+        "value": 1,
+        "reactionTrigger": ""
+      },
+      "range": {
+        "type": "distance",
+        "distanceFeet": 60
+      },
+      "area": {
+        "shape": "none",
+        "sizeFeet": 0
+      },
+      "duration": {
+        "type": "instant",
+        "value": 1,
+        "concentration": false
+      },
+      "components": {
+        "verbal": true,
+        "somatic": true,
+        "material": false,
+        "materialText": "",
+        "materialCostCp": 0,
+        "materialConsumed": false
+      },
+      "ritual": false,
+      "attackType": "ranged_spell",
+      "savingThrowAbility": "",
+      "scaling": [
+        {
+          "type": "character_level",
+          "at": 5,
+          "value": "2d8"
+        },
+        {
+          "type": "character_level",
+          "at": 11,
+          "value": "3d8"
+        },
+        {
+          "type": "character_level",
+          "at": 17,
+          "value": "4d8"
+        }
+      ],
+      "automationLevel": "full",
+      "level": 0,
+      "effects": [
+        {
+          "id": "effect.ray-of-frost.damage",
+          "target": "combat.target.hit_points.current",
+          "operation": "subtract",
+          "valueType": "dice",
+          "value": {
+            "type": "dice",
+            "dice": "1d8"
+          },
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "on hit",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.ray-of-frost.damage",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "instant",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": ""
+        },
+        {
+          "id": "effect.ray-of-frost.speed",
+          "target": "combat.target.movement.speed",
+          "operation": "subtract",
+          "valueType": "number",
+          "value": 10,
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "on hit",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.ray-of-frost.speed",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "rounds",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "srd52.spell.magic-missile",
+      "entityType": "spell",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "spell"
+      ],
+      "schoolId": "spell_school.evocation",
+      "spellClassIds": [
+        "srd52.class.sorcerer",
+        "srd52.class.wizard"
+      ],
+      "casting": {
+        "actionType": "action",
+        "value": 1,
+        "reactionTrigger": ""
+      },
+      "range": {
+        "type": "distance",
+        "distanceFeet": 120
+      },
+      "area": {
+        "shape": "none",
+        "sizeFeet": 0
+      },
+      "duration": {
+        "type": "instant",
+        "value": 1,
+        "concentration": false
+      },
+      "components": {
+        "verbal": true,
+        "somatic": true,
+        "material": false,
+        "materialText": "",
+        "materialCostCp": 0,
+        "materialConsumed": false
+      },
+      "ritual": false,
+      "attackType": "none",
+      "savingThrowAbility": "",
+      "scaling": [
+        {
+          "type": "spell_slot_level",
+          "at": 2,
+          "value": "+1 dart per slot level"
+        }
+      ],
+      "automationLevel": "full",
+      "level": 1,
+      "effects": [
+        {
+          "id": "effect.magic-missile.dart",
+          "target": "combat.target.hit_points.current",
+          "operation": "subtract",
+          "valueType": "dice",
+          "value": {
+            "type": "dice",
+            "dice": "1d4 + 1"
+          },
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "per dart",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.magic-missile.dart",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "instant",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": "Three darts at level 1; each dart may choose a target."
+        }
+      ]
+    },
+    {
+      "id": "srd52.spell.fireball",
+      "entityType": "spell",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "spell"
+      ],
+      "schoolId": "spell_school.evocation",
+      "spellClassIds": [
+        "srd52.class.sorcerer",
+        "srd52.class.wizard"
+      ],
+      "casting": {
+        "actionType": "action",
+        "value": 1,
+        "reactionTrigger": ""
+      },
+      "range": {
+        "type": "distance",
+        "distanceFeet": 150
+      },
+      "area": {
+        "shape": "sphere",
+        "sizeFeet": 20
+      },
+      "duration": {
+        "type": "instant",
+        "value": 1,
+        "concentration": false
+      },
+      "components": {
+        "verbal": true,
+        "somatic": true,
+        "material": true,
+        "materialText": "a ball of bat guano and sulfur",
+        "materialCostCp": 0,
+        "materialConsumed": false
+      },
+      "ritual": false,
+      "attackType": "none",
+      "savingThrowAbility": "dex",
+      "scaling": [
+        {
+          "type": "spell_slot_level",
+          "at": 4,
+          "value": "+1d6 per slot level"
+        }
+      ],
+      "automationLevel": "full",
+      "level": 3,
+      "effects": [
+        {
+          "id": "effect.fireball.damage",
+          "target": "combat.area.targets.hit_points.current",
+          "operation": "subtract",
+          "valueType": "dice",
+          "value": {
+            "type": "dice",
+            "dice": "8d6"
+          },
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.fireball.damage",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "instant",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": "Half damage on a successful Dexterity save."
+        }
+      ]
+    },
+    {
+      "id": "srd52.spell.wall-of-fire",
+      "entityType": "spell",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "spell"
+      ],
+      "schoolId": "spell_school.evocation",
+      "spellClassIds": [
+        "srd52.class.druid",
+        "srd52.class.sorcerer",
+        "srd52.class.wizard"
+      ],
+      "casting": {
+        "actionType": "action",
+        "value": 1,
+        "reactionTrigger": ""
+      },
+      "range": {
+        "type": "distance",
+        "distanceFeet": 120
+      },
+      "area": {
+        "shape": "wall",
+        "sizeFeet": 60
+      },
+      "duration": {
+        "type": "minutes",
+        "value": 1,
+        "concentration": true
+      },
+      "components": {
+        "verbal": true,
+        "somatic": true,
+        "material": true,
+        "materialText": "a piece of charcoal",
+        "materialCostCp": 0,
+        "materialConsumed": false
+      },
+      "ritual": false,
+      "attackType": "none",
+      "savingThrowAbility": "dex",
+      "scaling": [
+        {
+          "type": "spell_slot_level",
+          "at": 5,
+          "value": "+1d8 per slot level"
+        }
+      ],
+      "automationLevel": "full",
+      "level": 4,
+      "effects": [
+        {
+          "id": "effect.wall-of-fire.initial",
+          "target": "combat.area.targets.hit_points.current",
+          "operation": "subtract",
+          "valueType": "dice",
+          "value": {
+            "type": "dice",
+            "dice": "5d8"
+          },
+          "activation": "always_on",
+          "actionCost": "none",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.wall-of-fire.initial",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "instant",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": "Half damage on a successful Dexterity save when the wall appears."
+        },
+        {
+          "id": "effect.wall-of-fire.periodic",
+          "target": "combat.area.targets.hit_points.current",
+          "operation": "subtract",
+          "valueType": "dice",
+          "value": {
+            "type": "dice",
+            "dice": "5d8"
+          },
+          "activation": "on_event",
+          "actionCost": "none",
+          "trigger": "when a creature enters the wall for the first time on a turn or ends its turn within 10 feet of the damaging side",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.wall-of-fire.periodic",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "minutes",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "srd52.spell.shield",
+      "entityType": "spell",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "spell"
+      ],
+      "schoolId": "spell_school.abjuration",
+      "spellClassIds": [
+        "srd52.class.sorcerer",
+        "srd52.class.wizard"
+      ],
+      "casting": {
+        "actionType": "reaction",
+        "value": 1,
+        "reactionTrigger": "when hit by an attack roll or targeted by Magic Missile"
+      },
+      "range": {
+        "type": "self",
+        "distanceFeet": 0
+      },
+      "area": {
+        "shape": "none",
+        "sizeFeet": 0
+      },
+      "duration": {
+        "type": "rounds",
+        "value": 1,
+        "concentration": false
+      },
+      "components": {
+        "verbal": true,
+        "somatic": true,
+        "material": false,
+        "materialText": "",
+        "materialCostCp": 0,
+        "materialConsumed": false
+      },
+      "ritual": false,
+      "attackType": "none",
+      "savingThrowAbility": "",
+      "scaling": [],
+      "automationLevel": "full",
+      "level": 1,
+      "effects": [
+        {
+          "id": "effect.shield.ac",
+          "target": "combat.armor_class",
+          "operation": "add",
+          "valueType": "number",
+          "value": 5,
+          "activation": "on_event",
+          "actionCost": "reaction",
+          "trigger": "when hit by an attack roll or targeted by Magic Missile",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.shield.ac",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "rounds",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": ""
+        },
+        {
+          "id": "effect.shield.magic-missile",
+          "target": "defenses.magic-missile.damage",
+          "operation": "set",
+          "valueType": "number",
+          "value": 0,
+          "activation": "on_event",
+          "actionCost": "reaction",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.shield.magic-missile",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "rounds",
+          "durationValue": 1,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "srd52.spell.detect-magic",
+      "entityType": "spell",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "spell"
+      ],
+      "schoolId": "spell_school.divination",
+      "spellClassIds": [
+        "srd52.class.bard",
+        "srd52.class.cleric",
+        "srd52.class.druid",
+        "srd52.class.paladin",
+        "srd52.class.ranger",
+        "srd52.class.sorcerer",
+        "srd52.class.warlock",
+        "srd52.class.wizard"
+      ],
+      "casting": {
+        "actionType": "action",
+        "value": 1,
+        "reactionTrigger": ""
+      },
+      "range": {
+        "type": "self",
+        "distanceFeet": 0
+      },
+      "area": {
+        "shape": "emanation",
+        "sizeFeet": 30
+      },
+      "duration": {
+        "type": "minutes",
+        "value": 10,
+        "concentration": true
+      },
+      "components": {
+        "verbal": true,
+        "somatic": true,
+        "material": false,
+        "materialText": "",
+        "materialCostCp": 0,
+        "materialConsumed": false
+      },
+      "ritual": true,
+      "attackType": "none",
+      "savingThrowAbility": "",
+      "scaling": [],
+      "automationLevel": "full",
+      "level": 1,
+      "effects": [
+        {
+          "id": "effect.detect-magic.sense",
+          "target": "senses.magic",
+          "operation": "grant",
+          "valueType": "number",
+          "value": 30,
+          "activation": "manual_unlimited",
+          "actionCost": "action",
+          "trigger": "",
+          "conditions": [],
+          "stacking": "unique_by_source",
+          "stackingGroup": "effect.detect-magic.sense",
+          "priority": 100,
+          "resourceId": "",
+          "durationType": "minutes",
+          "durationValue": 10,
+          "restType": "long",
+          "automationLevel": "full",
+          "notes": ""
+        }
+      ]
+    }
+  ],
+  "localizations": {
+    "en": {
+      "srd52.class.wizard": {
+        "name": "Wizard",
+        "description": "An Intelligence-based full spellcaster who records spells in a spellbook and prepares them after a Long Rest."
+      },
+      "srd52.subclass.evoker": {
+        "name": "Evoker",
+        "description": "A Wizard specialization focused on elemental Evocation spells and protecting allies from those effects."
+      },
+      "srd52.feature.wizard-spellcasting": {
+        "name": "Spellcasting",
+        "description": "Know three Wizard cantrips, keep level 1+ Wizard spells in a spellbook, prepare spells from that book, and use Intelligence for Wizard spells. The spellbook starts with six level 1 Wizard spells and gains two eligible Wizard spells whenever a Wizard level is gained after level 1."
+      },
+      "srd52.feature.ritual-adept": {
+        "name": "Ritual Adept",
+        "description": "Cast a Wizard spell as a Ritual when it has the Ritual tag and is in your spellbook; it need not be prepared."
+      },
+      "srd52.feature.arcane-recovery": {
+        "name": "Arcane Recovery",
+        "description": "After a Short Rest, recover expended spell slots with a combined level up to half your Wizard level, rounded up. No recovered slot can be level 6 or higher. Once per Long Rest."
+      },
+      "srd52.feature.scholar": {
+        "name": "Scholar",
+        "description": "Choose Arcana, History, Investigation, Medicine, Nature, or Religion in which you are proficient; gain Expertise in that skill."
+      },
+      "srd52.feature.wizard-subclass": {
+        "name": "Wizard Subclass",
+        "description": "Choose a Wizard subclass and gain its features at the listed Wizard levels."
+      },
+      "srd52.feature.ability-score-improvement": {
+        "name": "Ability Score Improvement",
+        "description": "Gain the Ability Score Improvement feat or another feat for which you qualify. Wizard gains this at levels 4, 8, 12, and 16."
+      },
+      "srd52.feature.memorize-spell": {
+        "name": "Memorize Spell",
+        "description": "After a Short Rest, replace one prepared level 1+ Wizard spell with another level 1+ spell from your spellbook."
+      },
+      "srd52.feature.spell-mastery": {
+        "name": "Spell Mastery",
+        "description": "Choose one level 1 and one level 2 action spell in your spellbook. They are always prepared and can be cast at their lowest level without a spell slot. Choices can change after a Long Rest."
+      },
+      "srd52.feature.epic-boon": {
+        "name": "Epic Boon",
+        "description": "Gain an Epic Boon feat or another feat for which you qualify. Boon of Spell Recall is recommended."
+      },
+      "srd52.feature.signature-spells": {
+        "name": "Signature Spells",
+        "description": "Choose two level 3 spells in your spellbook. They are always prepared, and each can be cast once at level 3 without a spell slot; each use returns after a Short or Long Rest."
+      },
+      "srd52.feature.evocation-savant": {
+        "name": "Evocation Savant",
+        "description": "Add two level 0–2 Evocation Wizard spells to your spellbook for free. Whenever this class first grants a higher spell-slot level, add one eligible Evocation Wizard spell for free."
+      },
+      "srd52.feature.potent-cantrip": {
+        "name": "Potent Cantrip",
+        "description": "When your damaging cantrip misses or its target succeeds on the saving throw, the target takes half the cantrip's damage and suffers no additional effect."
+      },
+      "srd52.feature.sculpt-spells": {
+        "name": "Sculpt Spells",
+        "description": "When an Evocation spell affects visible creatures, protect up to 1 + the spell's level of them. They automatically succeed on their saves and take no damage when a successful save would normally halve damage."
+      },
+      "srd52.feature.empowered-evocation": {
+        "name": "Empowered Evocation",
+        "description": "When you cast a Wizard Evocation spell, add your Intelligence modifier to one damage roll of that spell."
+      },
+      "srd52.feature.overchannel": {
+        "name": "Overchannel",
+        "description": "For a damaging Wizard spell cast with a level 1–5 slot, maximize its damage on the casting turn. The first use before a Long Rest is safe; later uses deal escalating unavoidable Necrotic damage per slot level."
+      },
+      "srd52.item.dagger": {
+        "name": "Dagger",
+        "description": "Simple melee weapon: 1d4 Piercing; Finesse, Light, Thrown (20/60); Nick mastery."
+      },
+      "srd52.item.arcane-focus-staff": {
+        "name": "Arcane Focus (Staff)",
+        "description": "An Arcane Focus that also functions as a Quarterstaff: 1d6 Bludgeoning, Versatile (1d8), Topple mastery."
+      },
+      "srd52.item.robe": {
+        "name": "Robe",
+        "description": "A four-pound robe with vocational or ceremonial significance."
+      },
+      "srd52.item.spellbook": {
+        "name": "Spellbook",
+        "description": "A Tiny, three-pound, 100-page object readable by its Wizard or by a creature using Identify. It stores the Wizard's level 1+ spells."
+      },
+      "srd52.item.backpack": {
+        "name": "Backpack",
+        "description": "Holds up to 30 pounds in 1 cubic foot and can serve as a saddlebag."
+      },
+      "srd52.item.book": {
+        "name": "Book",
+        "description": "A fiction or nonfiction book. An accurate nonfiction reference can aid relevant Intelligence checks."
+      },
+      "srd52.item.ink": {
+        "name": "Ink",
+        "description": "A one-ounce bottle, enough for about 500 pages."
+      },
+      "srd52.item.ink-pen": {
+        "name": "Ink Pen",
+        "description": "Used with Ink to write or draw."
+      },
+      "srd52.item.lamp": {
+        "name": "Lamp",
+        "description": "Burns Oil and casts Bright Light in a 15-foot radius and Dim Light for 30 additional feet."
+      },
+      "srd52.item.oil": {
+        "name": "Oil Flask",
+        "description": "One flask of Oil; usable as fuel or to create a burning hazard."
+      },
+      "srd52.item.parchment": {
+        "name": "Parchment Sheet",
+        "description": "One sheet holds about 250 handwritten words."
+      },
+      "srd52.item.tinderbox": {
+        "name": "Tinderbox",
+        "description": "A compact fire-starting kit."
+      },
+      "srd52.item.scholars-pack": {
+        "name": "Scholar's Pack",
+        "description": "A 22-pound pack containing a Backpack, Book, Ink, Ink Pen, Lamp, 10 flasks of Oil, 10 sheets of Parchment, and a Tinderbox."
+      },
+      "srd52.spell.cure-wounds": {
+        "name": "Cure Wounds",
+        "description": "A touched creature regains 2d8 + the spellcasting ability modifier Hit Points; healing increases by 2d8 per slot level above 1."
+      },
+      "srd52.spell.ray-of-frost": {
+        "name": "Ray of Frost",
+        "description": "Make a ranged spell attack. On a hit, deal 1d8 Cold damage and reduce the target's Speed by 10 feet until your next turn. Damage scales at character levels 5, 11, and 17."
+      },
+      "srd52.spell.magic-missile": {
+        "name": "Magic Missile",
+        "description": "Create three darts. Each automatically strikes a visible target within range for 1d4 + 1 Force damage; distribute darts among one or more creatures. Gain one dart per slot level above 1."
+      },
+      "srd52.spell.fireball": {
+        "name": "Fireball",
+        "description": "Creatures in a 20-foot-radius Sphere make a Dexterity save, taking 8d6 Fire damage on a failure or half on a success. Damage increases by 1d6 per slot level above 3."
+      },
+      "srd52.spell.wall-of-fire": {
+        "name": "Wall of Fire",
+        "description": "Create an opaque wall up to 60 feet long, 20 feet high, and 1 foot thick, or a ring up to 20 feet in diameter. It deals 5d8 Fire damage when created and repeatedly on one chosen side when creatures enter or end a turn nearby."
+      },
+      "srd52.spell.shield": {
+        "name": "Shield",
+        "description": "As a reaction when hit by an attack or targeted by Magic Missile, gain +5 AC until your next turn and take no damage from Magic Missile."
+      },
+      "srd52.spell.detect-magic": {
+        "name": "Detect Magic",
+        "description": "For up to 10 minutes, sense magical effects within 30 feet. A later Magic action reveals a faint aura on visible affected creatures or objects and the school of a spell-created effect. The spell can be cast as a Ritual."
+      }
+    },
+    "ru": {
+      "srd52.class.wizard": {
+        "name": "Волшебник",
+        "description": "Полный заклинатель на Интеллекте, записывающий заклинания в книгу и подготавливающий их после продолжительного отдыха."
+      },
+      "srd52.subclass.evoker": {
+        "name": "Воплощающий",
+        "description": "Специализация волшебника на стихийных заклинаниях Воплощения и защите союзников от их эффектов."
+      },
+      "srd52.feature.wizard-spellcasting": {
+        "name": "Использование заклинаний",
+        "description": "Вы знаете три заговора волшебника, храните заклинания 1+ уровня в книге, подготавливаете их из книги и используете Интеллект. В начале книга содержит шесть заклинаний волшебника 1 уровня; после каждого следующего уровня волшебника в неё добавляются два доступных заклинания."
+      },
+      "srd52.feature.ritual-adept": {
+        "name": "Знаток ритуалов",
+        "description": "Позволяет сотворять ритуалом заклинание волшебника с тегом «Ритуал», если оно записано в книге; подготавливать его не требуется."
+      },
+      "srd52.feature.arcane-recovery": {
+        "name": "Магическое восстановление",
+        "description": "После короткого отдыха восстанавливает потраченные ячейки суммарным уровнем не выше половины уровня волшебника с округлением вверх. Ячейки 6+ уровня восстановить нельзя. Один раз до продолжительного отдыха."
+      },
+      "srd52.feature.scholar": {
+        "name": "Учёный",
+        "description": "Выберите Аркану, Историю, Анализ, Медицину, Природу или Религию, которой уже владеете; получите компетентность в выбранном навыке."
+      },
+      "srd52.feature.wizard-subclass": {
+        "name": "Подкласс волшебника",
+        "description": "Выберите подкласс волшебника и получайте его умения на указанных уровнях волшебника."
+      },
+      "srd52.feature.ability-score-improvement": {
+        "name": "Улучшение характеристик",
+        "description": "Получите черту «Улучшение характеристик» или другую доступную черту. Волшебник получает это умение на уровнях 4, 8, 12 и 16."
+      },
+      "srd52.feature.memorize-spell": {
+        "name": "Запоминание заклинания",
+        "description": "После короткого отдыха замените одно подготовленное заклинание волшебника 1+ уровня другим заклинанием 1+ уровня из своей книги."
+      },
+      "srd52.feature.spell-mastery": {
+        "name": "Мастерство заклинаний",
+        "description": "Выберите в книге одно заклинание 1 уровня и одно 2 уровня со временем сотворения «Действие». Они всегда подготовлены и могут сотворяться на минимальном уровне без ячейки. После продолжительного отдыха выбор можно заменить."
+      },
+      "srd52.feature.epic-boon": {
+        "name": "Эпическая черта",
+        "description": "Получите эпическую черту или другую доступную черту. Рекомендована «Черта возврата заклинания»."
+      },
+      "srd52.feature.signature-spells": {
+        "name": "Фирменные заклинания",
+        "description": "Выберите два заклинания 3 уровня из книги. Они всегда подготовлены, и каждое можно один раз сотворить на 3 уровне без ячейки; использования восстанавливаются после короткого или продолжительного отдыха."
+      },
+      "srd52.feature.evocation-savant": {
+        "name": "Знаток воплощения",
+        "description": "Бесплатно добавьте в книгу два заклинания волшебника школы Воплощения не выше 2 уровня. Каждый раз при первом получении нового уровня ячеек этого класса бесплатно добавляйте одно доступное заклинание Воплощения."
+      },
+      "srd52.feature.potent-cantrip": {
+        "name": "Мощный заговор",
+        "description": "Если атакующий заговор с уроном промахивается или цель преуспевает в спасброске, цель получает половину урона заговора без дополнительных эффектов."
+      },
+      "srd52.feature.sculpt-spells": {
+        "name": "Формирование заклинаний",
+        "description": "Когда заклинание Воплощения затрагивает видимых существ, защитите до 1 + уровня заклинания из них. Они автоматически преуспевают в спасбросках и не получают урон, если успех обычно уменьшает его вдвое."
+      },
+      "srd52.feature.empowered-evocation": {
+        "name": "Усиленное воплощение",
+        "description": "При сотворении заклинания волшебника школы Воплощения добавьте модификатор Интеллекта к одному броску урона этого заклинания."
+      },
+      "srd52.feature.overchannel": {
+        "name": "Перегрузка",
+        "description": "Максимизируйте урон наносящего урон заклинания волшебника, сотворённого ячейкой 1–5 уровня, в ход сотворения. Первое применение до продолжительного отдыха безопасно; повторные наносят растущий некротический урон за уровень ячейки, который нельзя уменьшить."
+      },
+      "srd52.item.dagger": {
+        "name": "Кинжал",
+        "description": "Простое рукопашное оружие: 1к4 колющего урона; Фехтовальное, Лёгкое, Метательное (20/60); мастерство «Ник»."
+      },
+      "srd52.item.arcane-focus-staff": {
+        "name": "Магическая фокусировка (посох)",
+        "description": "Магическая фокусировка, также являющаяся боевым посохом: 1к6 дробящего урона, Универсальное (1к8), мастерство «Опрокидывание»."
+      },
+      "srd52.item.robe": {
+        "name": "Мантия",
+        "description": "Четырёхфунтовая мантия профессионального или церемониального значения."
+      },
+      "srd52.item.spellbook": {
+        "name": "Книга заклинаний",
+        "description": "Крошечный предмет весом 3 фунта на 100 страниц, читаемый владельцем-волшебником или существом под действием «Опознания». Хранит заклинания волшебника 1+ уровня."
+      },
+      "srd52.item.backpack": {
+        "name": "Рюкзак",
+        "description": "Вмещает до 30 фунтов в объёме 1 кубического фута и может служить седельной сумкой."
+      },
+      "srd52.item.book": {
+        "name": "Книга",
+        "description": "Художественная или справочная книга. Точный справочник может помочь в соответствующих проверках Интеллекта."
+      },
+      "srd52.item.ink": {
+        "name": "Чернила",
+        "description": "Флакон в одну унцию, достаточный примерно для 500 страниц."
+      },
+      "srd52.item.ink-pen": {
+        "name": "Перо",
+        "description": "Используется с чернилами для письма и рисования."
+      },
+      "srd52.item.lamp": {
+        "name": "Лампа",
+        "description": "Сжигает масло, создавая яркий свет в радиусе 15 футов и тусклый ещё на 30 футов."
+      },
+      "srd52.item.oil": {
+        "name": "Фляга масла",
+        "description": "Одна фляга масла; используется как топливо или для создания горящей области."
+      },
+      "srd52.item.parchment": {
+        "name": "Лист пергамента",
+        "description": "Один лист вмещает около 250 рукописных слов."
+      },
+      "srd52.item.tinderbox": {
+        "name": "Огниво",
+        "description": "Компактный набор для разведения огня."
+      },
+      "srd52.item.scholars-pack": {
+        "name": "Набор учёного",
+        "description": "Набор весом 22 фунта: рюкзак, книга, чернила, перо, лампа, 10 фляг масла, 10 листов пергамента и огниво."
+      },
+      "srd52.spell.cure-wounds": {
+        "name": "Лечение ран",
+        "description": "Существо, которого вы касаетесь, восстанавливает 2к8 + модификатор базовой характеристики заклинаний хитов; лечение увеличивается на 2к8 за каждый уровень ячейки выше 1."
+      },
+      "srd52.spell.ray-of-frost": {
+        "name": "Луч холода",
+        "description": "Совершите дальнобойную атаку заклинанием. При попадании нанесите 1к8 урона холодом и уменьшите скорость цели на 10 футов до вашего следующего хода. Урон растёт на уровнях 5, 11 и 17."
+      },
+      "srd52.spell.magic-missile": {
+        "name": "Волшебная стрела",
+        "description": "Создайте три снаряда. Каждый автоматически поражает видимую цель в пределах дистанции и наносит 1к4 + 1 урона силовым полем; снаряды можно распределить между целями. За каждый уровень ячейки выше 1 создаётся ещё один снаряд."
+      },
+      "srd52.spell.fireball": {
+        "name": "Огненный шар",
+        "description": "Существа в сфере радиусом 20 футов совершают спасбросок Ловкости, получая 8к6 урона огнём при провале или половину при успехе. Урон увеличивается на 1к6 за уровень ячейки выше 3."
+      },
+      "srd52.spell.wall-of-fire": {
+        "name": "Стена огня",
+        "description": "Создайте непрозрачную стену длиной до 60 футов, высотой 20 футов и толщиной 1 фут либо кольцо диаметром до 20 футов. При появлении и затем на выбранной стороне она наносит 5к8 урона огнём существам, которые входят в область или заканчивают рядом ход."
+      },
+      "srd52.spell.shield": {
+        "name": "Щит",
+        "description": "Реакцией при попадании атакой или выборе целью «Волшебной стрелы» получите +5 к КД до своего следующего хода и не получайте урон от «Волшебной стрелы»."
+      },
+      "srd52.spell.detect-magic": {
+        "name": "Обнаружение магии",
+        "description": "До 10 минут ощущайте магические эффекты в пределах 30 футов. Последующее Магическое действие показывает слабую ауру на видимых затронутых существах и предметах, а также школу эффекта, созданного заклинанием. Можно сотворять ритуалом."
+      }
+    }
+  },
+  "assets": []
+}

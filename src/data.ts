@@ -1,4 +1,4 @@
-import type { Effect, EntityType, ForgeEntity, ForgeProject, LevelEntry } from "./types";
+import type { ClassProgressionEntry, Effect, EntityType, ForgeEntity, ForgeProject, LevelEntry } from "./types";
 
 export const entityTypes: EntityType[] = ["class", "subclass", "species", "background", "feat", "feature", "item", "spell", "reference"];
 
@@ -47,6 +47,13 @@ export const emptyEffect = (index = 1): Effect => ({
 });
 
 const twentyLevels = (): LevelEntry[] => Array.from({ length: 20 }, (_, index) => ({ level: index + 1, featureIds: [] }));
+const emptyClassProgression = (): ClassProgressionEntry[] => Array.from({ length: 20 }, (_, index) => ({
+  level: index + 1,
+  proficiencyBonus: 2 + Math.floor(index / 4),
+  cantripsKnown: 0,
+  preparedSpells: 0,
+  spellSlots: Array(9).fill(0),
+}));
 
 export function createEntity(entityType: EntityType, number: number): ForgeEntity {
   const id = `homebrew.${entityType}.new-${number}`;
@@ -65,7 +72,7 @@ export function createEntity(entityType: EntityType, number: number): ForgeEntit
     },
   };
 
-  if (entityType === "class") return { ...common, hitDie: "d8", primaryAbilities: ["str"], multiclassPrerequisite: "ability_score(\"str\") >= 13", startingHpFormula: "8 + ability_modifier(\"con\")", levelUpHpFormula: "5 + ability_modifier(\"con\")", startingProficiencies: [], multiclassProficiencies: [], spellcastingAbility: "", casterProgression: "none", casterLevelFormula: "0", levels: twentyLevels() };
+  if (entityType === "class") return { ...common, hitDie: "d8", primaryAbilities: ["str"], multiclassPrerequisite: "ability_score(\"str\") >= 13", startingHpFormula: "8 + ability_modifier(\"con\")", levelUpHpFormula: "5 + ability_modifier(\"con\")", startingProficiencies: [], multiclassProficiencies: [], spellcastingAbility: "", casterProgression: "none", casterLevelFormula: "0", levels: twentyLevels(), classProgression: emptyClassProgression(), choices: [], equipmentOptions: [] };
   if (entityType === "subclass") return { ...common, classId: "", subclassLevels: [{ level: 3, featureIds: [] }] };
   if (entityType === "species") return { ...common, sizeOptions: ["size.medium"], baseSpeeds: { walk: 30 }, featureIds: [], choices: [] };
   if (entityType === "background") return { ...common, abilityOptions: ["str", "dex", "con"], featId: "", proficiencyGrants: [], choices: [], equipmentOptions: [{ id: "equipment.a", items: [], currencyCp: 0 }] };

@@ -5,6 +5,7 @@ coverage/
 .idea/
 .wrangler/
 work/
+tmp/
 .env
 .env.*
 !.env.example

@@ -44,6 +44,14 @@ export interface LevelEntry {
   featureIds: string[];
 }
 
+export interface ClassProgressionEntry {
+  level: number;
+  proficiencyBonus: number;
+  cantripsKnown: number;
+  preparedSpells: number;
+  spellSlots: number[];
+}
+
 export interface ForgeEntity {
   id: string;
   entityType: EntityType;
@@ -74,6 +82,7 @@ export interface ForgeEntity {
   casterProgression?: "none" | "full" | "half_down" | "half_up" | "third" | "pact" | "custom";
   casterLevelFormula?: string;
   levels?: LevelEntry[];
+  classProgression?: ClassProgressionEntry[];
 
   classId?: string;
   subclassLevels?: LevelEntry[];
@@ -120,6 +129,8 @@ export interface ForgeEntity {
     stealthDisadvantage: boolean;
   };
   charges?: { maximumFormula: string; recovery: "short_rest" | "long_rest" | "both" | "dawn" | "manual" | "never" };
+  containedItems?: Array<{ itemId: string; quantity: number }>;
+  spellcastingFocusFor?: string[];
 
   spellLevel?: number;
   schoolId?: string;
@@ -131,6 +142,7 @@ export interface ForgeEntity {
   ritual?: boolean;
   attackType?: "none" | "melee_spell" | "ranged_spell";
   savingThrowAbility?: AbilityId | "";
+  spellClassIds?: string[];
   scaling?: Array<{ type: "character_level" | "spell_slot_level" | "class_level"; at: number; value: string }>;
 }
 
@@ -145,6 +157,8 @@ export interface ForgeProject {
     sourceId: string;
     licenseId: string;
     author: string;
+    defaultLocale?: Locale;
+    attribution?: string;
   };
   entities: ForgeEntity[];
   updatedAt: string;
