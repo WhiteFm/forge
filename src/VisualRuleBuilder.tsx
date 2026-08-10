@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { AbilityId, ForgeEntity, Locale, RuleExpression, RuleOperand, RuleOperandKind, RuleOperator } from "./types";
 
 const abilities: AbilityId[] = ["str", "dex", "con", "int", "wis", "cha"];
@@ -67,8 +68,12 @@ export function parseLegacyExpression(value: string, condition = false): RuleExp
 
 function EntitySelect({ entities, value, onChange, type }: { entities: ForgeEntity[]; value: string; onChange: (value: string) => void; type?: ForgeEntity["entityType"] }) {
   const options = entities.filter((entity) => !type || entity.entityType === type).sort((a, b) => a.localization.en.name.localeCompare(b.localization.en.name));
-  const hasValue = options.some((entity) => entity.id === value);
-  return <select value={value} onChange={(event) => onChange(event.target.value)}><option value="">—</option>{value && !hasValue && <option value={value}>{value} · linked ID</option>}{options.map((entity) => <option key={entity.id} value={entity.id}>{entity.localization.en.name || entity.id} · {entity.entityType}</option>)}</select>;
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const selected = options.find((entity) => entity.id === value);
+  const filtered = options.filter((entity) => `${entity.localization.en.name} ${entity.localization.ru.name} ${entity.id}`.toLowerCase().includes(search.toLowerCase())).slice(0, 100);
+  const choose = (next: string) => { onChange(next); setOpen(false); setSearch(""); };
+  return <div className={`entity-picker${open ? " open" : ""}`}><button className="entity-picker-trigger" type="button" onClick={() => setOpen((current) => !current)} aria-expanded={open}><span>{selected?.localization.en.name || value || "Select from pack"}</span><small>{selected ? selected.entityType : value ? "linked ID" : `${options.length} available`}</small><b>⌄</b></button>{open && <div className="entity-picker-popover"><div className="entity-picker-search"><span>⌕</span><input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or ID" />{value && <button type="button" onClick={() => choose("")}>Clear</button>}</div><div className="entity-picker-options">{filtered.map((entity) => <button className={entity.id === value ? "selected" : ""} type="button" key={entity.id} onClick={() => choose(entity.id)}><span><strong>{entity.localization.en.name || entity.id}</strong><small>{entity.id}</small></span><em>{entity.entityType}</em></button>)}{filtered.length === 0 && <p>No matching entities</p>}</div></div>}</div>;
 }
 
 function OperandEditor({ operand, entities, locale, onChange }: { operand: RuleOperand; entities: ForgeEntity[]; locale: Locale; onChange: (operand: RuleOperand) => void }) {

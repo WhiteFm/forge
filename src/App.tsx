@@ -34,7 +34,7 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [rightPanel, setRightPanel] = useState<"validation" | "json">("validation");
   const [issueScope, setIssueScope] = useState<"all" | "active">("all");
-  const [showRight, setShowRight] = useState(true);
+  const [showRight, setShowRight] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showProject, setShowProject] = useState(false);
   const [toastKey, setToastKey] = useState<"app.saved" | "app.savedChange" | "app.createdDraft" | "app.createdCopy" | "app.deleted" | "app.imported" | "app.importFailed">("app.saved");

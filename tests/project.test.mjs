@@ -76,9 +76,17 @@ test("renders a grouped, sticky class progression table", async () => {
 test("exposes pack-wide validation and a no-code rule builder", async () => {
   const app = await readFile(new URL("../src/App.tsx", import.meta.url), "utf8");
   const editor = await readFile(new URL("../src/VisualRuleBuilder.tsx", import.meta.url), "utf8");
+  const entityEditor = await readFile(new URL("../src/EntityEditor.tsx", import.meta.url), "utf8");
+  const components = await readFile(new URL("../src/components.tsx", import.meta.url), "utf8");
   assert.match(app, /Whole pack/);
   assert.match(app, /openIssue\(issue\.entityId\)/);
   assert.match(app, /BUNDLED_PROJECT_URL/);
   assert.match(editor, /Entity from pack/);
   assert.match(editor, /conditionOperators/);
+  assert.doesNotMatch(entityEditor, /grantedSpellsJson|referenceJson|choiceApplicationsJson/);
+  assert.match(entityEditor, /GrantedSpellsEditor/);
+  assert.match(entityEditor, /ReferenceValueEditor/);
+  assert.match(components, /VisualEffectsEditor/);
+  assert.match(components, /NumberControl/);
+  assert.match(components, /EntityQuantityList/);
 });

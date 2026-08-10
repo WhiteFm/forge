@@ -46,7 +46,7 @@
   "common.add": "+ Добавить",
   "common.remove": "Удалить",
   "common.levels": "Уровни",
-  "common.featureIds": "ID умений через запятую",
+  "common.featureIds": "Умения",
   "common.addLevel": "+ Добавить уровень",
   "common.choice": "Выбор {number}",
   "common.choiceId": "ID выбора",
