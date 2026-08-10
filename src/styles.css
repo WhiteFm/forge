@@ -429,9 +429,25 @@ textarea { min-height: 110px; }
 .property-add { display: grid; grid-template-columns: 1fr 48px; gap: 8px; }
 .compact-visual { display: grid; grid-template-columns: repeat(4,minmax(150px,1fr)) 34px; gap: 8px; align-items: end; border-radius: 13px; }
 
-.visual-rule-builder { border-radius: 11px; background: rgba(10,6,7,.5); }
+.visual-rule-builder { container-type: inline-size; width: 100%; max-width: 100%; border-radius: 11px; background: rgba(10,6,7,.5); }
 .rule-footer code { display: none; }
 .rule-flow, .rule-step, .rule-operand { min-width: 0; }
+.rule-step { grid-template-columns: minmax(0,1fr) 32px; }
+.rule-step:has(.rule-operator) { grid-template-columns: minmax(58px,.32fr) minmax(0,1fr) 32px; }
+.rule-operand { grid-template-columns: minmax(0,.82fr) minmax(0,1.18fr); }
+.rule-step > *, .rule-operand > *, .rule-operand .entity-picker, .rule-operand .entity-picker-trigger { min-width: 0; max-width: 100%; }
+.rule-operand select, .rule-operand input, .rule-operator { width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.rule-remove { align-self: center; margin: 0; }
+.rule-footer { flex-wrap: wrap; }
+.rule-footer .text-action { max-width: 100%; white-space: normal; }
+
+@container (max-width: 390px) {
+  .rule-step, .rule-step:has(.rule-operator) { grid-template-columns: minmax(0,1fr) 32px; align-items: center; }
+  .rule-step > .rule-operator { grid-column: 1 / -1; }
+  .rule-operand { grid-template-columns: minmax(0,1fr); }
+  .rule-operand > :only-child { grid-column: auto; }
+  .rule-remove { grid-column: 2; justify-self: end; }
+}
 .inspector-tabs button:nth-child(2) { display: none; }
 .json-panel { display: none; }
 .material-entry { grid-template-columns: minmax(220px,2fr) minmax(150px,.8fr) minmax(150px,.8fr) minmax(130px,.7fr) 34px; border-radius: 12px; }
