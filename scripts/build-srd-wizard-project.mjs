@@ -98,6 +98,54 @@ const spells = [
 const origins = buildSrdOrigins({ base, effect, choice, item, spell, vs });
 
 const spellCatalog = JSON.parse(await readFile(resolve(root, "scripts/data/dnd55-spells.json"), "utf8"));
+// The workbook marks these spells with M but leaves the material cell empty. Values below come from SRD 5.2.1.
+const officialMaterialCorrections = [
+  { spellId: "srd52.spell.wind-walk", sourceText: "a candle", entries: [{ name: "candle" }] },
+  { spellId: "srd52.spell.wall-of-stone", sourceText: "a cube of granite", entries: [{ name: "cube of granite" }] },
+  { spellId: "srd52.spell.sending", sourceText: "a copper wire", entries: [{ name: "copper wire" }] },
+  { spellId: "srd52.spell.message", sourceText: "a copper wire", entries: [{ name: "copper wire" }] },
+  { spellId: "srd52.spell.gentle-repose", sourceText: "2 Copper Pieces, which the spell consumes", minimumTotalCostCp: 2, sourceCurrency: "CP", consumed: true, entries: [{ name: "Copper Piece", quantity: 2, minimumCostCp: 1, consumed: true }] },
+  { spellId: "srd52.spell.flesh-to-stone", sourceText: "a cockatrice feather", entries: [{ name: "cockatrice feather" }] },
+  { spellId: "srd52.spell.dream", sourceText: "a handful of sand", entries: [{ name: "sand" }] },
+];
+
+const materialId = (name) => `srd52.item.spell-material.${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+for (const correction of officialMaterialCorrections) {
+  const targetSpell = spellCatalog.spells.find((entry) => entry.id === correction.spellId);
+  if (!targetSpell) throw new Error(`Cannot apply SRD material correction: missing ${correction.spellId}`);
+
+  const groupEntries = correction.entries.map((entry) => {
+    const id = materialId(entry.name);
+    let catalogMaterial = spellCatalog.materials.find((material) => material.id === id);
+    if (!catalogMaterial) {
+      catalogMaterial = { id, name: entry.name, usedBy: [], costsCp: [], consumed: false, costCp: entry.minimumCostCp ?? 0 };
+      spellCatalog.materials.push(catalogMaterial);
+    }
+    if (!catalogMaterial.usedBy.includes(correction.spellId)) catalogMaterial.usedBy.push(correction.spellId);
+    if ((entry.minimumCostCp ?? 0) > 0 && !catalogMaterial.costsCp.includes(entry.minimumCostCp)) catalogMaterial.costsCp.push(entry.minimumCostCp);
+    catalogMaterial.costCp = Math.max(catalogMaterial.costCp ?? 0, entry.minimumCostCp ?? 0);
+    catalogMaterial.consumed ||= entry.consumed ?? correction.consumed ?? false;
+    return { itemId: id, quantity: entry.quantity ?? 1, minimumCostCp: entry.minimumCostCp ?? 0, consumed: entry.consumed ?? correction.consumed ?? false };
+  });
+
+  targetSpell.components = {
+    ...targetSpell.components,
+    material: true,
+    materialText: correction.sourceText,
+    materialCostCp: correction.minimumTotalCostCp ?? 0,
+    materialConsumed: correction.consumed ?? false,
+  };
+  targetSpell.materialGroups = [{
+    id: `material-group.${correction.spellId.split(".").at(-1)}.srd52`,
+    sourceText: correction.sourceText,
+    minimumTotalCostCp: correction.minimumTotalCostCp ?? 0,
+    sourceCurrency: correction.sourceCurrency ?? "None",
+    consumed: correction.consumed ?? false,
+    entries: groupEntries,
+  }];
+}
+spellCatalog.stats.materialItems = spellCatalog.materials.length;
+
 const materialItems = spellCatalog.materials.map((material) => ({
   ...base(material.id, "item", material.name, material.name, `A spellcasting material component referenced by ${material.usedBy.length} spell${material.usedBy.length === 1 ? "" : "s"} in the imported SRD catalog.`, `Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: ${material.usedBy.length}.`, ["equipment", "spell-material", "spreadsheet-import"]),
   itemType: "spell_material",

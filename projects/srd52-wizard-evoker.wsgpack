@@ -23,7 +23,7 @@
       "allowDerivativePacks": true,
       "requiresEntitlement": false
     },
-    "createdAt": "2026-08-10T06:18:24.964Z"
+    "createdAt": "2026-08-10T06:24:12.773Z"
   },
   "entities": [
     {
@@ -8073,17 +8073,20 @@
       ],
       "itemType": "spell_material",
       "weightLb": 0,
-      "costCp": 0,
+      "costCp": 1,
       "stackable": true,
-      "consumable": false,
+      "consumable": true,
       "requiresAttunement": false,
       "equipmentSlots": [],
       "requirements": [],
       "materialProfile": {
         "sourceName": "Copper Piece",
-        "observedCostsCp": [],
+        "observedCostsCp": [
+          1
+        ],
         "usedBySpellIds": [
-          "srd52.spell.detect-thoughts"
+          "srd52.spell.detect-thoughts",
+          "srd52.spell.gentle-repose"
         ]
       },
       "effects": []
@@ -11928,7 +11931,8 @@
         "observedCostsCp": [],
         "usedBySpellIds": [
           "srd52.spell.create-or-destroy-water",
-          "srd52.spell.sleep"
+          "srd52.spell.sleep",
+          "srd52.spell.dream"
         ]
       },
       "effects": []
@@ -13158,6 +13162,135 @@
         "observedCostsCp": [],
         "usedBySpellIds": [
           "srd52.spell.detect-poison-and-disease"
+        ]
+      },
+      "effects": []
+    },
+    {
+      "id": "srd52.item.spell-material.candle",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment",
+        "spell-material",
+        "spreadsheet-import"
+      ],
+      "itemType": "spell_material",
+      "weightLb": 0,
+      "costCp": 0,
+      "stackable": true,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "materialProfile": {
+        "sourceName": "candle",
+        "observedCostsCp": [],
+        "usedBySpellIds": [
+          "srd52.spell.wind-walk"
+        ]
+      },
+      "effects": []
+    },
+    {
+      "id": "srd52.item.spell-material.cube-of-granite",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment",
+        "spell-material",
+        "spreadsheet-import"
+      ],
+      "itemType": "spell_material",
+      "weightLb": 0,
+      "costCp": 0,
+      "stackable": true,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "materialProfile": {
+        "sourceName": "cube of granite",
+        "observedCostsCp": [],
+        "usedBySpellIds": [
+          "srd52.spell.wall-of-stone"
+        ]
+      },
+      "effects": []
+    },
+    {
+      "id": "srd52.item.spell-material.copper-wire",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment",
+        "spell-material",
+        "spreadsheet-import"
+      ],
+      "itemType": "spell_material",
+      "weightLb": 0,
+      "costCp": 0,
+      "stackable": true,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "materialProfile": {
+        "sourceName": "copper wire",
+        "observedCostsCp": [],
+        "usedBySpellIds": [
+          "srd52.spell.sending",
+          "srd52.spell.message"
+        ]
+      },
+      "effects": []
+    },
+    {
+      "id": "srd52.item.spell-material.cockatrice-feather",
+      "entityType": "item",
+      "rulesetId": "dnd5e.2024",
+      "sourceId": "srd52.source.core",
+      "sourceVersion": "5.2.1",
+      "licenseId": "license.cc-by-4.0",
+      "status": "published",
+      "tags": [
+        "official",
+        "srd52",
+        "equipment",
+        "spell-material",
+        "spreadsheet-import"
+      ],
+      "itemType": "spell_material",
+      "weightLb": 0,
+      "costCp": 0,
+      "stackable": true,
+      "consumable": false,
+      "requiresAttunement": false,
+      "equipmentSlots": [],
+      "requirements": [],
+      "materialProfile": {
+        "sourceName": "cockatrice feather",
+        "observedCostsCp": [],
+        "usedBySpellIds": [
+          "srd52.spell.flesh-to-stone"
         ]
       },
       "effects": []
@@ -24084,11 +24217,27 @@
         "verbal": true,
         "somatic": true,
         "material": true,
-        "materialText": "",
+        "materialText": "a handful of sand",
         "materialCostCp": 0,
         "materialConsumed": false
       },
-      "materialGroups": [],
+      "materialGroups": [
+        {
+          "id": "material-group.dream.srd52",
+          "sourceText": "a handful of sand",
+          "minimumTotalCostCp": 0,
+          "sourceCurrency": "None",
+          "consumed": false,
+          "entries": [
+            {
+              "itemId": "srd52.item.spell-material.sand",
+              "quantity": 1,
+              "minimumCostCp": 0,
+              "consumed": false
+            }
+          ]
+        }
+      ],
       "ritual": false,
       "attackType": "none",
       "savingThrowAbility": "wis",
@@ -27591,11 +27740,27 @@
         "verbal": true,
         "somatic": true,
         "material": true,
-        "materialText": "",
+        "materialText": "a cockatrice feather",
         "materialCostCp": 0,
         "materialConsumed": false
       },
-      "materialGroups": [],
+      "materialGroups": [
+        {
+          "id": "material-group.flesh-to-stone.srd52",
+          "sourceText": "a cockatrice feather",
+          "minimumTotalCostCp": 0,
+          "sourceCurrency": "None",
+          "consumed": false,
+          "entries": [
+            {
+              "itemId": "srd52.item.spell-material.cockatrice-feather",
+              "quantity": 1,
+              "minimumCostCp": 0,
+              "consumed": false
+            }
+          ]
+        }
+      ],
       "ritual": false,
       "attackType": "none",
       "savingThrowAbility": "con",
@@ -28958,11 +29123,27 @@
         "verbal": true,
         "somatic": true,
         "material": true,
-        "materialText": "",
-        "materialCostCp": 0,
+        "materialText": "2 Copper Pieces, which the spell consumes",
+        "materialCostCp": 2,
         "materialConsumed": true
       },
-      "materialGroups": [],
+      "materialGroups": [
+        {
+          "id": "material-group.gentle-repose.srd52",
+          "sourceText": "2 Copper Pieces, which the spell consumes",
+          "minimumTotalCostCp": 2,
+          "sourceCurrency": "CP",
+          "consumed": true,
+          "entries": [
+            {
+              "itemId": "srd52.item.spell-material.copper-piece",
+              "quantity": 2,
+              "minimumCostCp": 1,
+              "consumed": true
+            }
+          ]
+        }
+      ],
       "ritual": true,
       "attackType": "none",
       "savingThrowAbility": "",
@@ -36661,11 +36842,27 @@
         "verbal": false,
         "somatic": true,
         "material": true,
-        "materialText": "",
+        "materialText": "a copper wire",
         "materialCostCp": 0,
         "materialConsumed": false
       },
-      "materialGroups": [],
+      "materialGroups": [
+        {
+          "id": "material-group.message.srd52",
+          "sourceText": "a copper wire",
+          "minimumTotalCostCp": 0,
+          "sourceCurrency": "None",
+          "consumed": false,
+          "entries": [
+            {
+              "itemId": "srd52.item.spell-material.copper-wire",
+              "quantity": 1,
+              "minimumCostCp": 0,
+              "consumed": false
+            }
+          ]
+        }
+      ],
       "ritual": false,
       "attackType": "none",
       "savingThrowAbility": "",
@@ -43011,11 +43208,27 @@
         "verbal": true,
         "somatic": true,
         "material": true,
-        "materialText": "",
+        "materialText": "a copper wire",
         "materialCostCp": 0,
         "materialConsumed": false
       },
-      "materialGroups": [],
+      "materialGroups": [
+        {
+          "id": "material-group.sending.srd52",
+          "sourceText": "a copper wire",
+          "minimumTotalCostCp": 0,
+          "sourceCurrency": "None",
+          "consumed": false,
+          "entries": [
+            {
+              "itemId": "srd52.item.spell-material.copper-wire",
+              "quantity": 1,
+              "minimumCostCp": 0,
+              "consumed": false
+            }
+          ]
+        }
+      ],
       "ritual": false,
       "attackType": "none",
       "savingThrowAbility": "",
@@ -49468,11 +49681,27 @@
         "verbal": true,
         "somatic": true,
         "material": true,
-        "materialText": "",
+        "materialText": "a cube of granite",
         "materialCostCp": 0,
         "materialConsumed": false
       },
-      "materialGroups": [],
+      "materialGroups": [
+        {
+          "id": "material-group.wall-of-stone.srd52",
+          "sourceText": "a cube of granite",
+          "minimumTotalCostCp": 0,
+          "sourceCurrency": "None",
+          "consumed": false,
+          "entries": [
+            {
+              "itemId": "srd52.item.spell-material.cube-of-granite",
+              "quantity": 1,
+              "minimumCostCp": 0,
+              "consumed": false
+            }
+          ]
+        }
+      ],
       "ritual": false,
       "attackType": "none",
       "savingThrowAbility": "dex",
@@ -50200,11 +50429,27 @@
         "verbal": true,
         "somatic": true,
         "material": true,
-        "materialText": "",
+        "materialText": "a candle",
         "materialCostCp": 0,
         "materialConsumed": false
       },
-      "materialGroups": [],
+      "materialGroups": [
+        {
+          "id": "material-group.wind-walk.srd52",
+          "sourceText": "a candle",
+          "minimumTotalCostCp": 0,
+          "sourceCurrency": "None",
+          "consumed": false,
+          "entries": [
+            {
+              "itemId": "srd52.item.spell-material.candle",
+              "quantity": 1,
+              "minimumCostCp": 0,
+              "consumed": false
+            }
+          ]
+        }
+      ],
       "ritual": false,
       "attackType": "none",
       "savingThrowAbility": "",
@@ -51353,7 +51598,7 @@
       },
       "srd52.item.spell-material.copper-piece": {
         "name": "Copper Piece",
-        "description": "A spellcasting material component referenced by 1 spell in the imported SRD catalog."
+        "description": "A spellcasting material component referenced by 2 spells in the imported SRD catalog."
       },
       "srd52.item.spell-material.crystal": {
         "name": "crystal",
@@ -51821,7 +52066,7 @@
       },
       "srd52.item.spell-material.sand": {
         "name": "sand",
-        "description": "A spellcasting material component referenced by 2 spells in the imported SRD catalog."
+        "description": "A spellcasting material component referenced by 3 spells in the imported SRD catalog."
       },
       "srd52.item.spell-material.sapphire": {
         "name": "sapphire",
@@ -51973,6 +52218,22 @@
       },
       "srd52.item.spell-material.yew-leaf": {
         "name": "yew leaf",
+        "description": "A spellcasting material component referenced by 1 spell in the imported SRD catalog."
+      },
+      "srd52.item.spell-material.candle": {
+        "name": "candle",
+        "description": "A spellcasting material component referenced by 1 spell in the imported SRD catalog."
+      },
+      "srd52.item.spell-material.cube-of-granite": {
+        "name": "cube of granite",
+        "description": "A spellcasting material component referenced by 1 spell in the imported SRD catalog."
+      },
+      "srd52.item.spell-material.copper-wire": {
+        "name": "copper wire",
+        "description": "A spellcasting material component referenced by 2 spells in the imported SRD catalog."
+      },
+      "srd52.item.spell-material.cockatrice-feather": {
+        "name": "cockatrice feather",
         "description": "A spellcasting material component referenced by 1 spell in the imported SRD catalog."
       },
       "srd52.spell.acid-arrow": {
@@ -53967,7 +54228,7 @@
       },
       "srd52.item.spell-material.copper-piece": {
         "name": "Copper Piece",
-        "description": "Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: 1."
+        "description": "Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: 2."
       },
       "srd52.item.spell-material.crystal": {
         "name": "crystal",
@@ -54435,7 +54696,7 @@
       },
       "srd52.item.spell-material.sand": {
         "name": "sand",
-        "description": "Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: 2."
+        "description": "Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: 3."
       },
       "srd52.item.spell-material.sapphire": {
         "name": "sapphire",
@@ -54587,6 +54848,22 @@
       },
       "srd52.item.spell-material.yew-leaf": {
         "name": "yew leaf",
+        "description": "Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: 1."
+      },
+      "srd52.item.spell-material.candle": {
+        "name": "candle",
+        "description": "Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: 1."
+      },
+      "srd52.item.spell-material.cube-of-granite": {
+        "name": "cube of granite",
+        "description": "Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: 1."
+      },
+      "srd52.item.spell-material.copper-wire": {
+        "name": "copper wire",
+        "description": "Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: 2."
+      },
+      "srd52.item.spell-material.cockatrice-feather": {
+        "name": "cockatrice feather",
         "description": "Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: 1."
       },
       "srd52.spell.acid-arrow": {

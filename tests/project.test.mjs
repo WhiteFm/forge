@@ -48,9 +48,15 @@ test("includes the SRD Wizard, Evoker, and complete Character Origins project", 
   const conjureCelestial = spells.find((spell) => spell.id === "srd52.spell.conjure-celestial");
   assert.deepEqual(conjureCelestial.spellCategories.sort(), ["damage", "healing"]);
   const spellMaterials = project.entities.filter((entity) => entity.entityType === "item" && entity.itemType === "spell_material");
-  assert.equal(spellMaterials.length, 175);
-  assert.ok(spells.filter((spell) => spell.components.material).every((spell) => spell.materialGroups.length > 0 || !spell.components.materialText));
+  assert.equal(spellMaterials.length, 179);
+  assert.ok(spells.filter((spell) => spell.components.material).every((spell) => spell.materialGroups.length > 0));
   assert.ok(spells.flatMap((spell) => spell.materialGroups ?? []).flatMap((group) => group.entries).every((entry) => spellMaterials.some((item) => item.id === entry.itemId)));
+  const messageWire = spells.find((spell) => spell.id === "srd52.spell.message").materialGroups[0].entries[0].itemId;
+  assert.equal(messageWire, "srd52.item.spell-material.copper-wire");
+  assert.equal(spells.find((spell) => spell.id === "srd52.spell.sending").materialGroups[0].entries[0].itemId, messageWire);
+  const gentleRepose = spells.find((spell) => spell.id === "srd52.spell.gentle-repose");
+  assert.equal(gentleRepose.materialGroups[0].minimumTotalCostCp, 2);
+  assert.deepEqual(gentleRepose.materialGroups[0].entries[0], { itemId: "srd52.item.spell-material.copper-piece", quantity: 2, minimumCostCp: 1, consumed: true });
   const soldier = project.entities.find((entity) => entity.id === "srd52.background.soldier");
   assert.deepEqual(soldier.abilityScoreIncrease.distributions, [[2, 1], [1, 1, 1]]);
   assert.equal(soldier.equipmentOptions[0].choiceItems[0].choiceId, "choice.soldier.gaming-set");
