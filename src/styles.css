@@ -150,13 +150,28 @@ select { color-scheme: dark; }
 .levels { margin: 20px; }
 .levels-head { display: flex; justify-content: space-between; color: var(--muted); margin-bottom: 9px; }
 .levels-head small { color: var(--faint); }
-.progression-table { margin: 20px; overflow-x: auto; border: 1px solid var(--line); }
-.progression-row { display: grid; grid-template-columns: 62px 50px 76px 88px repeat(9, 48px); min-width: 708px; border-bottom: 1px solid var(--line); }
-.progression-row:last-child { border-bottom: 0; }
-.progression-row > * { min-width: 0; height: 34px; border: 0; border-right: 1px solid var(--line); border-radius: 0; text-align: center; padding: 4px; }
-.progression-row > *:last-child { border-right: 0; }
-.progression-head { position: sticky; top: 0; z-index: 1; background: var(--surface-2); }
-.progression-head strong { display: grid; place-items: center; color: var(--muted); font: 700 .58rem/1 var(--sans); text-transform: uppercase; letter-spacing: .04em; }
+.progression-table { margin: 20px; overflow: auto; max-height: min(68vh, 760px); border: 1px solid var(--line); border-radius: 10px; background: #120b0c; box-shadow: 0 18px 44px rgba(0,0,0,.22); }
+.class-progression { width: 100%; min-width: 812px; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+.class-progression th, .class-progression td { width: 48px; height: 38px; padding: 0; border-right: 1px solid rgba(255,255,255,.055); border-bottom: 1px solid rgba(255,255,255,.055); text-align: center; }
+.class-progression th:nth-child(1), .class-progression td:nth-child(1) { width: 70px; }
+.class-progression th:nth-child(2), .class-progression td:nth-child(2) { width: 56px; }
+.class-progression th:nth-child(3), .class-progression td:nth-child(3) { width: 82px; }
+.class-progression th:nth-child(4), .class-progression td:nth-child(4) { width: 98px; }
+.class-progression thead th { position: sticky; top: 31px; z-index: 5; color: var(--muted); background: #201315; font: 700 .6rem/1 var(--sans); text-transform: uppercase; letter-spacing: .05em; }
+.class-progression .progression-groups th { top: 0; height: 31px; padding: 0 12px; color: var(--gold); background: linear-gradient(90deg,#2b1719,#1d1213); text-align: left; letter-spacing: .11em; }
+.class-progression .progression-groups th:last-child { text-align: center; color: var(--red-pale); }
+.class-progression tbody tr:nth-child(even) td { background-color: rgba(255,255,255,.018); }
+.class-progression tbody tr:hover td { background-color: rgba(226,38,45,.075); }
+.class-progression input { width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; color: var(--text); background: transparent; text-align: center; font: 650 .72rem/1 var(--sans); }
+.class-progression input:hover { background: rgba(255,255,255,.035); }
+.class-progression input:focus { position: relative; z-index: 10; outline: 1px solid var(--red-light); background: #2b1719; box-shadow: inset 0 0 0 2px rgba(226,38,45,.16); }
+.class-progression .sticky-column { position: sticky; z-index: 3; background: #181011; }
+.class-progression thead .sticky-column { z-index: 8; background: #201315; }
+.class-progression .sticky-1 { left: 0; }.class-progression .sticky-2 { left: 70px; }.class-progression .sticky-3 { left: 126px; }.class-progression .sticky-4 { left: 208px; box-shadow: 8px 0 16px rgba(0,0,0,.16); }
+.class-progression .level-cell span { position: absolute; left: 25px; top: 9px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: #211207; background: var(--gold); font: 800 .6rem/1 var(--sans); pointer-events: none; }
+.class-progression .level-cell input { color: transparent; caret-color: var(--text); }
+.class-progression .slot-cell input[value="0"] { color: var(--faint); }
+.class-progression .slot-tier-1 { box-shadow: inset 0 2px #d6b44b; }.class-progression .slot-tier-2 { box-shadow: inset 0 2px #df8d45; }.class-progression .slot-tier-3 { box-shadow: inset 0 2px #dc5f4d; }.class-progression .slot-tier-4 { box-shadow: inset 0 2px #cc4050; }.class-progression .slot-tier-5 { box-shadow: inset 0 2px #b6325d; }.class-progression .slot-tier-6 { box-shadow: inset 0 2px #91336b; }.class-progression .slot-tier-7 { box-shadow: inset 0 2px #70396f; }.class-progression .slot-tier-8 { box-shadow: inset 0 2px #523865; }.class-progression .slot-tier-9 { box-shadow: inset 0 2px #392e50; }
 .level-row { display: grid; grid-template-columns: 64px 1fr 34px; gap: 7px; margin-bottom: 7px; }
 .level-number { text-align: center; }
 .cards-list { display: flex; flex-direction: column; gap: 12px; }

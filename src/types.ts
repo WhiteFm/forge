@@ -44,6 +44,29 @@ export interface LevelEntry {
   featureIds: string[];
 }
 
+export interface ChoiceApplication {
+  choiceId: string;
+  target: string;
+  operation: "grant" | "grant_proficiency" | "set" | "add";
+  valueTemplate: string;
+}
+
+export interface AbilityScoreIncrease {
+  allowedAbilities: AbilityId[];
+  distributions: number[][];
+  maximumScore: number;
+}
+
+export interface GrantedSpell {
+  spellId: string;
+  atCharacterLevel: number;
+  alwaysPrepared: boolean;
+  freeUsesFormula: string;
+  recovery: "short_rest" | "long_rest" | "both" | "dawn" | "manual" | "never";
+  allowSpellSlots: boolean;
+  spellcastingAbilityOptions: AbilityId[];
+}
+
 export interface ClassProgressionEntry {
   level: number;
   proficiencyBonus: number;
@@ -67,9 +90,12 @@ export interface ForgeEntity {
   referenceValue?: Record<string, unknown>;
 
   sizeOptions?: string[];
+  creatureTypeId?: string;
+  lifespanYears?: number;
   baseSpeeds?: Record<string, number>;
   featureIds?: string[];
   choices?: ChoiceDefinition[];
+  choiceApplications?: ChoiceApplication[];
 
   hitDie?: "d6" | "d8" | "d10" | "d12";
   primaryAbilities?: AbilityId[];
@@ -88,18 +114,22 @@ export interface ForgeEntity {
   subclassLevels?: LevelEntry[];
 
   abilityOptions?: AbilityId[];
+  abilityScoreIncrease?: AbilityScoreIncrease;
   featId?: string;
+  featChoiceSelections?: Array<{ choiceId: string; optionIds: string[] }>;
   proficiencyGrants?: string[];
-  equipmentOptions?: Array<{ id: string; items: Array<{ itemId: string; quantity: number }>; currencyCp: number }>;
+  equipmentOptions?: Array<{ id: string; items: Array<{ itemId: string; quantity: number }>; choiceItems?: Array<{ choiceId: string; quantity: number }>; currencyCp: number }>;
 
   featCategory?: "origin" | "general" | "fighting_style" | "epic_boon" | "custom";
   repeatable?: boolean;
+  repeatConstraint?: string;
   prerequisites?: string[];
 
   mode?: "always_on" | "manual_unlimited" | "limited_use";
   activation?: "none" | "action" | "bonus_action" | "reaction" | "free_action" | "special";
-  resource?: { id: string; maximumFormula: string; recovery: "short_rest" | "long_rest" | "both" | "dawn" | "manual" | "never"; recoveryFormula: string };
+  resource?: { id: string; maximumFormula: string; recovery: "short_rest" | "long_rest" | "both" | "dawn" | "turn_start" | "initiative" | "initiative_or_rest" | "manual" | "never"; recoveryFormula: string };
   effects?: Effect[];
+  spellGrants?: GrantedSpell[];
   automationLevel?: "full" | "partial" | "manual";
 
   itemType?: "gear" | "weapon" | "armor" | "shield" | "tool" | "consumable" | "container" | "wondrous" | "currency" | "custom";

@@ -189,5 +189,17 @@
   "editor.scaling": "Scaling",
   "editor.atLevel": "At level",
   "editor.addScaling": "+ Add scaling",
-  "editor.spellEffects": "Spell effects"
+  "editor.spellEffects": "Spell effects",
+  "editor.creatureType": "Creature type ID",
+  "editor.lifespan": "Typical lifespan (years)",
+  "editor.abilityDistributions": "Ability increase patterns",
+  "editor.abilityMaximum": "Ability score maximum",
+  "editor.featPreset": "Preset feat choices",
+  "editor.repeatConstraint": "Repeat constraint",
+  "editor.grantedSpells": "Granted spells",
+  "editor.grantedSpellsJson": "Spell grants (structured JSON)",
+  "editor.choiceItems": "Items from choices",
+  "editor.choiceItemsHint": "choice.id:quantity — binds equipment to an earlier choice",
+  "editor.choiceApplications": "Choice applications",
+  "editor.choiceApplicationsJson": "How selected values are applied (structured JSON)"
 }

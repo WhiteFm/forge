@@ -189,5 +189,17 @@
   "editor.scaling": "Масштабирование",
   "editor.atLevel": "На уровне",
   "editor.addScaling": "+ Добавить масштабирование",
-  "editor.spellEffects": "Эффекты заклинания"
+  "editor.spellEffects": "Эффекты заклинания",
+  "editor.creatureType": "ID типа существа",
+  "editor.lifespan": "Обычная продолжительность жизни (лет)",
+  "editor.abilityDistributions": "Схемы повышения характеристик",
+  "editor.abilityMaximum": "Максимум характеристики",
+  "editor.featPreset": "Предустановленные выборы черты",
+  "editor.repeatConstraint": "Ограничение повторного выбора",
+  "editor.grantedSpells": "Выдаваемые заклинания",
+  "editor.grantedSpellsJson": "Выдача заклинаний (структурированный JSON)",
+  "editor.choiceItems": "Предметы из выборов",
+  "editor.choiceItemsHint": "choice.id:количество — связывает снаряжение с предыдущим выбором",
+  "editor.choiceApplications": "Применение выборов",
+  "editor.choiceApplicationsJson": "Как применяются выбранные значения (структурированный JSON)"
 }

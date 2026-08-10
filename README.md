@@ -17,9 +17,19 @@
 
 Механика хранится в атомарных эффектах: цель, операция, значение, формула, условия, режим применения, ресурс, восстановление, сложение и приоритет. Текст `_ru` и `_en` не участвует в математике.
 
-## SRD 5.2.1 Wizard example
+## SRD 5.2.1 Character Origins + Wizard project
 
-Import `projects/srd52-wizard-evoker.forge.json` through the Forge **Import** button. The editable project contains the Wizard, Evoker, all class and subclass features, the complete level 1–20 spell-slot table, both starting-equipment choices, every item inside the Scholar's Pack, and seven spells covering healing, attacks, instant areas, persistent areas, reactions, and rituals. English is the default locale; Russian remains available from the EN/RU switch.
+Import `projects/srd52-wizard-evoker.forge.json` through the Forge **Import** button. This single editable project contains:
+
+- all 9 SRD 5.2.1 species and their lineages, ancestry choices, resources, senses, resistances, level-gated traits, and granted spells;
+- all 4 backgrounds, both equipment choices, their Origin feats, preset feat choices, tools, skills, and dependent Gaming Set selection;
+- all 17 SRD feats across Origin, General, Fighting Style, and Epic Boon categories;
+- the Wizard, Evoker, all class/subclass features, and the complete level 1–20 spell-slot table;
+- 29 items and 27 spells, including every fixed spell granted by the included species.
+
+English is the default locale; Russian remains available from the EN/RU switch. The project validates with zero errors and zero warnings.
+
+The Character Origins update also extends the portable contract with structured `creatureTypeId`, `lifespanYears`, `abilityScoreIncrease`, `featChoiceSelections`, `choiceApplications`, equipment `choiceItems`, `repeatConstraint`, `spellGrants`, and per-turn/Initiative resource recovery modes. These fields keep selections and derived mechanics portable instead of encoding them only in prose.
 
 Regenerate the editable project and canonical pack with:
 

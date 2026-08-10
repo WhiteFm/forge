@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildSrdOrigins } from "./srd-origins-data.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = resolve(root, "projects");
@@ -94,9 +95,11 @@ const spells = [
   spell("srd52.spell.detect-magic", "Detect Magic", "Обнаружение магии", "For up to 10 minutes, sense magical effects within 30 feet. A later Magic action reveals a faint aura on visible affected creatures or objects and the school of a spell-created effect. The spell can be cast as a Ritual.", "До 10 минут ощущайте магические эффекты в пределах 30 футов. Последующее Магическое действие показывает слабую ауру на видимых затронутых существах и предметах, а также школу эффекта, созданного заклинанием. Можно сотворять ритуалом.", 1, "spell_school.divination", ["srd52.class.bard","srd52.class.cleric","srd52.class.druid","srd52.class.paladin","srd52.class.ranger","srd52.class.sorcerer","srd52.class.warlock","srd52.class.wizard"], { actionType: "action", value: 1, reactionTrigger: "" }, { type: "self", distanceFeet: 0 }, { shape: "emanation", sizeFeet: 30 }, { type: "minutes", value: 10, concentration: true }, vs, { ritual: true, effects: [effect("effect.detect-magic.sense", "senses.magic", "grant", "number", "30", { activation: "manual_unlimited", actionCost: "action", durationType: "minutes", durationValue: 10 })] }),
 ];
 
+const origins = buildSrdOrigins({ base, effect, choice, item, spell, vs });
+
 const project = {
-  schemaVersion: "1.0.0", projectId: "srd52-wizard-evoker", pack: { id: "srd52.pack.wizard-evoker", version: "1.0.0", name: "SRD 5.2.1 Wizard & Evoker", rulesetId: "dnd5e.2024", sourceId: "srd52.source.core", licenseId: "license.cc-by-4.0", author: "WSGuild", defaultLocale: "en", attribution },
-  entities: [wizard, evoker, ...features, ...evokerFeatures, ...items, ...spells], updatedAt: new Date().toISOString(),
+  schemaVersion: "1.1.0", projectId: "srd52-wizard-evoker", pack: { id: "srd52.pack.wizard-evoker", version: "1.1.0", name: "SRD 5.2.1 Character Origins, Wizard & Evoker", rulesetId: "dnd5e.2024", sourceId: "srd52.source.core", licenseId: "license.cc-by-4.0", author: "WSGuild", defaultLocale: "en", attribution },
+  entities: [wizard, evoker, ...features, ...evokerFeatures, ...origins.species, ...origins.backgrounds, ...origins.feats, ...origins.speciesFeatures, ...origins.featFeatures, ...items, ...origins.originItems, ...spells, ...origins.originSpells], updatedAt: new Date().toISOString(),
 };
 
 function canonicalEffect(value) {

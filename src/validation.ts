@@ -1,9 +1,9 @@
 import type { Effect, ForgeEntity, ForgeProject, ValidationIssue } from "./types";
 
 const idPattern = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)+$/;
-const targetPattern = /^[a-z][a-z0-9]*(?:\.[A-Za-z0-9_*-]+)+$/;
+const targetPattern = /^[a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9_*-]+)+$/;
 const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
-const allowedFunctions = new Set(["character_level", "class_level", "ability_score", "ability_modifier", "proficiency_bonus", "min", "max", "floor", "ceil", "abs"]);
+const allowedFunctions = new Set(["character_level", "class_level", "ability_score", "ability_modifier", "proficiency_bonus", "has_feature", "min", "max", "floor", "ceil", "abs"]);
 
 export function validateFormula(formula: string): string | null {
   if (!formula.trim()) return "Формула не заполнена";
@@ -70,7 +70,9 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
       if (entity.casterProgression !== "none" && !entity.spellcastingAbility) issues.push({ severity: "error", entityId: entity.id, path: "spellcastingAbility", message: "Заклинательному классу нужна базовая характеристика" });
     }
     if (entity.entityType === "subclass" && !entity.classId) issues.push({ severity: "error", entityId: entity.id, path: "classId", message: "Подкласс должен ссылаться на базовый класс" });
+    if (entity.entityType === "species" && !entity.creatureTypeId) issues.push({ severity: "error", entityId: entity.id, path: "creatureTypeId", message: "Виду нужен тип существа" });
     if (entity.entityType === "background" && entity.abilityOptions?.length !== 3) issues.push({ severity: "error", entityId: entity.id, path: "abilityOptions", message: "Предыстория должна предлагать ровно 3 характеристики" });
+    if (entity.entityType === "background" && (!entity.abilityScoreIncrease || entity.abilityScoreIncrease.allowedAbilities.length !== 3 || !entity.abilityScoreIncrease.distributions.length)) issues.push({ severity: "error", entityId: entity.id, path: "abilityScoreIncrease", message: "Предыстории нужна схема повышения характеристик" });
     if (entity.entityType === "feature" && entity.mode === "limited_use" && (!entity.resource?.id || !entity.resource.maximumFormula)) issues.push({ severity: "error", entityId: entity.id, path: "resource", message: "Активному умению нужен ресурс, максимум и восстановление" });
     if (entity.entityType === "item") {
       if ((entity.weightLb ?? 0) < 0 || (entity.costCp ?? 0) < 0) issues.push({ severity: "error", entityId: entity.id, path: "item", message: "Вес и стоимость не могут быть отрицательными" });
@@ -93,6 +95,8 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
       if (effectIds.has(effect.id)) issues.push({ severity: "error", entityId: entity.id, path: `effects.${effectIndex}.id`, message: "ID эффекта дублируется внутри сущности" });
       effectIds.add(effect.id);
     }
+    const choiceIds = new Set((entity.choices ?? []).map((choice) => choice.id));
+    for (const [applicationIndex, application] of (entity.choiceApplications ?? []).entries()) if (!choiceIds.has(application.choiceId)) issues.push({ severity: "error", entityId: entity.id, path: `choiceApplications.${applicationIndex}.choiceId`, message: "Применение ссылается на отсутствующий выбор" });
   }
 
   const references: Array<{ owner: ForgeEntity; id: string; path: string }> = [];
@@ -102,6 +106,7 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
     for (const level of entity.subclassLevels ?? []) for (const id of level.featureIds) references.push({ owner: entity, id, path: `subclassLevels.${level.level}` });
     if (entity.classId) references.push({ owner: entity, id: entity.classId, path: "classId" });
     if (entity.featId) references.push({ owner: entity, id: entity.featId, path: "featId" });
+    for (const [grantIndex, grant] of (entity.spellGrants ?? []).entries()) references.push({ owner: entity, id: grant.spellId, path: `spellGrants.${grantIndex}.spellId` });
   }
   for (const reference of references) if (reference.id && !ids.has(reference.id) && !reference.id.startsWith("srd52.")) issues.push({ severity: "warning", entityId: reference.owner.id, path: reference.path, message: `Ссылка ${reference.id} не найдена в этом пакете` });
   return locale === "en" ? issues.map((issue) => ({ ...issue, message: translateValidationMessage(issue.message) })) : issues;
@@ -121,7 +126,10 @@ const validationTranslations: Record<string, string> = {
   "Выберите минимум одну основную характеристику": "Select at least one primary ability",
   "Заклинательному классу нужна базовая характеристика": "A spellcasting class needs a spellcasting ability",
   "Подкласс должен ссылаться на базовый класс": "A subclass must reference its base class",
+  "Виду нужен тип существа": "A species needs a creature type",
   "Предыстория должна предлагать ровно 3 характеристики": "A background must offer exactly 3 abilities",
+  "Предыстории нужна схема повышения характеристик": "A background needs an ability-score increase scheme",
+  "Применение ссылается на отсутствующий выбор": "A choice application references a missing choice",
   "Активному умению нужен ресурс, максимум и восстановление": "A limited-use feature needs a resource, maximum, and recovery",
   "Вес и стоимость не могут быть отрицательными": "Weight and cost cannot be negative",
   "Оружию нужен профиль урона": "A weapon needs a damage profile",
