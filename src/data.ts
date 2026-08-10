@@ -18,11 +18,11 @@ export const entityTypeLabels: Record<EntityType, { ru: string; en: string }> = 
 
 export const targetSuggestions = [
   "abilities.str.score", "abilities.dex.score", "abilities.con.score", "abilities.int.score", "abilities.wis.score", "abilities.cha.score",
-  "combat.initiative", "combat.armor_class", "combat.hit_points.maximum", "combat.saving_throws.*", "combat.attacks.*.bonus",
+  "combat.initiative", "combat.armor_class", "combat.hit_points.current", "combat.hit_points.maximum", "combat.temporary_hit_points", "combat.target.hit_points.current", "combat.area.targets.hit_points.current", "combat.saving_throws.*", "combat.attacks.*.bonus",
   "skills.*.proficiency", "skills.*.checks", "proficiencies.weapons", "proficiencies.armor", "proficiencies.tools",
   "movement.walk", "movement.fly", "movement.swim", "movement.climb", "movement.burrow",
   "senses.darkvision", "defenses.resistances", "defenses.immunities", "defenses.vulnerabilities",
-  "spellcasting.save_dc", "spellcasting.attack_bonus", "spellcasting.slots.*", "inventory.carry_capacity",
+  "spellcasting.save_dc", "spellcasting.attack_bonus", "spellcasting.slots.*", "spellcasting.prepared.spells", "spellcasting.spellbook.spells", "inventory.carry_capacity", "inventory.items", "inventory.currency",
 ];
 
 export const emptyEffect = (index = 1): Effect => ({
@@ -31,6 +31,7 @@ export const emptyEffect = (index = 1): Effect => ({
   operation: "add",
   valueType: "formula",
   value: "proficiency_bonus()",
+  valueExpression: { operands: [{ kind: "proficiency_bonus", value: "" }], operators: [] },
   activation: "always_on",
   actionCost: "none",
   trigger: "",
@@ -79,7 +80,7 @@ export function createEntity(entityType: EntityType, number: number): ForgeEntit
   if (entityType === "feat") return { ...common, featCategory: "general", repeatable: false, repeatConstraint: "", prerequisites: [], featureIds: [], choices: [] };
   if (entityType === "feature") return { ...common, mode: "always_on", activation: "none", prerequisites: [], choices: [], effects: [emptyEffect()], automationLevel: "full" };
   if (entityType === "item") return { ...common, itemType: "gear", weightLb: 0, costCp: 0, stackable: false, consumable: false, requiresAttunement: false, equipmentSlots: [], requirements: [], effects: [] };
-  if (entityType === "spell") return { ...common, spellLevel: 0, schoolId: "spell_school.evocation", casting: { actionType: "action", value: 1, reactionTrigger: "" }, range: { type: "distance", distanceFeet: 60 }, area: { shape: "none", sizeFeet: 0 }, duration: { type: "instant", value: 1, concentration: false }, components: { verbal: true, somatic: true, material: false, materialText: "", materialCostCp: 0, materialConsumed: false }, ritual: false, attackType: "none", savingThrowAbility: "", effects: [], scaling: [], automationLevel: "full" };
+  if (entityType === "spell") return { ...common, spellLevel: 0, schoolId: "spell_school.evocation", casting: { actionType: "action", value: 1, reactionTrigger: "", raw: "Action" }, range: { type: "distance", distanceFeet: 60, distanceValue: 60, distanceUnit: "feet", raw: "60 feet" }, area: { shape: "none", sizeFeet: 0 }, areas: [{ shape: "none", sizeFeet: 0, rawShape: "None", rawSize: "None", dimensionsFeet: [] }], duration: { type: "instant", value: 1, concentration: false, raw: "Instantaneous" }, components: { verbal: true, somatic: true, material: false, materialText: "", materialCostCp: 0, materialConsumed: false }, materialGroups: [], spellCategories: ["neutral"], spellProfiles: [], ritual: false, attackType: "none", savingThrowAbility: "", effects: [], scaling: [], automationLevel: "full" };
   return { ...common, referenceCategory: "ability", referenceValue: { code: "custom", order: 100 } };
 }
 

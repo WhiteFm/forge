@@ -44,6 +44,8 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
   if (!idPattern.test(project.pack.id)) issues.push({ severity: "error", path: "pack.id", message: "ID пакета имеет неверный формат" });
   if (!semverPattern.test(project.pack.version)) issues.push({ severity: "error", path: "pack.version", message: "Версия должна иметь формат 1.0.0" });
   const ids = new Set<string>();
+  const allIds = new Set(project.entities.map((entity) => entity.id));
+  const entityById = new Map(project.entities.map((entity) => [entity.id, entity]));
 
   for (const entity of project.entities) {
     if (!idPattern.test(entity.id)) issues.push({ severity: "error", entityId: entity.id, path: "id", message: "ID должен содержать namespace, тип и машинное имя" });
@@ -87,6 +89,15 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
       if ((entity.spellLevel ?? -1) < 0 || (entity.spellLevel ?? 10) > 9) issues.push({ severity: "error", entityId: entity.id, path: "spellLevel", message: "Уровень заклинания должен быть от 0 до 9" });
       if (!entity.schoolId) issues.push({ severity: "error", entityId: entity.id, path: "schoolId", message: "Укажите школу заклинания" });
       if (entity.range?.type === "distance" && entity.range.distanceFeet <= 0) issues.push({ severity: "error", entityId: entity.id, path: "range", message: "Для дистанции укажите число футов" });
+      if (entity.components?.material && entity.components.materialText && !(entity.materialGroups ?? []).length) issues.push({ severity: "error", entityId: entity.id, path: "materialGroups", message: "Материальные компоненты должны быть связаны с предметами инвентаря" });
+      for (const [groupIndex, group] of (entity.materialGroups ?? []).entries()) {
+        if (!group.entries.length) issues.push({ severity: "error", entityId: entity.id, path: `materialGroups.${groupIndex}.entries`, message: "Добавьте хотя бы один предмет материального компонента" });
+        for (const [entryIndex, entry] of group.entries.entries()) {
+          const materialItem = entityById.get(entry.itemId);
+          if (!materialItem || materialItem.entityType !== "item") issues.push({ severity: "error", entityId: entity.id, path: `materialGroups.${groupIndex}.entries.${entryIndex}.itemId`, message: "Материальный компонент должен ссылаться на предмет этого пака" });
+          if (entry.quantity < 1) issues.push({ severity: "error", entityId: entity.id, path: `materialGroups.${groupIndex}.entries.${entryIndex}.quantity`, message: "Количество материального компонента должно быть не меньше 1" });
+        }
+      }
     }
 
     const effectIds = new Set<string>();
@@ -108,7 +119,7 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
     if (entity.featId) references.push({ owner: entity, id: entity.featId, path: "featId" });
     for (const [grantIndex, grant] of (entity.spellGrants ?? []).entries()) references.push({ owner: entity, id: grant.spellId, path: `spellGrants.${grantIndex}.spellId` });
   }
-  for (const reference of references) if (reference.id && !ids.has(reference.id) && !reference.id.startsWith("srd52.")) issues.push({ severity: "warning", entityId: reference.owner.id, path: reference.path, message: `Ссылка ${reference.id} не найдена в этом пакете` });
+  for (const reference of references) if (reference.id && !allIds.has(reference.id) && !reference.id.startsWith("srd52.")) issues.push({ severity: "warning", entityId: reference.owner.id, path: reference.path, message: `Ссылка ${reference.id} не найдена в этом пакете` });
   return locale === "en" ? issues.map((issue) => ({ ...issue, message: translateValidationMessage(issue.message) })) : issues;
 }
 
@@ -137,6 +148,10 @@ const validationTranslations: Record<string, string> = {
   "Уровень заклинания должен быть от 0 до 9": "Spell level must be between 0 and 9",
   "Укажите школу заклинания": "Select a spell school",
   "Для дистанции укажите число футов": "A distance range needs a value in feet",
+  "Материальные компоненты должны быть связаны с предметами инвентаря": "Material components must be linked to inventory items",
+  "Добавьте хотя бы один предмет материального компонента": "Add at least one material-component item",
+  "Материальный компонент должен ссылаться на предмет этого пака": "A material component must reference an item in this pack",
+  "Количество материального компонента должно быть не меньше 1": "Material-component quantity must be at least 1",
   "ID эффекта должен быть стабильным техническим идентификатором": "Effect ID must be a stable technical identifier",
   "Цель эффекта должна иметь вид combat.initiative": "Effect target must use a path such as combat.initiative",
   "Укажите значение эффекта": "Enter an effect value",

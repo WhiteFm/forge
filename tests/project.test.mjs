@@ -41,10 +41,16 @@ test("includes the SRD Wizard, Evoker, and complete Character Origins project", 
   assert.deepEqual(project.entities.filter((entity) => entity.entityType === "background").map((entity) => entity.id).sort(), ["acolyte", "criminal", "sage", "soldier"].map((id) => `srd52.background.${id}`).sort());
   assert.equal(project.entities.filter((entity) => entity.entityType === "feat").length, 17);
   assert.ok(["alert", "magic-initiate", "savage-attacker", "skilled", "ability-score-improvement", "grappler", "archery", "defense", "great-weapon-fighting", "two-weapon-fighting", "boon-of-combat-prowess", "boon-of-dimensional-travel", "boon-of-fate", "boon-of-irresistible-offense", "boon-of-spell-recall", "boon-of-the-night-spirit", "boon-of-truesight"].every((id) => project.entities.some((entity) => entity.id === `srd52.feat.${id}`)));
-  assert.equal(spells.length, 27);
+  assert.equal(spells.length, 334);
   assert.ok(spells.some((spell) => spell.id === "srd52.spell.cure-wounds"));
   assert.ok(spells.some((spell) => spell.id === "srd52.spell.wall-of-fire"));
   assert.ok(spells.some((spell) => spell.id === "srd52.spell.hellish-rebuke"));
+  const conjureCelestial = spells.find((spell) => spell.id === "srd52.spell.conjure-celestial");
+  assert.deepEqual(conjureCelestial.spellCategories.sort(), ["damage", "healing"]);
+  const spellMaterials = project.entities.filter((entity) => entity.entityType === "item" && entity.itemType === "spell_material");
+  assert.equal(spellMaterials.length, 175);
+  assert.ok(spells.filter((spell) => spell.components.material).every((spell) => spell.materialGroups.length > 0 || !spell.components.materialText));
+  assert.ok(spells.flatMap((spell) => spell.materialGroups ?? []).flatMap((group) => group.entries).every((entry) => spellMaterials.some((item) => item.id === entry.itemId)));
   const soldier = project.entities.find((entity) => entity.id === "srd52.background.soldier");
   assert.deepEqual(soldier.abilityScoreIncrease.distributions, [[2, 1], [1, 1, 1]]);
   assert.equal(soldier.equipmentOptions[0].choiceItems[0].choiceId, "choice.soldier.gaming-set");
@@ -59,4 +65,14 @@ test("renders a grouped, sticky class progression table", async () => {
   assert.match(component, /Spell slots by level/);
   assert.match(component, /class-progression/);
   assert.match(css, /\.class-progression \.sticky-1/);
+});
+
+test("exposes pack-wide validation and a no-code rule builder", async () => {
+  const app = await readFile(new URL("../src/App.tsx", import.meta.url), "utf8");
+  const editor = await readFile(new URL("../src/VisualRuleBuilder.tsx", import.meta.url), "utf8");
+  assert.match(app, /Whole pack/);
+  assert.match(app, /openIssue\(issue\.entityId\)/);
+  assert.match(app, /BUNDLED_PROJECT_URL/);
+  assert.match(editor, /Entity from pack/);
+  assert.match(editor, /conditionOperators/);
 });

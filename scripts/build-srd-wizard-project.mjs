@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildSrdOrigins } from "./srd-origins-data.mjs";
@@ -97,9 +97,60 @@ const spells = [
 
 const origins = buildSrdOrigins({ base, effect, choice, item, spell, vs });
 
+const spellCatalog = JSON.parse(await readFile(resolve(root, "scripts/data/dnd55-spells.json"), "utf8"));
+const materialItems = spellCatalog.materials.map((material) => ({
+  ...base(material.id, "item", material.name, material.name, `A spellcasting material component referenced by ${material.usedBy.length} spell${material.usedBy.length === 1 ? "" : "s"} in the imported SRD catalog.`, `Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: ${material.usedBy.length}.`, ["equipment", "spell-material", "spreadsheet-import"]),
+  itemType: "spell_material",
+  weightLb: 0,
+  costCp: material.costCp,
+  stackable: true,
+  consumable: material.consumed,
+  requiresAttunement: false,
+  equipmentSlots: [],
+  requirements: [],
+  effects: [],
+  materialProfile: { sourceName: material.name, observedCostsCp: material.costsCp, usedBySpellIds: material.usedBy },
+}));
+
+const abilityNames = { Strength: "str", Dexterity: "dex", Constitution: "con", Intelligence: "int", Wisdom: "wis", Charisma: "cha" };
+const catalogSpells = spellCatalog.spells.map((entry) => {
+  const primaryArea = entry.areas[0] ?? { shape: "none", sizeFeet: 0 };
+  const effects = [];
+  for (const [profileIndex, profile] of entry.profiles.entries()) {
+    const initialDice = profile.dice.initialCount > 0 && profile.dice.initialDie ? `${profile.dice.initialCount}${profile.dice.initialDie}` : "";
+    const periodicDice = profile.dice.periodicCount > 0 && profile.dice.periodicDie ? `${profile.dice.periodicCount}${profile.dice.periodicDie}` : "";
+    if (initialDice && ["damage", "healing"].includes(profile.category)) effects.push(effect(`effect.${entry.id.split(".").at(-1)}.${profile.category}.${profileIndex + 1}`, profile.category === "damage" ? "combat.target.hit_points.current" : "combat.hit_points.current", profile.category === "damage" ? "subtract" : "add", "dice", initialDice, { durationType: "instant", automationLevel: "partial", notes: `Imported from ${profile.sourceSheet}, row ${profile.sourceRow}.` }));
+    if (periodicDice && ["damage", "healing"].includes(profile.category)) effects.push(effect(`effect.${entry.id.split(".").at(-1)}.${profile.category}.periodic.${profileIndex + 1}`, profile.category === "damage" ? "combat.target.hit_points.current" : "combat.hit_points.current", profile.category === "damage" ? "subtract" : "add", "dice", periodicDice, { activation: "on_event", trigger: "periodic spell effect", durationType: "rounds", durationValue: Math.max(1, profile.dice.periodRounds), automationLevel: "partial", notes: `Imported periodic profile from ${profile.sourceSheet}, row ${profile.sourceRow}.` }));
+  }
+  const savingThrow = Object.entries(abilityNames).find(([name]) => entry.description.includes(`${name} saving throw`))?.[1] ?? "";
+  const attackType = /ranged spell attack/i.test(entry.description) ? "ranged_spell" : /melee spell attack/i.test(entry.description) ? "melee_spell" : "none";
+  return {
+    ...base(entry.id, "spell", entry.name, entry.name, entry.description, entry.description, ["spell", "spreadsheet-import"]),
+    spellLevel: entry.level,
+    schoolId: entry.schoolId,
+    spellClassIds: entry.classIds,
+    casting: entry.casting,
+    range: entry.range,
+    area: { shape: primaryArea.shape, sizeFeet: primaryArea.sizeFeet },
+    areas: entry.areas,
+    duration: entry.duration,
+    components: entry.components,
+    materialGroups: entry.materialGroups,
+    ritual: entry.ritual,
+    attackType,
+    savingThrowAbility: savingThrow,
+    spellCategories: entry.categories,
+    spellProfiles: entry.profiles.map((profile) => ({ sourceSheet: profile.sourceSheet, sourceRow: profile.sourceRow, category: profile.category, dice: profile.dice, higherLevel: profile.higherLevel })),
+    sourceRows: entry.sourceRows,
+    effects,
+    scaling: [],
+    automationLevel: "partial",
+  };
+});
+
 const project = {
   schemaVersion: "1.1.0", projectId: "srd52-wizard-evoker", pack: { id: "srd52.pack.wizard-evoker", version: "1.1.0", name: "SRD 5.2.1 Character Origins, Wizard & Evoker", rulesetId: "dnd5e.2024", sourceId: "srd52.source.core", licenseId: "license.cc-by-4.0", author: "WSGuild", defaultLocale: "en", attribution },
-  entities: [wizard, evoker, ...features, ...evokerFeatures, ...origins.species, ...origins.backgrounds, ...origins.feats, ...origins.speciesFeatures, ...origins.featFeatures, ...items, ...origins.originItems, ...spells, ...origins.originSpells], updatedAt: new Date().toISOString(),
+  entities: [wizard, evoker, ...features, ...evokerFeatures, ...origins.species, ...origins.backgrounds, ...origins.feats, ...origins.speciesFeatures, ...origins.featFeatures, ...items, ...origins.originItems, ...materialItems, ...catalogSpells], updatedAt: new Date().toISOString(),
 };
 
 function canonicalEffect(value) {

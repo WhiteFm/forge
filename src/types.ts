@@ -9,16 +9,33 @@ export interface LocalizedText {
   description: string;
 }
 
+export type RuleOperandKind = "number" | "boolean" | "ability_score" | "ability_modifier" | "proficiency_bonus" | "character_level" | "class_level" | "entity" | "selected_value" | "legacy";
+export type RuleOperator = "+" | "-" | "*" | "/" | "==" | "!=" | ">" | ">=" | "<" | "<=" | "contains" | "and" | "or";
+
+export interface RuleOperand {
+  kind: RuleOperandKind;
+  value: string;
+  entityId?: string;
+  abilityId?: AbilityId;
+}
+
+export interface RuleExpression {
+  operands: RuleOperand[];
+  operators: RuleOperator[];
+}
+
 export interface Effect {
   id: string;
   target: string;
   operation: "add" | "subtract" | "set" | "set_minimum" | "set_maximum" | "multiply" | "replace_formula" | "grant" | "grant_proficiency" | "upgrade_proficiency" | "grant_advantage" | "grant_disadvantage" | "create_resource" | "restore_resource";
   valueType: "number" | "boolean" | "string" | "formula" | "dice" | "reference";
   value: string;
+  valueExpression?: RuleExpression;
   activation: EffectMode;
   actionCost: "none" | "action" | "bonus_action" | "reaction" | "free_action" | "special";
   trigger: string;
   conditions: string[];
+  conditionExpressions?: RuleExpression[];
   stacking: "sum" | "maximum" | "minimum" | "replace" | "non_stacking" | "unique_by_source";
   stackingGroup: string;
   priority: number;
@@ -37,6 +54,7 @@ export interface ChoiceDefinition {
   max: number;
   optionIds: string[];
   filter: string;
+  filterExpression?: RuleExpression;
 }
 
 export interface LevelEntry {
@@ -100,13 +118,17 @@ export interface ForgeEntity {
   hitDie?: "d6" | "d8" | "d10" | "d12";
   primaryAbilities?: AbilityId[];
   multiclassPrerequisite?: string;
+  multiclassPrerequisiteExpression?: RuleExpression;
   startingHpFormula?: string;
+  startingHpExpression?: RuleExpression;
   levelUpHpFormula?: string;
+  levelUpHpExpression?: RuleExpression;
   startingProficiencies?: string[];
   multiclassProficiencies?: string[];
   spellcastingAbility?: AbilityId | "";
   casterProgression?: "none" | "full" | "half_down" | "half_up" | "third" | "pact" | "custom";
   casterLevelFormula?: string;
+  casterLevelExpression?: RuleExpression;
   levels?: LevelEntry[];
   classProgression?: ClassProgressionEntry[];
 
@@ -124,15 +146,16 @@ export interface ForgeEntity {
   repeatable?: boolean;
   repeatConstraint?: string;
   prerequisites?: string[];
+  prerequisiteExpressions?: RuleExpression[];
 
   mode?: "always_on" | "manual_unlimited" | "limited_use";
   activation?: "none" | "action" | "bonus_action" | "reaction" | "free_action" | "special";
-  resource?: { id: string; maximumFormula: string; recovery: "short_rest" | "long_rest" | "both" | "dawn" | "turn_start" | "initiative" | "initiative_or_rest" | "manual" | "never"; recoveryFormula: string };
+  resource?: { id: string; maximumFormula: string; maximumExpression?: RuleExpression; recovery: "short_rest" | "long_rest" | "both" | "dawn" | "turn_start" | "initiative" | "initiative_or_rest" | "manual" | "never"; recoveryFormula: string; recoveryExpression?: RuleExpression };
   effects?: Effect[];
   spellGrants?: GrantedSpell[];
   automationLevel?: "full" | "partial" | "manual";
 
-  itemType?: "gear" | "weapon" | "armor" | "shield" | "tool" | "consumable" | "container" | "wondrous" | "currency" | "custom";
+  itemType?: "gear" | "weapon" | "armor" | "shield" | "tool" | "consumable" | "container" | "wondrous" | "currency" | "spell_material" | "custom";
   weightLb?: number;
   costCp?: number;
   stackable?: boolean;
@@ -140,6 +163,8 @@ export interface ForgeEntity {
   requiresAttunement?: boolean;
   equipmentSlots?: string[];
   requirements?: string[];
+  requirementExpressions?: RuleExpression[];
+  materialProfile?: { sourceName: string; observedCostsCp: number[]; usedBySpellIds: string[] };
   weaponProfile?: {
     category: "simple_melee" | "simple_ranged" | "martial_melee" | "martial_ranged" | "custom";
     damage: string;
@@ -158,17 +183,21 @@ export interface ForgeEntity {
     strengthRequirement: number;
     stealthDisadvantage: boolean;
   };
-  charges?: { maximumFormula: string; recovery: "short_rest" | "long_rest" | "both" | "dawn" | "manual" | "never" };
+  charges?: { maximumFormula: string; maximumExpression?: RuleExpression; recovery: "short_rest" | "long_rest" | "both" | "dawn" | "manual" | "never" };
   containedItems?: Array<{ itemId: string; quantity: number }>;
   spellcastingFocusFor?: string[];
 
   spellLevel?: number;
   schoolId?: string;
-  casting?: { actionType: "action" | "bonus_action" | "reaction" | "minute" | "hour" | "special"; value: number; reactionTrigger: string };
-  range?: { type: "self" | "touch" | "distance" | "sight" | "unlimited" | "special"; distanceFeet: number };
+  casting?: { actionType: "action" | "bonus_action" | "reaction" | "minute" | "hour" | "special"; value: number; reactionTrigger: string; raw?: string };
+  range?: { type: "self" | "touch" | "distance" | "sight" | "unlimited" | "special"; distanceFeet: number; distanceValue?: number; distanceUnit?: "feet" | "miles"; raw?: string };
   area?: { shape: "none" | "cone" | "cube" | "cylinder" | "emanation" | "line" | "sphere" | "wall"; sizeFeet: number };
-  duration?: { type: "instant" | "rounds" | "minutes" | "hours" | "days" | "until_dispelled" | "special"; value: number; concentration: boolean };
+  areas?: Array<{ shape: "none" | "cone" | "cube" | "cylinder" | "emanation" | "line" | "sphere" | "wall" | string; sizeFeet: number; rawShape: string; rawSize: string; dimensionsFeet: Array<{ value: number; kind: string }> }>;
+  duration?: { type: "instant" | "rounds" | "minutes" | "hours" | "days" | "until_dispelled" | "special"; value: number; concentration: boolean; raw?: string };
   components?: { verbal: boolean; somatic: boolean; material: boolean; materialText: string; materialCostCp: number; materialConsumed: boolean };
+  materialGroups?: Array<{ id: string; sourceText: string; minimumTotalCostCp: number; sourceCurrency: string; consumed: boolean; entries: Array<{ itemId: string; quantity: number; minimumCostCp: number; consumed: boolean }> }>;
+  spellCategories?: Array<"damage" | "healing" | "neutral" | string>;
+  spellProfiles?: Array<{ sourceSheet: string; sourceRow: number; category: string; dice: { initialCount: number; initialDie: string; periodicCount: number; periodicDie: string; periodRounds: number }; higherLevel: { enabled: boolean } }>;
   ritual?: boolean;
   attackType?: "none" | "melee_spell" | "ranged_spell";
   savingThrowAbility?: AbilityId | "";
