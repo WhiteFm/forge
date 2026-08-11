@@ -26,17 +26,18 @@ function downloadJson(filename: string, value: unknown) {
   URL.revokeObjectURL(url);
 }
 
-function useAutoFitButtons(locale: string) {
+function useAutoFitText(locale: string) {
   useEffect(() => {
-    const selector = [".primary-button", ".ghost-button", ".secondary-button", ".add-card-button", ".text-action", ".project-chip", ".section-toggle", ".entity-picker-trigger", ".workspace-actions button", ".issue-scope button", ".project-modal footer button", ".nav-sidebar nav > button"].join(",");
+    const selector = [".primary-button", ".ghost-button", ".secondary-button", ".add-card-button", ".text-action", ".project-chip", ".section-toggle", ".entity-picker-trigger", ".workspace-actions button", ".issue-scope button", ".project-modal footer button", ".nav-sidebar nav > button", ".class-progression th", ".field > span", ".field > legend", ".levels-head > *"].join(",");
     let frame = 0;
     const fit = () => {
-      document.querySelectorAll<HTMLButtonElement>(selector).forEach((button) => {
-        button.style.fontSize = "";
-        let size = Number.parseFloat(getComputedStyle(button).fontSize);
-        while (size > 8 && (button.scrollWidth > button.clientWidth || button.scrollHeight > button.clientHeight)) {
+      document.querySelectorAll<HTMLElement>(selector).forEach((element) => {
+        element.style.fontSize = "";
+        let size = Number.parseFloat(getComputedStyle(element).fontSize);
+        const minimum = element.matches(".class-progression th") ? 6 : 8;
+        while (size > minimum && (element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight)) {
           size -= 0.5;
-          button.style.fontSize = `${size}px`;
+          element.style.fontSize = `${size}px`;
         }
       });
     };
@@ -52,7 +53,7 @@ function useAutoFitButtons(locale: string) {
 
 export default function App() {
   const { locale, setLocale, t } = useUi();
-  useAutoFitButtons(locale);
+  useAutoFitText(locale);
   const [project, setProject] = useState<ForgeProject>(loadProject);
   const [activeType, setActiveType] = useState<EntityType>(project.entities[0]?.entityType ?? "class");
   const [activeId, setActiveId] = useState(project.entities[0]?.id ?? "");

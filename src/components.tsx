@@ -1,20 +1,24 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ClipboardEvent, type ReactNode } from "react";
 import { emptyEffect, makeSubentityId, targetSuggestions } from "./data";
 import type { AbilityId, ChoiceApplication, ChoiceDefinition, ClassProgressionEntry, Effect, ForgeEntity, LevelEntry } from "./types";
 import { useUi } from "./ui-i18n";
 import { EntityMultiPicker, EntityPicker, VisualExpressionBuilder, VisualExpressionList } from "./VisualRuleBuilder";
 
+function compactLevelText(value: string) {
+  return value.replace(/\b(?:level|levels)\b/gi, "LVL").replace(/уров(?:ень|ня|не|ню|ни|ней|нями|нях)/giu, "УР.");
+}
+
 export function Field({ label, hint, wide, children, tone }: { label: string; hint?: string; wide?: boolean; children: ReactNode; tone?: "accent" | "quiet" }) {
-  return <label className={`field${wide ? " field-wide" : ""}${tone ? ` field-${tone}` : ""}`}><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
+  return <label className={`field${wide ? " field-wide" : ""}${tone ? ` field-${tone}` : ""}`}><span>{compactLevelText(label)}</span>{children}{hint && <small>{compactLevelText(hint)}</small>}</label>;
 }
 
 export function Section({ title, eyebrow, children, actions, defaultOpen = true }: { title: string; eyebrow?: string; children: ReactNode; actions?: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
-  return <section className={`editor-section${open ? " is-open" : ""}`}><header><button className="section-toggle" type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}><span className="section-chevron">⌄</span><span>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h2>{title}</h2></span></button>{actions}</header>{open && <div className="section-content">{children}</div>}</section>;
+  return <section className={`editor-section${open ? " is-open" : ""}`}><header><button className="section-toggle" type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}><span className="section-chevron">⌄</span><span>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h2>{compactLevelText(title)}</h2></span></button>{actions}</header>{open && <div className="section-content">{children}</div>}</section>;
 }
 
 export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) {
-  return <label className="toggle"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /><span aria-hidden="true" /><strong>{label}</strong></label>;
+  return <label className="toggle"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /><span aria-hidden="true" /><strong>{compactLevelText(label)}</strong></label>;
 }
 
 export function CsvInput({ value, onChange, placeholder }: { value: string[]; onChange: (value: string[]) => void; placeholder?: string }) {
@@ -62,15 +66,41 @@ export function LevelsEditor({ levels, entities, locale, onChange, title, editab
     onChange(editableLevels ? remaining : remaining.map((item, levelIndex) => ({ ...item, level: levelIndex + 1 })));
   };
   const addLevel = () => onChange([...levels, { level: Math.min(20, (levels.at(-1)?.level ?? 0) + 1), featureIds: [] }]);
-  return <div className="levels"><div className="levels-head"><strong>{title ?? t("common.levels")}</strong><small>{t("common.featureIds")}</small></div>{levels.map((entry, index) => <article className={`level-card${editableLevels ? " editable-level" : ""}`} key={`${entry.level}-${index}`}><div className="level-badge"><span>{locale === "en" ? "Lvl" : "Ур."}</span><strong>{entry.level}</strong></div>{editableLevels && <NumberStepper value={entry.level} min={1} max={20} onChange={(level) => onChange(levels.map((item, itemIndex) => itemIndex === index ? { ...item, level } : item))} />}<EntityMultiPicker entities={entities} type="feature" value={entry.featureIds} locale={locale} onChange={(featureIds) => onChange(levels.map((item, itemIndex) => itemIndex === index ? { ...item, featureIds } : item))} /><button type="button" className="icon-button danger level-remove" aria-label={locale === "en" ? `Remove level ${entry.level}` : `Удалить уровень ${entry.level}`} onClick={() => removeLevel(index)}>×</button></article>)}{levels.length < 20 && <button type="button" className="add-card-button add-level-button" onClick={addLevel}>＋ {t("common.addLevel")}</button>}</div>;
+  return <div className="levels"><div className="levels-head"><strong>{title ?? t("common.levels")}</strong><small>{t("common.featureIds")}</small></div>{levels.map((entry, index) => <article className={`level-card${editableLevels ? " editable-level" : ""}`} key={`${entry.level}-${index}`}><div className="level-badge"><span>{locale === "en" ? "LVL" : "УР."}</span><strong>{entry.level}</strong></div>{editableLevels && <NumberStepper value={entry.level} min={1} max={20} onChange={(level) => onChange(levels.map((item, itemIndex) => itemIndex === index ? { ...item, level } : item))} />}<EntityMultiPicker entities={entities} type="feature" value={entry.featureIds} locale={locale} onChange={(featureIds) => onChange(levels.map((item, itemIndex) => itemIndex === index ? { ...item, featureIds } : item))} /><button type="button" className="icon-button danger level-remove" aria-label={locale === "en" ? `Remove LVL ${entry.level}` : `Удалить УР. ${entry.level}`} onClick={() => removeLevel(index)}>×</button></article>)}{levels.length < 20 && <button type="button" className="add-card-button add-level-button" onClick={addLevel}>＋ {t("common.addLevel")}</button>}</div>;
 }
 
 export function ClassProgressionEditor({ rows, levels, onChange }: { rows: ClassProgressionEntry[]; levels: LevelEntry[]; onChange: (rows: ClassProgressionEntry[]) => void }) {
   const { locale } = useUi();
-  const labels = locale === "en" ? ["Level", "PB", "Cantrips", "Prepared"] : ["Уровень", "БМ", "Заговоры", "Подготовлено"];
+  const labels = locale === "en" ? ["LVL", "PB", "Cantrips", "Prepared"] : ["УР.", "БМ", "Заговоры", "Подготовлено"];
   const syncedRows = levels.map((entry, index) => ({ ...(rows[index] ?? { proficiencyBonus: 2 + Math.floor(index / 4), cantripsKnown: 0, preparedSpells: 0, spellSlots: Array(9).fill(0) }), level: entry.level }));
   const patch = (index: number, value: Partial<ClassProgressionEntry>) => onChange(syncedRows.map((row, rowIndex) => rowIndex === index ? { ...row, ...value } : row));
-  return <div className="progression-table"><table className="class-progression"><colgroup><col className="col-level" /><col className="col-pb" /><col className="col-cantrips" /><col className="col-prepared" />{Array.from({ length: 9 }, (_, index) => <col className={`col-slot col-slot-${index + 1}`} key={index} />)}</colgroup><thead><tr className="progression-groups"><th colSpan={4}>{locale === "en" ? "Class progression" : "Прогрессия класса"}</th><th colSpan={9}>{locale === "en" ? "Spell slots by level" : "Ячейки по уровням"}</th></tr><tr>{labels.map((label) => <th key={label}>{label}</th>)}{Array.from({ length: 9 }, (_, index) => <th className={`slot-heading slot-tier-${index + 1}`} key={index}>{index + 1}</th>)}</tr></thead><tbody>{syncedRows.map((row, index) => <tr key={`${row.level}-${index}`}><td className="level-cell"><span>{row.level}</span></td><td><input type="number" min="2" max="6" value={row.proficiencyBonus} onChange={(event) => patch(index, { proficiencyBonus: Number(event.target.value) })} /></td><td><input type="number" min="0" value={row.cantripsKnown} onChange={(event) => patch(index, { cantripsKnown: Number(event.target.value) })} /></td><td><input type="number" min="0" value={row.preparedSpells} onChange={(event) => patch(index, { preparedSpells: Number(event.target.value) })} /></td>{Array.from({ length: 9 }, (_, slotIndex) => <td className={`slot-cell slot-tier-${slotIndex + 1}`} key={slotIndex}><input aria-label={`${locale === "en" ? "Spell slot level" : "Уровень ячейки"} ${slotIndex + 1}`} type="number" min="0" value={row.spellSlots[slotIndex] ?? 0} onChange={(event) => patch(index, { spellSlots: Array.from({ length: 9 }, (_, innerIndex) => innerIndex === slotIndex ? Number(event.target.value) : (row.spellSlots[innerIndex] ?? 0)) })} /></td>)}</tr>)}</tbody></table></div>;
+  const pasteTable = (event: ClipboardEvent<HTMLDivElement>) => {
+    const clipboard = event.clipboardData.getData("text/plain");
+    if (!clipboard.includes("\t") && !clipboard.includes("\n")) return;
+    const target = event.target instanceof HTMLElement ? event.target.closest<HTMLInputElement>("input[data-row][data-column]") : null;
+    const startRow = Number(target?.dataset.row ?? 0);
+    let startColumn = Number(target?.dataset.column ?? -1);
+    const pastedRows = clipboard.replace(/\r/g, "").split("\n").filter((line, index, all) => line.length > 0 || index < all.length - 1).map((line) => line.split("\t"));
+    while (pastedRows.length && !Number.isFinite(Number(pastedRows[0][0]?.trim().replace(/\s/g, "").replace(",", ".")))) pastedRows.shift();
+    if (!pastedRows.length) return;
+    if (startColumn === -1 && pastedRows[0].length === 12) startColumn = 0;
+    event.preventDefault();
+    const nextRows = syncedRows.map((row) => ({ ...row, spellSlots: [...row.spellSlots] }));
+    pastedRows.forEach((cells, pastedRowIndex) => cells.forEach((cell, pastedColumnIndex) => {
+      const rowIndex = startRow + pastedRowIndex;
+      const column = startColumn + pastedColumnIndex;
+      if (!nextRows[rowIndex] || column < 0 || column > 11) return;
+      const parsed = Number(cell.trim().replace(/\s/g, "").replace(",", "."));
+      if (!Number.isFinite(parsed)) return;
+      const value = column === 0 ? Math.min(6, Math.max(2, Math.trunc(parsed))) : Math.max(0, Math.trunc(parsed));
+      if (column === 0) nextRows[rowIndex].proficiencyBonus = value;
+      else if (column === 1) nextRows[rowIndex].cantripsKnown = value;
+      else if (column === 2) nextRows[rowIndex].preparedSpells = value;
+      else nextRows[rowIndex].spellSlots[column - 3] = value;
+    }));
+    onChange(nextRows);
+  };
+  return <div className="progression-table" tabIndex={0} onPaste={pasteTable} aria-label={locale === "en" ? "Class progression table. Paste tab-separated cells from Excel with Ctrl+V." : "Таблица прогрессии класса. Вставляйте ячейки из Excel через Ctrl+V."}><table className="class-progression"><colgroup><col className="col-level" /><col className="col-pb" /><col className="col-cantrips" /><col className="col-prepared" />{Array.from({ length: 9 }, (_, index) => <col className={`col-slot col-slot-${index + 1}`} key={index} />)}</colgroup><thead><tr className="progression-groups"><th colSpan={4}>{locale === "en" ? "Class progression" : "Прогрессия класса"}</th><th colSpan={9}>{locale === "en" ? "Spell slots by LVL" : "Ячейки по УР."}</th></tr><tr>{labels.map((label) => <th key={label}>{label}</th>)}{Array.from({ length: 9 }, (_, index) => <th className={`slot-heading slot-tier-${index + 1}`} key={index}>{index + 1}</th>)}</tr></thead><tbody>{syncedRows.map((row, index) => <tr key={`${row.level}-${index}`}><td className="level-cell"><input aria-label={`${locale === "en" ? "LVL" : "УР."} ${row.level}`} readOnly data-row={index} data-column={-1} value={row.level} /></td><td><input data-row={index} data-column={0} type="number" min="2" max="6" value={row.proficiencyBonus} onChange={(event) => patch(index, { proficiencyBonus: Number(event.target.value) })} /></td><td><input data-row={index} data-column={1} type="number" min="0" value={row.cantripsKnown} onChange={(event) => patch(index, { cantripsKnown: Number(event.target.value) })} /></td><td><input data-row={index} data-column={2} type="number" min="0" value={row.preparedSpells} onChange={(event) => patch(index, { preparedSpells: Number(event.target.value) })} /></td>{Array.from({ length: 9 }, (_, slotIndex) => <td className={`slot-cell slot-tier-${slotIndex + 1}`} key={slotIndex}><input data-row={index} data-column={slotIndex + 3} aria-label={`${locale === "en" ? "Spell slot LVL" : "УР. ячейки"} ${slotIndex + 1}`} type="number" min="0" value={row.spellSlots[slotIndex] ?? 0} onChange={(event) => patch(index, { spellSlots: Array.from({ length: 9 }, (_, innerIndex) => innerIndex === slotIndex ? Number(event.target.value) : (row.spellSlots[innerIndex] ?? 0)) })} /></td>)}</tr>)}</tbody></table></div>;
 }
 
 export function ChoicesEditor({ choices, entities, entityId, applications, onChange, onApplicationsChange }: { choices: ChoiceDefinition[]; entities: ForgeEntity[]; entityId: string; applications: ChoiceApplication[]; onChange: (choices: ChoiceDefinition[]) => void; onApplicationsChange: (applications: ChoiceApplication[]) => void }) {

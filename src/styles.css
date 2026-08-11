@@ -167,7 +167,7 @@ select { color-scheme: dark; }
 .class-progression input:hover { background: rgba(255,255,255,.035); }
 .class-progression input:focus { position: relative; z-index: 10; outline: 1px solid var(--red-light); background: #2b1719; box-shadow: inset 0 0 0 2px rgba(226,38,45,.16); }
 .class-progression .level-cell { padding: 3px; background: #181011; }
-.class-progression .level-cell span { width: 100%; height: 28px; display: grid; place-items: center; border-radius: 5px; color: #211207; background: var(--gold); font: 800 clamp(.55rem,.45rem + .18vw,.72rem)/1 var(--sans); pointer-events: none; }
+.class-progression .level-cell input { width: 100%; height: 28px; display: grid; place-items: center; border-radius: 5px; color: #211207; background: var(--gold); font: 800 clamp(.55rem,.45rem + .18vw,.72rem)/1 var(--sans); cursor: cell; }
 .class-progression .slot-cell input[value="0"] { color: var(--faint); }
 .class-progression .slot-tier-1 { box-shadow: inset 0 2px #d6b44b; }.class-progression .slot-tier-2 { box-shadow: inset 0 2px #df8d45; }.class-progression .slot-tier-3 { box-shadow: inset 0 2px #dc5f4d; }.class-progression .slot-tier-4 { box-shadow: inset 0 2px #cc4050; }.class-progression .slot-tier-5 { box-shadow: inset 0 2px #b6325d; }.class-progression .slot-tier-6 { box-shadow: inset 0 2px #91336b; }.class-progression .slot-tier-7 { box-shadow: inset 0 2px #70396f; }.class-progression .slot-tier-8 { box-shadow: inset 0 2px #523865; }.class-progression .slot-tier-9 { box-shadow: inset 0 2px #392e50; }
 .level-row { display: grid; grid-template-columns: 64px 1fr 34px; gap: 7px; margin-bottom: 7px; }
@@ -478,8 +478,7 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
 .level-card { grid-template-columns: 64px minmax(0,1fr); }
 .level-card.editable-level { grid-template-columns: 64px minmax(150px,.42fr) minmax(240px,1fr) 34px; }
 .class-progression .level-cell { display: grid; place-items: center; }
-.class-progression .level-cell span { position: static; width: 22px; height: 22px; }
-.class-progression .level-cell input { display: none; }
+.class-progression .level-cell input { position: static; width: 22px; height: 22px; }
 
 .subentity-header { display: grid !important; grid-template-columns: 34px minmax(0,1fr) 34px; align-items: center; gap: 10px; }
 .subentity-name { width: 100%; min-height: 34px !important; padding: 4px 8px !important; border: 0 !important; border-bottom: 1px solid transparent !important; border-radius: 0 !important; color: var(--text) !important; background: transparent !important; font: 700 clamp(.78rem,.68rem + .22vw,1rem)/1.1 var(--display) !important; }
@@ -596,7 +595,9 @@ textarea { padding: 8px 9px; }
 .class-progression input { min-height: 0; font-size: clamp(.55rem,.46rem + .18vw,.75rem); }
 .class-progression th, .class-progression td { height: 34px; }
 .class-progression .level-cell { padding: 2px; }
-.class-progression .level-cell span { height: 30px; border-radius: 5px; }
+.class-progression .level-cell input { height: 30px; border-radius: 5px; }
+.class-progression th, .field > span, .field > legend, .levels-head > * { overflow: hidden; white-space: nowrap; text-overflow: clip; }
+.progression-table:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
 
 .project-chip { width: 280px; height: 40px; }
 .project-chip span { min-width: 0; overflow: visible; font-size: clamp(7px, .6vw, 10px); line-height: 1.1; text-overflow: clip; }

@@ -73,9 +73,14 @@ test("includes the SRD Wizard, Evoker, and complete Character Origins project", 
 test("renders a full-width grouped class progression table", async () => {
   const component = await readFile(new URL("../src/components.tsx", import.meta.url), "utf8");
   const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
-  assert.match(component, /Spell slots by level/);
+  assert.match(component, /Spell slots by LVL/);
   assert.match(component, /class-progression/);
   assert.match(component, /col-level/);
+  assert.match(component, /onPaste=\{pasteTable\}/);
+  assert.match(component, /data-column=\{-1\}/);
+  assert.match(component, /clipboardData\.getData\("text\/plain"\)/);
+  assert.match(component, /\["LVL", "PB", "Cantrips", "Prepared"\]/);
+  assert.match(component, /compactLevelText/);
   assert.match(css, /\.progression-table \{[^}]*overflow:\s*visible/);
   assert.doesNotMatch(css, /\.progression-table \{[^}]*max-height:\s*min/);
 });
