@@ -371,6 +371,19 @@ test("uses manual numeric entry and compact responsive editor grids", async () =
     /species-body-group[\s\S]*Movement[\s\S]*species-stat-grid[\s\S]*Senses[\s\S]*species-stat-grid/,
   );
   assert.match(css, /\.species-parameter-groups[\s\S]*\.species-stat-grid/);
+  assert.match(
+    css,
+    /\.field:has\(\.entity-quantity-list\)[\s\S]*grid-column:\s*1 \/ -1/,
+  );
+  assert.match(css, /\.field:has\(\.repeat-list\)/);
+  assert.match(css, /\.field:has\(\.chip-picker\)/);
+  assert.match(css, /\.field:has\(\.tag-editor\)/);
+  assert.match(css, /display:\s*flex;[\s\S]*flex-wrap:\s*wrap/);
+  assert.match(css, /flex:\s*1 0 100%/);
+  assert.match(
+    css,
+    /\.toggle input\s*\{[\s\S]*width:\s*1px;[\s\S]*clip-path:\s*inset\(50%\)/,
+  );
 });
 
 test("shows localized option labels and a read-only entity debug view", async () => {

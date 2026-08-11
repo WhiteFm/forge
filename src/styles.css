@@ -707,6 +707,7 @@ select {
   color: white;
 }
 .toggle {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -716,6 +717,13 @@ select {
 }
 .toggle input {
   position: absolute;
+  inset: 50% auto auto 8px;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
   opacity: 0;
   pointer-events: none;
 }
@@ -3350,6 +3358,124 @@ textarea {
 .species-features-group > .entity-multi-picker {
   width: min(900px, 100%);
   margin-inline: auto;
+}
+
+/*
+ * Repeating controls can grow to any height. Keeping one beside short fields
+ * forces the whole CSS-grid row to that height and leaves a large empty hole
+ * under its neighbours. Give every variable-height editor its own full row so
+ * added records always push the following content down without dead space.
+ */
+.field:has(.entity-quantity-list),
+.field:has(.material-entry-list),
+.field:has(.entity-multi-picker),
+.field:has(.grant-slots),
+.field:has(.property-editor),
+.field:has(.visual-rule-builder),
+.field:has(.visual-rule-list),
+.field:has(.repeat-list),
+.field:has(.chip-picker),
+.field:has(.tag-editor),
+.field:has(.component-picker),
+.field:has(.size-picker) {
+  grid-column: 1 / -1;
+}
+
+.field:has(.entity-quantity-list) > .entity-quantity-list,
+.field:has(.material-entry-list) > .material-entry-list,
+.field:has(.entity-multi-picker) > .entity-multi-picker,
+.field:has(.grant-slots) > .grant-slots,
+.field:has(.property-editor) > .property-editor,
+.field:has(.visual-rule-builder) > .visual-rule-builder,
+.field:has(.visual-rule-list) > .visual-rule-list,
+.field:has(.repeat-list) > .repeat-list,
+.field:has(.chip-picker) > .chip-picker,
+.field:has(.tag-editor) > .tag-editor,
+.field:has(.component-picker) > .component-picker,
+.field:has(.size-picker) > .size-picker {
+  width: 100%;
+}
+
+/* Compact flow for every editor form. Flex rows distribute short, related
+ * controls across all available width; growing collections always start on a
+ * clean full-width row and therefore cannot create grid-height cavities. */
+:is(
+  .section-content > .form-grid,
+  .resource-panel > .form-grid,
+  .visual-form-group > .form-grid,
+  .advanced-card > .form-grid,
+  .subcard > .form-grid
+) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+:is(
+  .section-content > .form-grid,
+  .resource-panel > .form-grid,
+  .visual-form-group > .form-grid,
+  .advanced-card > .form-grid,
+  .subcard > .form-grid
+) > * {
+  min-width: 0;
+  flex: 1 1 210px;
+  align-self: flex-start;
+}
+
+:is(
+  .section-content > .form-grid,
+  .resource-panel > .form-grid,
+  .visual-form-group > .form-grid,
+  .advanced-card > .form-grid,
+  .subcard > .form-grid
+) > .field-wide {
+  flex: 2 1 428px;
+}
+
+:is(
+  .section-content > .form-grid,
+  .resource-panel > .form-grid,
+  .visual-form-group > .form-grid,
+  .advanced-card > .form-grid,
+  .subcard > .form-grid
+) > .field:has(textarea),
+:is(
+  .section-content > .form-grid,
+  .resource-panel > .form-grid,
+  .visual-form-group > .form-grid,
+  .advanced-card > .form-grid,
+  .subcard > .form-grid
+) > .field:has(
+    :is(
+      .entity-quantity-list,
+      .material-entry-list,
+      .entity-multi-picker,
+      .grant-slots,
+      .property-editor,
+      .visual-rule-builder,
+      .visual-rule-list,
+      .repeat-list,
+      .chip-picker,
+      .tag-editor,
+      .component-picker,
+      .size-picker
+    )
+  ) {
+  flex: 1 0 100%;
+}
+
+@container (max-width: 470px) {
+  :is(
+    .section-content > .form-grid,
+    .resource-panel > .form-grid,
+    .visual-form-group > .form-grid,
+    .advanced-card > .form-grid,
+    .subcard > .form-grid
+  ) > * {
+    flex-basis: 100%;
+  }
 }
 
 @media (max-width: 700px) {
