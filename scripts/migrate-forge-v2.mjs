@@ -46,6 +46,7 @@ for (const entity of source.entities) {
 source.entities = replaceDeep(source.entities, entityMap);
 
 source.entities = source.entities.map((entity) => {
+  delete entity.tags;
   delete entity.rulesetId;
   delete entity.sourceId;
   delete entity.sourceVersion;
@@ -75,7 +76,9 @@ source.entities = source.entities.map((entity) => {
     const name = choice.name || titleFromId(choice.id, `Choice ${index + 1}`);
     const id = `${entity.id}.${slug(name, `choice_${index + 1}`)}`;
     subMap.set(choice.id, id);
-    return { ...choice, id, name, nameRu: choice.nameRu || `Выбор ${index + 1}` };
+    const next = { ...choice, id, name, nameRu: choice.nameRu || `Выбор ${index + 1}` };
+    if (/\btags\b/i.test(next.filter ?? "")) { next.filter = ""; delete next.filterExpression; }
+    return next;
   });
   entity.equipmentOptions = (entity.equipmentOptions ?? []).map((option, index) => {
     const name = option.name || `Equipment Set ${index + 1}`;
@@ -112,7 +115,7 @@ const entities = source.entities.map((entity) => {
   return base;
 });
 const canonical = {
-  manifest: { schemaVersion: source.schemaVersion, packId: source.pack.id, namespace: source.pack.id, version: source.pack.version, rulesetId: source.pack.rulesetId, kind: source.entities.every((entity) => entity.tags.includes("official")) ? "official" : "homebrew", author: source.pack.author, defaultLocale: source.pack.defaultLocale ?? "en", locales: ["en", "ru"], license: { id: source.pack.licenseId, name: source.pack.licenseId, attribution: source.pack.attribution ?? source.pack.author }, portability: { embedTechnicalData: true, embedLocalizedText: true, allowDerivativePacks: true, requiresEntitlement: false }, createdAt: source.updatedAt },
+  manifest: { schemaVersion: source.schemaVersion, packId: source.pack.id, namespace: source.pack.id, version: source.pack.version, rulesetId: source.pack.rulesetId, kind: source.pack.id === "srd52" ? "official" : "homebrew", author: source.pack.author, defaultLocale: source.pack.defaultLocale ?? "en", locales: ["en", "ru"], license: { id: source.pack.licenseId, name: source.pack.licenseId, attribution: source.pack.attribution ?? source.pack.author }, portability: { embedTechnicalData: true, embedLocalizedText: true, allowDerivativePacks: true, requiresEntitlement: false }, createdAt: source.updatedAt },
   entities,
   localizations,
   assets: [],

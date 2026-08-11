@@ -81,8 +81,6 @@
   "editor.status": "Статус",
   "editor.name": "Название _{locale}",
   "editor.description": "Описание _{locale}",
-  "editor.tags": "Теги",
-  "editor.tagsHint": "official, srd52 или homebrew",
   "editor.classCore": "Основа класса",
   "editor.hitDie": "Кость хитов",
   "editor.casterProgression": "Прогрессия заклинателя",

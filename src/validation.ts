@@ -65,8 +65,10 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
     }
 
     if (entity.entityType === "class") {
-      if ((entity.levels ?? []).length !== 20) issues.push({ severity: "error", entityId: entity.id, path: "levels", message: "Класс должен содержать ровно 20 уровней" });
-      if (entity.classProgression && entity.classProgression.length !== 20) issues.push({ severity: "error", entityId: entity.id, path: "classProgression", message: "Таблица прогрессии класса должна содержать ровно 20 уровней" });
+      const levels = entity.levels ?? [];
+      if (levels.length < 1 || levels.length > 20) issues.push({ severity: "error", entityId: entity.id, path: "levels", message: "Класс должен содержать от 1 до 20 уровней" });
+      if (levels.some((level, index) => level.level !== index + 1)) issues.push({ severity: "error", entityId: entity.id, path: "levels", message: "Уровни класса должны идти подряд с первого уровня" });
+      if (entity.classProgression && entity.classProgression.length !== levels.length) issues.push({ severity: "error", entityId: entity.id, path: "classProgression", message: "Таблица прогрессии должна совпадать с количеством уровней класса" });
       for (const [rowIndex, row] of (entity.classProgression ?? []).entries()) if (row.spellSlots.length !== 9) issues.push({ severity: "error", entityId: entity.id, path: `classProgression.${rowIndex}.spellSlots`, message: "Строка прогрессии должна содержать 9 уровней ячеек" });
       if (!entity.primaryAbilities?.length) issues.push({ severity: "error", entityId: entity.id, path: "primaryAbilities", message: "Выберите минимум одну основную характеристику" });
       if (entity.casterProgression !== "none" && !entity.spellcastingAbility) issues.push({ severity: "error", entityId: entity.id, path: "spellcastingAbility", message: "Заклинательному классу нужна базовая характеристика" });
@@ -133,8 +135,9 @@ const validationTranslations: Record<string, string> = {
   "Такой ID уже существует в пакете": "This ID already exists in the pack",
   "Русское название обязательно": "Russian name is required",
   "Английское название обязательно": "English name is required",
-  "Класс должен содержать ровно 20 уровней": "A class must contain exactly 20 levels",
-  "Таблица прогрессии класса должна содержать ровно 20 уровней": "The class progression table must contain exactly 20 levels",
+  "Класс должен содержать от 1 до 20 уровней": "A class must contain between 1 and 20 levels",
+  "Уровни класса должны идти подряд с первого уровня": "Class levels must be sequential starting at level 1",
+  "Таблица прогрессии должна совпадать с количеством уровней класса": "The progression table must match the number of class levels",
   "Строка прогрессии должна содержать 9 уровней ячеек": "Each progression row must contain all 9 spell-slot levels",
   "Выберите минимум одну основную характеристику": "Select at least one primary ability",
   "Заклинательному классу нужна базовая характеристика": "A spellcasting class needs a spellcasting ability",
@@ -210,7 +213,7 @@ export function toCanonicalPack(project: ForgeProject) {
       namespace: project.pack.id.split(".").slice(0, 2).join("."),
       version: project.pack.version,
       rulesetId: project.pack.rulesetId,
-      kind: project.entities.every((entity) => entity.tags.includes("official")) ? "official" : "homebrew",
+      kind: project.pack.id === "srd52" ? "official" : "homebrew",
       author: project.pack.author,
       defaultLocale: project.pack.defaultLocale ?? "en",
       locales: ["en", "ru"],

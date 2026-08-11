@@ -67,14 +67,17 @@ test("includes the SRD Wizard, Evoker, and complete Character Origins project", 
   assert.equal(project.projectId, undefined);
   assert.equal(project.pack.sourceId, undefined);
   assert.ok(project.entities.every((entity) => entity.rulesetId === undefined && entity.sourceId === undefined && entity.licenseId === undefined));
+  assert.ok(project.entities.every((entity) => entity.tags === undefined));
 });
 
-test("renders a grouped, sticky class progression table", async () => {
+test("renders a full-width grouped class progression table", async () => {
   const component = await readFile(new URL("../src/components.tsx", import.meta.url), "utf8");
   const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
   assert.match(component, /Spell slots by level/);
   assert.match(component, /class-progression/);
-  assert.match(css, /\.class-progression \.sticky-1/);
+  assert.match(component, /col-level/);
+  assert.match(css, /\.progression-table \{[^}]*overflow:\s*visible/);
+  assert.doesNotMatch(css, /\.progression-table \{[^}]*max-height:\s*min/);
 });
 
 test("exposes pack-wide validation and a no-code rule builder", async () => {

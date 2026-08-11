@@ -115,16 +115,18 @@ export function normalizeProject(input: ForgeProject): ForgeProject {
   project.entities = replaceIdsDeep(project.entities ?? [], replacements);
 
   project.entities = project.entities.map((entity) => {
-    const legacy = entity as ForgeEntity & { rulesetId?: string; sourceId?: string; sourceVersion?: string; licenseId?: string; creatureTypeId?: string; featId?: string; proficiencyGrants?: string[] };
+    const legacy = entity as ForgeEntity & { tags?: string[]; rulesetId?: string; sourceId?: string; sourceVersion?: string; licenseId?: string; creatureTypeId?: string; featId?: string; proficiencyGrants?: string[] };
+    delete legacy.tags;
     delete legacy.rulesetId;
     delete legacy.sourceId;
     delete legacy.sourceVersion;
     delete legacy.licenseId;
     delete legacy.creatureTypeId;
     if (entity.entityType === "class") {
-      const levels = Array.from({ length: 20 }, (_, index) => entity.levels?.find((entry) => entry.level === index + 1) ?? { level: index + 1, featureIds: [] });
+      const sourceLevels = entity.levels?.slice(0, 20) ?? [];
+      const levels = (sourceLevels.length ? sourceLevels : [{ level: 1, featureIds: [] }]).map((entry, index) => ({ ...entry, level: index + 1 }));
       entity.levels = levels;
-      entity.classProgression = levels.map((level, index) => ({ ...(entity.classProgression?.find((entry) => entry.level === level.level) ?? emptyClassProgression()[index]), level: level.level }));
+      entity.classProgression = levels.map((level, index) => ({ ...(entity.classProgression?.find((entry) => entry.level === level.level) ?? entity.classProgression?.[index] ?? emptyClassProgression()[index]), level: level.level }));
     }
     if (entity.entityType === "species") {
       entity.sizeOptions = (entity.sizeOptions ?? ["medium"]).map((size) => size.replace(/^size\./, ""));
@@ -144,7 +146,10 @@ export function normalizeProject(input: ForgeProject): ForgeProject {
       const name = choice.name || `Choice ${index + 1}`;
       const id = makeSubentityId(entity.id, name, `choice_${index + 1}`);
       choiceReplacements.set(choice.id, id);
-      return { ...choice, id, name, nameRu: choice.nameRu || `Выбор ${index + 1}` };
+      const usesLegacyTags = /\btags\b/i.test(choice.filter ?? "");
+      const next = { ...choice, id, name, nameRu: choice.nameRu || `Выбор ${index + 1}`, filter: usesLegacyTags ? "" : choice.filter };
+      if (usesLegacyTags) delete next.filterExpression;
+      return next;
     });
     if (choiceReplacements.size) entity = replaceIdsDeep(entity, choiceReplacements);
     entity.equipmentOptions = (entity.equipmentOptions ?? []).map((option, index) => {
@@ -172,7 +177,6 @@ export function createEntity(entityType: EntityType, number: number, packId = "h
     id,
     entityType,
     status: "draft",
-    tags: ["homebrew"],
     localization: {
       ru: { name: "Новая сущность", description: "" },
       en: { name: englishName, description: "" },

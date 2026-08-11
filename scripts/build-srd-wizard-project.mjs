@@ -5,11 +5,11 @@ import { buildSrdOrigins } from "./srd-origins-data.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = resolve(root, "projects");
-const source = { status: "published", tags: ["official", "srd52"] };
+const source = { status: "published" };
 const attribution = "This work includes material from the System Reference Document 5.2.1 (SRD 5.2.1) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.";
 
 const localized = (nameEn, nameRu, descriptionEn, descriptionRu) => ({ en: { name: nameEn, description: descriptionEn }, ru: { name: nameRu, description: descriptionRu } });
-const base = (id, entityType, nameEn, nameRu, descriptionEn, descriptionRu, tags = []) => ({ id, entityType, ...source, tags: [...source.tags, ...tags], localization: localized(nameEn, nameRu, descriptionEn, descriptionRu) });
+const base = (id, entityType, nameEn, nameRu, descriptionEn, descriptionRu) => ({ id, entityType, ...source, localization: localized(nameEn, nameRu, descriptionEn, descriptionRu) });
 const effect = (id, target, operation, valueType, value, extra = {}) => ({ id, target, operation, valueType, value, activation: "always_on", actionCost: "none", trigger: "", conditions: [], stacking: "unique_by_source", stackingGroup: id, priority: 100, resourceId: "", durationType: "permanent", durationValue: 1, restType: "long", automationLevel: "full", notes: "", ...extra });
 const choice = (id, min, max, filter, optionIds = []) => ({ id, selectionType: "entity", min, max, optionIds, filter });
 

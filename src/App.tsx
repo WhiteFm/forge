@@ -26,8 +26,33 @@ function downloadJson(filename: string, value: unknown) {
   URL.revokeObjectURL(url);
 }
 
+function useAutoFitButtons(locale: string) {
+  useEffect(() => {
+    const selector = [".primary-button", ".ghost-button", ".secondary-button", ".add-card-button", ".text-action", ".project-chip", ".section-toggle", ".entity-picker-trigger", ".workspace-actions button", ".issue-scope button", ".project-modal footer button", ".nav-sidebar nav > button"].join(",");
+    let frame = 0;
+    const fit = () => {
+      document.querySelectorAll<HTMLButtonElement>(selector).forEach((button) => {
+        button.style.fontSize = "";
+        let size = Number.parseFloat(getComputedStyle(button).fontSize);
+        while (size > 8 && (button.scrollWidth > button.clientWidth || button.scrollHeight > button.clientHeight)) {
+          size -= 0.5;
+          button.style.fontSize = `${size}px`;
+        }
+      });
+    };
+    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(fit); };
+    const observer = new MutationObserver(schedule);
+    const shell = document.querySelector(".forge-shell");
+    if (shell) observer.observe(shell, { childList: true, subtree: true, characterData: true });
+    window.addEventListener("resize", schedule);
+    schedule();
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener("resize", schedule); };
+  }, [locale]);
+}
+
 export default function App() {
   const { locale, setLocale, t } = useUi();
+  useAutoFitButtons(locale);
   const [project, setProject] = useState<ForgeProject>(loadProject);
   const [activeType, setActiveType] = useState<EntityType>(project.entities[0]?.entityType ?? "class");
   const [activeId, setActiveId] = useState(project.entities[0]?.id ?? "");
@@ -137,7 +162,7 @@ export default function App() {
     setShowSidebar(false);
   }
 
-  return <div className="forge-shell">
+  return <div className="forge-shell" data-locale={locale}>
     <header className="topbar">
       <button className="mobile-menu" type="button" onClick={() => setShowSidebar((value) => !value)} aria-label={t("app.openMenu")}>☰</button>
       <div className="brand"><img className="brand-mark" src={`${import.meta.env.BASE_URL}forge-logo.svg`} alt="Forge" /><span><strong>WSGuild</strong><small>{t("app.brand")}</small></span></div>
@@ -161,7 +186,7 @@ export default function App() {
     <aside className={`entity-sidebar ${showSidebar ? "open-list" : ""}`}>
       <div className="entity-list-head"><div><span className="eyebrow">{entityTypeLabels[activeType][locale]}</span><strong>{t("app.records", { count: shownEntities.length })}</strong></div><button className="square-button" type="button" onClick={() => addEntity(activeType)}>＋</button></div>
       <div className="search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("app.search")} /></div>
-      <div className="entity-list">{shownEntities.map((entity) => { const count = issues.filter((issue) => issue.entityId === entity.id && issue.severity === "error").length; return <button className={entity.id === activeId ? "active" : ""} type="button" key={entity.id} onClick={() => { setActiveId(entity.id); setShowSidebar(false); }}><span className={`status-bar status-${entity.status}`} /><span><strong>{entity.localization[locale].name || t("app.untitled")}</strong><small>{entity.id}</small><em>{entity.tags.includes("official") ? "OFFICIAL" : "HOMEBREW"}</em></span>{count > 0 && <b>{count}</b>}</button>; })}{shownEntities.length === 0 && <div className="empty-list"><p>{t("app.emptyList")}</p><button type="button" onClick={() => addEntity(activeType)}>{t("app.createFirstRecord")}</button></div>}</div>
+      <div className="entity-list">{shownEntities.map((entity) => { const count = issues.filter((issue) => issue.entityId === entity.id && issue.severity === "error").length; return <button className={entity.id === activeId ? "active" : ""} type="button" key={entity.id} onClick={() => { setActiveId(entity.id); setShowSidebar(false); }}><span className={`status-bar status-${entity.status}`} /><span><strong>{entity.localization[locale].name || t("app.untitled")}</strong><small>{entity.id}</small></span>{count > 0 && <b>{count}</b>}</button>; })}{shownEntities.length === 0 && <div className="empty-list"><p>{t("app.emptyList")}</p><button type="button" onClick={() => addEntity(activeType)}>{t("app.createFirstRecord")}</button></div>}</div>
     </aside>
 
     <main className={`workspace ${showRight ? "with-inspector" : ""}`}>

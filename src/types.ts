@@ -101,7 +101,6 @@ export interface ForgeEntity {
   id: string;
   entityType: EntityType;
   status: ContentStatus;
-  tags: string[];
   localization: Record<Locale, LocalizedText>;
 
   referenceCategory?: "ability" | "skill" | "language" | "tool" | "damage_type" | "condition" | "sense" | "movement_type" | "size" | "rest_type" | "action_type" | "weapon_property" | "weapon_mastery" | "armor_training" | "spell_school";

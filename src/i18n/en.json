@@ -81,8 +81,6 @@
   "editor.status": "Status",
   "editor.name": "Name _{locale}",
   "editor.description": "Description _{locale}",
-  "editor.tags": "Tags",
-  "editor.tagsHint": "official, srd52, or homebrew",
   "editor.classCore": "Class core",
   "editor.hitDie": "Hit Point Die",
   "editor.casterProgression": "Caster progression",
