@@ -1,4 +1,4 @@
-import { useState, type ClipboardEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useEffect, useState, type ClipboardEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { emptyEffect, makeSubentityId, targetSuggestions } from "./data";
 import type { AbilityId, ChoiceApplication, ChoiceDefinition, ClassProgressionEntry, Effect, ForgeEntity, LevelEntry } from "./types";
 import { useUi } from "./ui-i18n";
@@ -32,15 +32,33 @@ export function CsvInput({ value, onChange, placeholder }: { value: string[]; on
   return <div className="tag-editor"><div className="tag-list">{value.map((item) => <span className="data-chip" key={item}>{item}<button type="button" onClick={() => onChange(value.filter((entry) => entry !== item))} aria-label={`Remove ${item}`}>×</button></span>)}</div><div className="tag-entry"><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === ",") { event.preventDefault(); add(); } }} placeholder={placeholder ?? (locale === "en" ? "Add a value" : "Добавить значение")} /><button type="button" onClick={add} disabled={!draft.trim()}>+</button></div></div>;
 }
 
-export function NumberControl({ value, onChange, min = 0, max = 100, step = 1, unit = "" }: { value: number; onChange: (value: number) => void; min?: number; max?: number; step?: number; unit?: string }) {
+type NumericInputProps = { value: number; onChange: (value: number) => void; min?: number; max?: number; step?: number; unit?: string };
+
+function NumericInput({ value, onChange, min = 0, max = 100, step = 1, unit = "" }: NumericInputProps) {
+  const [draft, setDraft] = useState(String(value));
+  const [editing, setEditing] = useState(false);
   const clamp = (next: number) => Math.min(max, Math.max(min, Number(next.toFixed(4))));
-  return <div className="number-control"><button type="button" onClick={() => onChange(clamp(value - step))} aria-label="Decrease">−</button><input type="range" min={min} max={max} step={step} value={Math.min(max, Math.max(min, value))} onChange={(event) => onChange(Number(event.target.value))} /><output><input aria-label="Value" type="number" min={min} max={max} step={step} value={value} onChange={(event) => onChange(clamp(Number(event.target.value)))} />{unit && <span>{unit}</span>}</output><button type="button" onClick={() => onChange(clamp(value + step))} aria-label="Increase">+</button></div>;
+  useEffect(() => { if (!editing) setDraft(String(value)); }, [editing, value]);
+  const commit = () => {
+    if (!draft.trim()) {
+      setDraft(String(value));
+      setEditing(false);
+      return;
+    }
+    const parsed = Number(draft);
+    if (Number.isFinite(parsed)) {
+      const next = clamp(parsed);
+      onChange(next);
+      setDraft(String(next));
+    } else setDraft(String(value));
+    setEditing(false);
+  };
+  return <div className="numeric-input"><input aria-label="Value" inputMode="decimal" type="number" min={min} max={max} step={step} value={draft} onFocus={() => setEditing(true)} onChange={(event) => { const nextDraft = event.target.value; setDraft(nextDraft); const parsed = Number(nextDraft); if (nextDraft !== "" && Number.isFinite(parsed) && parsed >= min && parsed <= max) onChange(Number(parsed.toFixed(4))); }} onBlur={commit} onWheel={(event) => event.currentTarget.blur()} onKeyDown={(event) => { if (event.key === "ArrowUp" || event.key === "ArrowDown") event.preventDefault(); if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { setDraft(String(value)); event.currentTarget.blur(); } }} />{unit && <span aria-hidden="true">{unit}</span>}</div>;
 }
 
-export function NumberStepper({ value, onChange, min = 0, max = 100, step = 1, unit = "" }: { value: number; onChange: (value: number) => void; min?: number; max?: number; step?: number; unit?: string }) {
-  const clamp = (next: number) => Math.min(max, Math.max(min, Number(next.toFixed(4))));
-  return <div className="number-stepper"><button className="step-button decrease" type="button" onClick={() => onChange(clamp(value - step))} aria-label="Decrease">−</button><output><input aria-label="Value" type="number" min={min} max={max} step={step} value={value} onChange={(event) => onChange(clamp(Number(event.target.value)))} />{unit && <span>{unit}</span>}</output><button className="step-button increase" type="button" onClick={() => onChange(clamp(value + step))} aria-label="Increase">+</button></div>;
-}
+export function NumberControl(props: NumericInputProps) { return <NumericInput {...props} />; }
+
+export function NumberStepper(props: NumericInputProps) { return <NumericInput {...props} />; }
 
 export function EntityQuantityList({ entities, value, locale, onChange, addLabel }: { entities: ForgeEntity[]; value: Array<{ itemId: string; quantity: number }>; locale: "en" | "ru"; onChange: (value: Array<{ itemId: string; quantity: number }>) => void; addLabel?: string }) {
   return <div className="entity-quantity-list">{value.map((entry, index) => <div className="entity-quantity-row" key={`${entry.itemId}-${index}`}><EntityPicker entities={entities} type="item" value={entry.itemId} onChange={(itemId) => onChange(value.map((item, itemIndex) => itemIndex === index ? { ...item, itemId } : item))} /><NumberControl value={entry.quantity} min={1} max={99} onChange={(quantity) => onChange(value.map((item, itemIndex) => itemIndex === index ? { ...item, quantity } : item))} /><button className="icon-button danger" type="button" onClick={() => onChange(value.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>)}<button className="add-card-button" type="button" onClick={() => onChange([...value, { itemId: "", quantity: 1 }])}>＋ {addLabel ?? (locale === "en" ? "Add item" : "Добавить предмет")}</button></div>;

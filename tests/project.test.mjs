@@ -137,3 +137,16 @@ test("ships complete Forge documentation", async () => {
   assert.match(validation, /Что валидация пока не проверяет/);
   assert.match(glossary, /`PB` \/ `БМ`/);
 });
+
+test("uses manual numeric entry and compact responsive editor grids", async () => {
+  const components = await readFile(new URL("../src/components.tsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+  assert.match(components, /className="numeric-input"/);
+  assert.match(components, /inputMode="decimal" type="number"/);
+  assert.doesNotMatch(components, /type="range"/);
+  assert.doesNotMatch(components, /aria-label="Decrease"|aria-label="Increase"/);
+  assert.match(css, /input\[type="number"\]::\-webkit-inner-spin-button/);
+  assert.match(css, /container-type:\s*inline-size/);
+  assert.match(css, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.doesNotMatch(css, /number-control|number-stepper|step-button/);
+});
