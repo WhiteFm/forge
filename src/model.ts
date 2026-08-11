@@ -1,4 +1,5 @@
 import { buildDndTemplateCatalog } from "./template-catalog";
+import { buildSrdItemEntities } from "./srd-items";
 
 export type Locale = "en" | "ru" | "sv";
 export type LocalText = { en: string; ru?: string; sv?: string };
@@ -125,7 +126,7 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 2;
+  catalogVersion: 3;
   namespace: string;
   version: string;
   defaultLocale: "en";
@@ -305,7 +306,7 @@ export function createCleanProject(): ForgeProject {
   const packKey = "characters";
   const catalog = buildDndTemplateCatalog(namespace);
   const project: ForgeProject = {
-    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 2, namespace, version: "1.0.0", defaultLocale: "en",
+    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 3, namespace, version: "1.0.0", defaultLocale: "en",
     reference: { id: `${namespace}.ref.${refKey}`, key: refKey, name: { en: "Core Reference", ru: "Основной справочник", sv: "Grundreferens" }, version: "1.0.0" },
     pack: { id: `${namespace}.pack.${packKey}`, key: packKey, name: { en: "New Content Pack", ru: "Новый пак контента", sv: "Nytt innehållspaket" }, version: "1.0.0", requiredRefs: [{ id: `${namespace}.ref.${refKey}`, minimumVersion: "1.0.0", compatibleMajor: 1 }] },
     categories: structuredClone(STANDARD_CATEGORIES),
@@ -313,20 +314,36 @@ export function createCleanProject(): ForgeProject {
     references: catalog.references,
     influences: [],
     templates: catalog.templates,
-    entities: [], dependencies: [], createdAt: now, updatedAt: now,
+    entities: buildSrdItemEntities(namespace, catalog.references), dependencies: [], createdAt: now, updatedAt: now,
   };
   return recalculateProjectIds(project);
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 2) return project;
+  if (project.catalogVersion === 3) return project;
   const next = structuredClone(project);
   const catalog = buildDndTemplateCatalog(next.namespace);
   next.atomics = next.atomics.map((item) => ({ ...item, locked: false, packId: item.id.startsWith("wsg.") ? "wsg" : item.packId ?? next.namespace }));
-  const catalogByKindAndKey = new Map(catalog.references.map((item) => [`${item.kind}:${item.key}`, item.id]));
+  const signature = (item: ReferenceRecord) => `${item.kind}:${item.optionGroup ?? ""}:${item.name.en.trim().toLowerCase()}`;
+  const existingByKey = new Map(next.references.map((item) => [`${item.kind}:${item.key}`, item]));
+  const existingBySignature = new Map(next.references.map((item) => [signature(item), item]));
+  const catalogReferenceIds = new Map<string, string>();
+  for (const reference of catalog.references) {
+    const existing = existingByKey.get(`${reference.kind}:${reference.key}`) ?? existingBySignature.get(signature(reference));
+    if (!existing) {
+      next.references.push(reference);
+      existingByKey.set(`${reference.kind}:${reference.key}`, reference);
+      existingBySignature.set(signature(reference), reference);
+      catalogReferenceIds.set(reference.id, reference.id);
+      continue;
+    }
+    catalogReferenceIds.set(reference.id, existing.id);
+    Object.assign(existing, { ...reference, id: existing.id, previousIds: [...new Set([...existing.previousIds, ...reference.previousIds])] });
+  }
+  const catalogByKindAndKey = new Map(next.references.map((item) => [`${item.kind}:${item.key}`, item.id]));
   const migratedReferenceIds = new Map(next.references.filter((item) => item.id.startsWith("wsg.ref.")).flatMap((item) => {
     const replacement = catalogByKindAndKey.get(`${item.kind}:${item.key}`);
-    return replacement ? [[item.id, replacement] as const] : [];
+    return replacement && replacement !== item.id ? [[item.id, replacement] as const] : [];
   }));
   for (const template of next.templates) for (const field of template.fields) field.referenceId = migratedReferenceIds.get(field.referenceId) ?? field.referenceId;
   for (const entity of next.entities) entity.values = Object.fromEntries(Object.entries(entity.values).map(([key, value]) => [migratedReferenceIds.get(key) ?? key, value]));
@@ -337,17 +354,20 @@ export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
     ...next.influences.flatMap((influence) => influence.effectIds),
   ]);
   next.references = next.references.filter((item) => !item.id.startsWith("wsg.ref.") || usedReferenceIds.has(item.id));
-  const referenceIds = new Set(next.references.map((item) => item.id));
-  for (const reference of catalog.references) if (!referenceIds.has(reference.id)) next.references.push(reference);
   for (const catalogTemplate of catalog.templates) {
+    const normalizedTemplate = { ...catalogTemplate, fields: catalogTemplate.fields.map((field) => ({ ...field, referenceId: catalogReferenceIds.get(field.referenceId) ?? field.referenceId })) };
     const existing = next.templates.find((template) => template.type === catalogTemplate.type);
-    if (!existing) { next.templates.push(catalogTemplate); continue; }
+    if (!existing) { next.templates.push(normalizedTemplate); continue; }
     const existingReferences = new Set(existing.fields.map((field) => field.referenceId));
-    for (const field of catalogTemplate.fields) if (!existingReferences.has(field.referenceId)) existing.fields.push({ ...field, order: existing.fields.length });
+    for (const field of normalizedTemplate.fields) if (!existingReferences.has(field.referenceId)) existing.fields.push({ ...field, order: existing.fields.length });
     if (!existing.name.ru) existing.name.ru = catalogTemplate.name.ru;
     if (!existing.name.sv) existing.name.sv = catalogTemplate.name.sv;
   }
-  next.catalogVersion = 2;
+  const existingEntityKeys = new Set(next.entities.map((entity) => `${entity.type}:${entity.key}`));
+  for (const entity of buildSrdItemEntities(next.namespace, next.references)) {
+    if (!existingEntityKeys.has(`${entity.type}:${entity.key}`)) next.entities.push(entity);
+  }
+  next.catalogVersion = 3;
   next.updatedAt = new Date().toISOString();
   return recalculateProjectIds(next);
 }
