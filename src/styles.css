@@ -606,6 +606,14 @@ textarea { padding: 8px 9px; }
 .class-progression .level-cell { padding: 2px; }
 .class-progression .level-cell input { height: 30px; border-radius: 5px; }
 .class-progression th, .field > span, .field > legend, .levels-head > * { overflow: hidden; white-space: nowrap; text-overflow: clip; }
+.class-progression { user-select: none; }
+.class-progression thead th { height: 34px !important; max-height: 34px; overflow: hidden !important; font-family: "Alegreya", sans-serif !important; line-height: 1 !important; white-space: nowrap !important; text-overflow: clip; }
+.class-progression .progression-groups th { height: 31px !important; max-height: 31px; }
+.class-progression td { cursor: cell; }
+.class-progression td.grid-cell-selected { position: relative; background-color: rgba(217,198,95,.11) !important; outline: 1px solid rgba(217,198,95,.62); outline-offset: -2px; }
+.class-progression td.grid-cell-selected input { background-color: rgba(217,198,95,.08); }
+.class-progression td.grid-cell-active { z-index: 3; outline: 2px solid var(--gold-bright); outline-offset: -2px; }
+.class-progression .level-cell.grid-cell-selected input { background: linear-gradient(rgba(255,255,255,.18), rgba(255,255,255,.18)), var(--gold); }
 .progression-table:focus-visible { outline: 1px solid var(--gold); outline-offset: 2px; }
 
 .project-chip { width: 280px; height: 40px; }

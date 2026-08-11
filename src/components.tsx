@@ -1,4 +1,4 @@
-import { useState, type ClipboardEvent, type ReactNode } from "react";
+import { useState, type ClipboardEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { emptyEffect, makeSubentityId, targetSuggestions } from "./data";
 import type { AbilityId, ChoiceApplication, ChoiceDefinition, ClassProgressionEntry, Effect, ForgeEntity, LevelEntry } from "./types";
 import { useUi } from "./ui-i18n";
@@ -71,36 +71,105 @@ export function LevelsEditor({ levels, entities, locale, onChange, title, editab
 
 export function ClassProgressionEditor({ rows, levels, onChange }: { rows: ClassProgressionEntry[]; levels: LevelEntry[]; onChange: (rows: ClassProgressionEntry[]) => void }) {
   const { locale } = useUi();
+  type GridPoint = { row: number; column: number };
+  type GridSelection = { anchor: GridPoint; focus: GridPoint };
+  const [selection, setSelection] = useState<GridSelection | null>(null);
+  const [dragging, setDragging] = useState(false);
   const labels = locale === "en" ? ["LVL", "PB", "Cantrips", "Prepared"] : ["УР.", "БМ", "Заговоры", "Подготовлено"];
   const syncedRows = levels.map((entry, index) => ({ ...(rows[index] ?? { proficiencyBonus: 2 + Math.floor(index / 4), cantripsKnown: 0, preparedSpells: 0, spellSlots: Array(9).fill(0) }), level: entry.level }));
+  const bounds = selection ? { minRow: Math.min(selection.anchor.row, selection.focus.row), maxRow: Math.max(selection.anchor.row, selection.focus.row), minColumn: Math.min(selection.anchor.column, selection.focus.column), maxColumn: Math.max(selection.anchor.column, selection.focus.column) } : null;
   const patch = (index: number, value: Partial<ClassProgressionEntry>) => onChange(syncedRows.map((row, rowIndex) => rowIndex === index ? { ...row, ...value } : row));
+  const writeValue = (nextRows: ClassProgressionEntry[], rowIndex: number, column: number, raw: string) => {
+    if (!nextRows[rowIndex] || column < -1 || column > 11) return;
+    const parsed = Number(raw.trim().replace(/\s/g, "").replace(",", "."));
+    if (!Number.isFinite(parsed)) return;
+    if (column === -1) return;
+    const value = column === 0 ? Math.min(6, Math.max(2, Math.trunc(parsed))) : Math.max(0, Math.trunc(parsed));
+    if (column === 0) nextRows[rowIndex].proficiencyBonus = value;
+    else if (column === 1) nextRows[rowIndex].cantripsKnown = value;
+    else if (column === 2) nextRows[rowIndex].preparedSpells = value;
+    else nextRows[rowIndex].spellSlots[column - 3] = value;
+  };
   const pasteTable = (event: ClipboardEvent<HTMLDivElement>) => {
     const clipboard = event.clipboardData.getData("text/plain");
-    if (!clipboard.includes("\t") && !clipboard.includes("\n")) return;
     const target = event.target instanceof HTMLElement ? event.target.closest<HTMLInputElement>("input[data-row][data-column]") : null;
-    const startRow = Number(target?.dataset.row ?? 0);
-    let startColumn = Number(target?.dataset.column ?? -1);
+    let startRow = bounds?.minRow ?? Number(target?.dataset.row ?? 0);
+    let startColumn = bounds?.minColumn ?? Number(target?.dataset.column ?? -1);
     const pastedRows = clipboard.replace(/\r/g, "").split("\n").filter((line, index, all) => line.length > 0 || index < all.length - 1).map((line) => line.split("\t"));
     while (pastedRows.length && !Number.isFinite(Number(pastedRows[0][0]?.trim().replace(/\s/g, "").replace(",", ".")))) pastedRows.shift();
     if (!pastedRows.length) return;
     if (startColumn === -1 && pastedRows[0].length === 12) startColumn = 0;
     event.preventDefault();
     const nextRows = syncedRows.map((row) => ({ ...row, spellSlots: [...row.spellSlots] }));
-    pastedRows.forEach((cells, pastedRowIndex) => cells.forEach((cell, pastedColumnIndex) => {
-      const rowIndex = startRow + pastedRowIndex;
-      const column = startColumn + pastedColumnIndex;
-      if (!nextRows[rowIndex] || column < 0 || column > 11) return;
-      const parsed = Number(cell.trim().replace(/\s/g, "").replace(",", "."));
-      if (!Number.isFinite(parsed)) return;
-      const value = column === 0 ? Math.min(6, Math.max(2, Math.trunc(parsed))) : Math.max(0, Math.trunc(parsed));
-      if (column === 0) nextRows[rowIndex].proficiencyBonus = value;
-      else if (column === 1) nextRows[rowIndex].cantripsKnown = value;
-      else if (column === 2) nextRows[rowIndex].preparedSpells = value;
-      else nextRows[rowIndex].spellSlots[column - 3] = value;
-    }));
+    if (bounds && pastedRows.length === 1 && pastedRows[0].length === 1) {
+      for (let rowIndex = bounds.minRow; rowIndex <= bounds.maxRow; rowIndex += 1) for (let column = bounds.minColumn; column <= bounds.maxColumn; column += 1) writeValue(nextRows, rowIndex, column, pastedRows[0][0]);
+    } else pastedRows.forEach((cells, pastedRowIndex) => cells.forEach((cell, pastedColumnIndex) => writeValue(nextRows, startRow + pastedRowIndex, startColumn + pastedColumnIndex, cell)));
     onChange(nextRows);
   };
-  return <div className="progression-table" tabIndex={0} onPaste={pasteTable} aria-label={locale === "en" ? "Class progression table. Paste tab-separated cells from Excel with Ctrl+V." : "Таблица прогрессии класса. Вставляйте ячейки из Excel через Ctrl+V."}><table className="class-progression"><colgroup><col className="col-level" /><col className="col-pb" /><col className="col-cantrips" /><col className="col-prepared" />{Array.from({ length: 9 }, (_, index) => <col className={`col-slot col-slot-${index + 1}`} key={index} />)}</colgroup><thead><tr className="progression-groups"><th colSpan={4}>{locale === "en" ? "Class progression" : "Прогрессия класса"}</th><th colSpan={9}>{locale === "en" ? "Spell slots by LVL" : "Ячейки по УР."}</th></tr><tr>{labels.map((label) => <th key={label}>{label}</th>)}{Array.from({ length: 9 }, (_, index) => <th className={`slot-heading slot-tier-${index + 1}`} key={index}>{index + 1}</th>)}</tr></thead><tbody>{syncedRows.map((row, index) => <tr key={`${row.level}-${index}`}><td className="level-cell"><input aria-label={`${locale === "en" ? "LVL" : "УР."} ${row.level}`} readOnly data-row={index} data-column={-1} value={row.level} /></td><td><input data-row={index} data-column={0} type="number" min="2" max="6" value={row.proficiencyBonus} onChange={(event) => patch(index, { proficiencyBonus: Number(event.target.value) })} /></td><td><input data-row={index} data-column={1} type="number" min="0" value={row.cantripsKnown} onChange={(event) => patch(index, { cantripsKnown: Number(event.target.value) })} /></td><td><input data-row={index} data-column={2} type="number" min="0" value={row.preparedSpells} onChange={(event) => patch(index, { preparedSpells: Number(event.target.value) })} /></td>{Array.from({ length: 9 }, (_, slotIndex) => <td className={`slot-cell slot-tier-${slotIndex + 1}`} key={slotIndex}><input data-row={index} data-column={slotIndex + 3} aria-label={`${locale === "en" ? "Spell slot LVL" : "УР. ячейки"} ${slotIndex + 1}`} type="number" min="0" value={row.spellSlots[slotIndex] ?? 0} onChange={(event) => patch(index, { spellSlots: Array.from({ length: 9 }, (_, innerIndex) => innerIndex === slotIndex ? Number(event.target.value) : (row.spellSlots[innerIndex] ?? 0)) })} /></td>)}</tr>)}</tbody></table></div>;
+  const copySelection = (event: ClipboardEvent<HTMLDivElement>) => {
+    if (!bounds) return;
+    const lines: string[] = [];
+    for (let rowIndex = bounds.minRow; rowIndex <= bounds.maxRow; rowIndex += 1) {
+      const cells: Array<string | number> = [];
+      for (let column = bounds.minColumn; column <= bounds.maxColumn; column += 1) {
+        const row = syncedRows[rowIndex];
+        cells.push(column === -1 ? row.level : column === 0 ? row.proficiencyBonus : column === 1 ? row.cantripsKnown : column === 2 ? row.preparedSpells : row.spellSlots[column - 3] ?? 0);
+      }
+      lines.push(cells.join("\t"));
+    }
+    event.preventDefault();
+    event.clipboardData.setData("text/plain", lines.join("\n"));
+  };
+  const cellFromElement = (element: Element | null): GridPoint | null => {
+    const cell = element?.closest<HTMLElement>("td[data-grid-row][data-grid-column]");
+    return cell ? { row: Number(cell.dataset.gridRow), column: Number(cell.dataset.gridColumn) } : null;
+  };
+  const startSelection = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const point = cellFromElement(event.target instanceof Element ? event.target : null);
+    if (!point) return;
+    setSelection((current) => event.shiftKey && current ? { ...current, focus: point } : { anchor: point, focus: point });
+    setDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const input = event.target instanceof Element ? event.target.closest("td")?.querySelector("input") : null;
+    input?.focus({ preventScroll: true });
+    input?.select();
+    event.preventDefault();
+  };
+  const moveSelection = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragging) return;
+    const point = cellFromElement(document.elementFromPoint(event.clientX, event.clientY));
+    if (point) setSelection((current) => current ? { ...current, focus: point } : { anchor: point, focus: point });
+  };
+  const stopSelection = (event: ReactPointerEvent<HTMLDivElement>) => {
+    setDragging(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+  const keySelection = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
+      event.preventDefault();
+      setSelection({ anchor: { row: 0, column: -1 }, focus: { row: Math.max(0, levels.length - 1), column: 11 } });
+      return;
+    }
+    if ((event.key === "Delete" || event.key === "Backspace") && bounds) {
+      event.preventDefault();
+      const nextRows = syncedRows.map((row) => ({ ...row, spellSlots: [...row.spellSlots] }));
+      for (let rowIndex = bounds.minRow; rowIndex <= bounds.maxRow; rowIndex += 1) for (let column = Math.max(0, bounds.minColumn); column <= bounds.maxColumn; column += 1) writeValue(nextRows, rowIndex, column, "0");
+      onChange(nextRows);
+      return;
+    }
+    const directions: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+    const direction = directions[event.key];
+    if (!direction) return;
+    event.preventDefault();
+    const current = selection?.focus ?? { row: 0, column: -1 };
+    const point = { row: Math.min(Math.max(0, levels.length - 1), Math.max(0, current.row + direction[0])), column: Math.min(11, Math.max(-1, current.column + direction[1])) };
+    setSelection((previous) => event.shiftKey && previous ? { ...previous, focus: point } : { anchor: point, focus: point });
+    const tableEditor = event.currentTarget;
+    requestAnimationFrame(() => tableEditor.querySelector<HTMLInputElement>(`input[data-row="${point.row}"][data-column="${point.column}"]`)?.focus());
+  };
+  const cellClass = (row: number, column: number, base = "") => `${base}${bounds && row >= bounds.minRow && row <= bounds.maxRow && column >= bounds.minColumn && column <= bounds.maxColumn ? " grid-cell-selected" : ""}${selection?.focus.row === row && selection.focus.column === column ? " grid-cell-active" : ""}`;
+  return <div className="progression-table" tabIndex={0} onPointerDown={startSelection} onPointerMove={moveSelection} onPointerUp={stopSelection} onPointerCancel={stopSelection} onPaste={pasteTable} onCopy={copySelection} onKeyDown={keySelection} aria-label={locale === "en" ? "Spreadsheet class progression table" : "Табличный редактор прогрессии класса"}><table className="class-progression"><colgroup><col className="col-level" /><col className="col-pb" /><col className="col-cantrips" /><col className="col-prepared" />{Array.from({ length: 9 }, (_, index) => <col className={`col-slot col-slot-${index + 1}`} key={index} />)}</colgroup><thead><tr className="progression-groups"><th colSpan={4}>{locale === "en" ? "Class progression" : "Прогрессия класса"}</th><th colSpan={9}>{locale === "en" ? "Spell slots by LVL" : "Ячейки по УР."}</th></tr><tr>{labels.map((label) => <th key={label}>{label}</th>)}{Array.from({ length: 9 }, (_, index) => <th className={`slot-heading slot-tier-${index + 1}`} key={index}>{index + 1}</th>)}</tr></thead><tbody>{syncedRows.map((row, index) => <tr key={`${row.level}-${index}`}><td data-grid-row={index} data-grid-column={-1} className={cellClass(index, -1, "level-cell")}><input aria-label={`${locale === "en" ? "LVL" : "УР."} ${row.level}`} readOnly data-row={index} data-column={-1} value={row.level} /></td><td data-grid-row={index} data-grid-column={0} className={cellClass(index, 0)}><input data-row={index} data-column={0} type="number" min="2" max="6" value={row.proficiencyBonus} onChange={(event) => patch(index, { proficiencyBonus: Number(event.target.value) })} /></td><td data-grid-row={index} data-grid-column={1} className={cellClass(index, 1)}><input data-row={index} data-column={1} type="number" min="0" value={row.cantripsKnown} onChange={(event) => patch(index, { cantripsKnown: Number(event.target.value) })} /></td><td data-grid-row={index} data-grid-column={2} className={cellClass(index, 2)}><input data-row={index} data-column={2} type="number" min="0" value={row.preparedSpells} onChange={(event) => patch(index, { preparedSpells: Number(event.target.value) })} /></td>{Array.from({ length: 9 }, (_, slotIndex) => <td data-grid-row={index} data-grid-column={slotIndex + 3} className={cellClass(index, slotIndex + 3, `slot-cell slot-tier-${slotIndex + 1}`)} key={slotIndex}><input data-row={index} data-column={slotIndex + 3} aria-label={`${locale === "en" ? "Spell slot LVL" : "УР. ячейки"} ${slotIndex + 1}`} type="number" min="0" value={row.spellSlots[slotIndex] ?? 0} onChange={(event) => patch(index, { spellSlots: Array.from({ length: 9 }, (_, innerIndex) => innerIndex === slotIndex ? Number(event.target.value) : (row.spellSlots[innerIndex] ?? 0)) })} /></td>)}</tr>)}</tbody></table></div>;
 }
 
 export function ChoicesEditor({ choices, entities, entityId, applications, onChange, onApplicationsChange, onRemoveChoice }: { choices: ChoiceDefinition[]; entities: ForgeEntity[]; entityId: string; applications: ChoiceApplication[]; onChange: (choices: ChoiceDefinition[]) => void; onApplicationsChange: (applications: ChoiceApplication[]) => void; onRemoveChoice: (choiceId: string) => void }) {

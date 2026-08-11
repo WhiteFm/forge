@@ -77,11 +77,15 @@ test("renders a full-width grouped class progression table", async () => {
   assert.match(component, /class-progression/);
   assert.match(component, /col-level/);
   assert.match(component, /onPaste=\{pasteTable\}/);
+  assert.match(component, /onPointerDown=\{startSelection\}/);
+  assert.match(component, /grid-cell-selected/);
   assert.match(component, /data-column=\{-1\}/);
+  assert.match(component, /readOnly data-row=\{index\} data-column=\{-1\}/);
   assert.match(component, /clipboardData\.getData\("text\/plain"\)/);
   assert.match(component, /\["LVL", "PB", "Cantrips", "Prepared"\]/);
   assert.match(component, /compactLevelText/);
   assert.match(css, /\.progression-table \{[^}]*overflow:\s*visible/);
+  assert.match(css, /white-space:\s*nowrap\s*!important/);
   assert.doesNotMatch(css, /\.progression-table \{[^}]*max-height:\s*min/);
 });
 
