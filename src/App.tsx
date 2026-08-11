@@ -1,951 +1,487 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import EntityEditor from "./EntityEditor";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { decodeBundle, downloadText, encodeBundle } from "./codec";
 import {
-  createEntity,
-  entityTypeLabels,
-  entityTypes,
-  initialProject,
-  normalizeProject,
-} from "./data";
-import type { EntityType, ForgeEntity, ForgeProject } from "./types";
-import { useUi } from "./ui-i18n";
-import { toCanonicalPack, validateProject } from "./validation";
-import { optionLabel } from "./option-labels";
+  ENTITY_TYPES,
+  createCleanProject,
+  localized,
+  recalculateProjectIds,
+  slugify,
+  validateProject,
+  type AtomicDataType,
+  type AtomicRecord,
+  type EffectOperation,
+  type EntityTemplate,
+  type EntityType,
+  type ForgeEntity,
+  type ForgeProject,
+  type Locale,
+  type LocalText,
+  type PropertyType,
+  type ReferenceKind,
+  type ReferenceRecord,
+  type StorageMode,
+  type TableDefinition,
+} from "./model";
 
-const STORAGE_KEY = "wsguild.forge.project.v1";
-const BUNDLED_PROJECT_URL = new URL(
-  "../projects/srd52-wizard-evoker.forge.json",
-  import.meta.url,
-).href;
+type Page = "overview" | "atomics" | "references" | "templates" | "entities" | "dependencies";
+type Dialog = "settings" | "debug" | "export" | null;
 
-function loadProject(): ForgeProject {
+const STORAGE_KEY = "wsguild.forge.project.v3";
+const LOCALE_KEY = "wsguild.forge.locale.v3";
+
+const labels = {
+  en: {
+    overview: "Overview", atomics: "Atomics", references: "References", templates: "Templates", entities: "Entities", dependencies: "Dependencies",
+    project: "Project", clean: "New clean project", import: "Import", export: "Export", debug: "Debug", settings: "Settings",
+    search: "Search by name or ID", add: "Create", delete: "Delete", english: "English", russian: "Russian", swedish: "Swedish",
+    englishRequired: "English is required. Russian and Swedish fall back to English when empty.", locked: "Standard · locked", custom: "Custom",
+    id: "ID", name: "Name", description: "Description", category: "Sorting category", type: "Type", dataType: "Data type", storage: "Storage",
+    input: "Persistent / input", derived: "Calculated", runtime: "Current / runtime", formula: "Formula", unit: "Unit", minimum: "Minimum", maximum: "Maximum", dieSides: "Die sides",
+    parameters: "Parameters", values: "Values", effects: "Effects", influences: "Influences", table: "Table", required: "Required", multiple: "Multiple", fields: "Template fields",
+    noSelection: "Select a record on the left or create a new one.", emptyGroup: "No records in this category.", usedBy: "Used by", noItems: "Nothing has been created yet.",
+    packContent: "Pack content", refContent: "Reference content", records: "records", errors: "Errors", warnings: "Warnings", json: "JSON",
+    readonlyJson: "Generated JSON is read-only.", valid: "No blocking errors.", version: "Version", namespace: "Namespace", refName: "Reference name", packName: "Pack name", key: "Key",
+    localStorage: "The working project is stored only in this browser. CCL, VTT and Bestiary load installed .wsgref and .wsgpack files from each user's computer.",
+    cleanIntro: "A clean Forge project with immutable WSG atomics and reference primitives. It contains no classes, species, spells or other game content.",
+    flow1: "Define universal values and dice", flow2: "Build parameters, values and reusable effects", flow3: "Assemble one schema for each entity type", flow4: "Create content without writing JSON",
+    editable: "Editable in Forge", readOnly: "Read-only in Forge", exportRefs: "Export references and templates", exportPack: "Export game entities", exportProject: "Export editable project",
+    operation: "Operation", target: "Target atomic", source: "Value source", valueLabel: "Value", addOperation: "Add operation", columns: "Columns", rows: "Rows", addColumn: "Add column", addRow: "Add row", pasteTable: "Paste a copied Excel range into the selected cell.",
+    attach: "Install local dependency", dependencyHelp: "A .wsgpack requires its declared .wsgref. Installed dependencies remain local and are embedded in the editable project file only.",
+    templateHelp: "Each pack has one template per entity type. Template changes preserve entity values whose parameter IDs remain unchanged.", entityHelp: "Entity IDs are generated from namespace, type and English name. They cannot be edited directly.",
+    access: "Forge access", cancel: "Cancel", done: "Done", confirmReset: "Create a new clean project? Current local changes will be replaced.", removeBlocked: "This record is still used. Removing it will create missing links and block export.",
+  },
+  ru: {
+    overview: "Обзор", atomics: "Атомарные", references: "Справочники", templates: "Шаблоны", entities: "Сущности", dependencies: "Зависимости",
+    project: "Проект", clean: "Новый чистый проект", import: "Импорт", export: "Экспорт", debug: "Debug", settings: "Настройки",
+    search: "Поиск по имени или ID", add: "Создать", delete: "Удалить", english: "Английский", russian: "Русский", swedish: "Шведский",
+    englishRequired: "Английский обязателен. Пустой русский или шведский заменяется английским.", locked: "Стандартное · заблокировано", custom: "Пользовательское",
+    id: "ID", name: "Название", description: "Описание", category: "Категория сортировки", type: "Тип", dataType: "Тип данных", storage: "Хранение",
+    input: "Постоянное / ввод", derived: "Вычисляемое", runtime: "Текущее / игровое", formula: "Формула", unit: "Единица", minimum: "Минимум", maximum: "Максимум", dieSides: "Грани кости",
+    parameters: "Параметры", values: "Значения", effects: "Эффекты", influences: "Влияния", table: "Таблица", required: "Обязательно", multiple: "Несколько", fields: "Поля шаблона",
+    noSelection: "Выберите запись слева или создайте новую.", emptyGroup: "В этой категории нет записей.", usedBy: "Используется", noItems: "Пока ничего не создано.",
+    packContent: "Содержимое пака", refContent: "Содержимое справочника", records: "записей", errors: "Ошибки", warnings: "Предупреждения", json: "JSON",
+    readonlyJson: "Сгенерированный JSON доступен только для чтения.", valid: "Блокирующих ошибок нет.", version: "Версия", namespace: "Пространство имён", refName: "Название справочника", packName: "Название пака", key: "Ключ",
+    localStorage: "Рабочий проект хранится только в этом браузере. CCL, VTT и Бестиарий загружают установленные .wsgref и .wsgpack с компьютера каждого пользователя.",
+    cleanIntro: "Чистый проект Кузницы с неизменяемыми атомарными значениями и примитивами WSG. Классов, видов, заклинаний и другого игрового контента в нём нет.",
+    flow1: "Определите общие значения и кости", flow2: "Соберите параметры, значения и переиспользуемые эффекты", flow3: "Соберите одну схему для каждого типа сущности", flow4: "Создавайте контент без написания JSON",
+    editable: "Можно редактировать в Кузнице", readOnly: "Только чтение в Кузнице", exportRefs: "Экспорт справочников и шаблонов", exportPack: "Экспорт игровых сущностей", exportProject: "Экспорт редактируемого проекта",
+    operation: "Операция", target: "Целевое атомарное", source: "Источник значения", valueLabel: "Значение", addOperation: "Добавить операцию", columns: "Столбцы", rows: "Строки", addColumn: "Добавить столбец", addRow: "Добавить строку", pasteTable: "Вставьте скопированный диапазон Excel в выбранную ячейку.",
+    attach: "Установить локальную зависимость", dependencyHelp: ".wsgpack требует объявленный .wsgref. Установленные зависимости остаются локальными и встраиваются только в редактируемый файл проекта.",
+    templateHelp: "В паке один шаблон каждого типа. При изменении шаблона сохраняются значения, ID параметров которых не изменились.", entityHelp: "ID сущности создаётся из пространства имён, типа и английского названия. Напрямую менять его нельзя.",
+    access: "Доступ в Кузнице", cancel: "Отмена", done: "Готово", confirmReset: "Создать новый чистый проект? Текущие локальные изменения будут заменены.", removeBlocked: "Запись всё ещё используется. Удаление создаст отсутствующие ссылки и заблокирует экспорт.",
+  },
+  sv: {
+    overview: "Översikt", atomics: "Atomära", references: "Referenser", templates: "Mallar", entities: "Entiteter", dependencies: "Beroenden",
+    project: "Projekt", clean: "Nytt rent projekt", import: "Importera", export: "Exportera", debug: "Debug", settings: "Inställningar",
+    search: "Sök efter namn eller ID", add: "Skapa", delete: "Ta bort", english: "Engelska", russian: "Ryska", swedish: "Svenska",
+    englishRequired: "Engelska krävs. Tom ryska eller svenska ersätts med engelska.", locked: "Standard · låst", custom: "Anpassad",
+    id: "ID", name: "Namn", description: "Beskrivning", category: "Sorteringskategori", type: "Typ", dataType: "Datatyp", storage: "Lagring",
+    input: "Beständig / inmatning", derived: "Beräknad", runtime: "Aktuell / speltid", formula: "Formel", unit: "Enhet", minimum: "Minimum", maximum: "Maximum", dieSides: "Tärningssidor",
+    parameters: "Parametrar", values: "Värden", effects: "Effekter", influences: "Påverkningar", table: "Tabell", required: "Obligatorisk", multiple: "Flera", fields: "Mallfält",
+    noSelection: "Välj en post till vänster eller skapa en ny.", emptyGroup: "Inga poster i kategorin.", usedBy: "Används av", noItems: "Inget har skapats ännu.",
+    packContent: "Paketinnehåll", refContent: "Referensinnehåll", records: "poster", errors: "Fel", warnings: "Varningar", json: "JSON",
+    readonlyJson: "Genererad JSON är skrivskyddad.", valid: "Inga blockerande fel.", version: "Version", namespace: "Namnrymd", refName: "Referensnamn", packName: "Paketnamn", key: "Nyckel",
+    localStorage: "Arbetsprojektet lagras bara i denna webbläsare. CCL, VTT och Bestiary läser installerade .wsgref- och .wsgpack-filer från varje användares dator.",
+    cleanIntro: "Ett rent Forge-projekt med låsta WSG-atomära värden och referensprimitiver. Det innehåller inga klasser, arter, besvärjelser eller annat spelinnehåll.",
+    flow1: "Definiera universella värden och tärningar", flow2: "Bygg parametrar, värden och återanvändbara effekter", flow3: "Sätt ihop ett schema för varje entitetstyp", flow4: "Skapa innehåll utan att skriva JSON",
+    editable: "Redigerbar i Forge", readOnly: "Skrivskyddad i Forge", exportRefs: "Exportera referenser och mallar", exportPack: "Exportera spelentiteter", exportProject: "Exportera redigerbart projekt",
+    operation: "Operation", target: "Målatomär", source: "Värdekälla", valueLabel: "Värde", addOperation: "Lägg till operation", columns: "Kolumner", rows: "Rader", addColumn: "Lägg till kolumn", addRow: "Lägg till rad", pasteTable: "Klistra in ett kopierat Excel-område i vald cell.",
+    attach: "Installera lokalt beroende", dependencyHelp: "Ett .wsgpack kräver deklarerad .wsgref. Installerade beroenden förblir lokala och bäddas endast in i projektfilen.",
+    templateHelp: "Varje paket har en mall per entitetstyp. Malländringar bevarar värden vars parameter-ID är oförändrade.", entityHelp: "Entitets-ID skapas från namnrymd, typ och engelskt namn. Det kan inte redigeras direkt.",
+    access: "Forge-åtkomst", cancel: "Avbryt", done: "Klar", confirmReset: "Skapa ett nytt rent projekt? Lokala ändringar ersätts.", removeBlocked: "Posten används fortfarande. Borttagning skapar saknade länkar och blockerar export.",
+  },
+} as const;
+
+type LabelKey = keyof typeof labels.en;
+const entityNames: Record<EntityType, LocalText> = {
+  class: { en: "Classes", ru: "Классы", sv: "Klasser" }, multiclass: { en: "Multiclass profiles", ru: "Профили мультикласса", sv: "Multiklassprofiler" },
+  subclass: { en: "Subclasses", ru: "Подклассы", sv: "Underklasser" }, species: { en: "Species", ru: "Виды", sv: "Arter" },
+  background: { en: "Backgrounds", ru: "Предыстории", sv: "Bakgrunder" }, feat: { en: "Feats", ru: "Черты", sv: "Talanger" },
+  feature: { en: "Features", ru: "Умения", sv: "Förmågor" }, item: { en: "Items", ru: "Предметы", sv: "Föremål" }, spell: { en: "Spells", ru: "Заклинания", sv: "Besvärjelser" },
+};
+
+const propertyTypes: PropertyType[] = ["string", "localized_short", "localized_long", "integer", "decimal", "boolean", "select", "reference", "references", "entity", "entities", "group", "list", "formula", "condition", "effect", "dice", "table"];
+
+function compareVersions(left: string, right: string) {
+  const a = left.split(".").map(Number);
+  const b = right.split(".").map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    if ((a[index] || 0) !== (b[index] || 0)) return (a[index] || 0) - (b[index] || 0);
+  }
+  return 0;
+}
+
+function loadProject() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return normalizeProject(JSON.parse(saved) as ForgeProject);
-  } catch {
-    /* start with a valid empty project */
-  }
-  return initialProject;
+    if (saved) {
+      const value = JSON.parse(saved) as ForgeProject;
+      if (value.format === "wsg-forge-project" && value.schemaVersion === 3) return value;
+    }
+  } catch { /* A damaged local cache starts clean. */ }
+  return createCleanProject();
 }
 
-function downloadJson(filename: string, value: unknown) {
-  const blob = new Blob([JSON.stringify(value, null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
+function TextField({ label, value, onChange, disabled, hint, multiline }: { label: string; value: string | number; onChange: (value: string) => void; disabled?: boolean; hint?: string; multiline?: boolean }) {
+  return <label className="field"><span>{label}</span>{multiline ? <textarea value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} /> : <input value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} />} {hint && <small>{hint}</small>}</label>;
 }
 
-function useAutoFitText(locale: string) {
-  useEffect(() => {
-    const selector = [
-      ".primary-button",
-      ".ghost-button",
-      ".secondary-button",
-      ".add-card-button",
-      ".text-action",
-      ".project-chip",
-      ".section-toggle",
-      ".entity-picker-trigger",
-      ".workspace-actions button",
-      ".issue-scope button",
-      ".project-modal footer button",
-      ".nav-sidebar nav > button",
-      ".subclass-group-toggle",
-      ".class-progression th",
-      ".field > span",
-      ".field > legend",
-      ".levels-head > *",
-    ].join(",");
-    let frame = 0;
-    const fit = () => {
-      document.querySelectorAll<HTMLElement>(selector).forEach((element) => {
-        element.style.fontSize = "";
-        let size = Number.parseFloat(getComputedStyle(element).fontSize);
-        const minimum = element.matches(".class-progression th") ? 6 : 8;
-        while (
-          size > minimum &&
-          (element.scrollWidth > element.clientWidth ||
-            element.scrollHeight > element.clientHeight)
-        ) {
-          size -= 0.5;
-          element.style.fontSize = `${size}px`;
-        }
-      });
-    };
-    const schedule = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(fit);
-    };
-    const observer = new MutationObserver(schedule);
-    const shell = document.querySelector(".forge-shell");
-    if (shell)
-      observer.observe(shell, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-    window.addEventListener("resize", schedule);
-    schedule();
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-      window.removeEventListener("resize", schedule);
-    };
-  }, [locale]);
+function SelectField({ label, value, onChange, children, disabled }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode; disabled?: boolean }) {
+  return <label className="field"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>{children}</select></label>;
 }
 
-export default function App() {
-  const { locale, setLocale, t } = useUi();
-  useAutoFitText(locale);
+function CheckField({ label, checked, onChange, disabled }: { label: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean }) {
+  return <label className="check-field"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} disabled={disabled} /><span>{label}</span></label>;
+}
+
+function LocalizedFields({ value, onChange, t, multiline = false, disabled = false }: { value: LocalText; onChange: (value: LocalText) => void; t: (key: LabelKey) => string; multiline?: boolean; disabled?: boolean }) {
+  return <div className="locale-grid">
+    <TextField label={`${t(multiline ? "description" : "name")} · EN *`} value={value.en} onChange={(en) => onChange({ ...value, en })} multiline={multiline} disabled={disabled} />
+    <TextField label={`${t(multiline ? "description" : "name")} · RU`} value={value.ru ?? ""} onChange={(ru) => onChange({ ...value, ru })} multiline={multiline} disabled={disabled} />
+    <TextField label={`${t(multiline ? "description" : "name")} · SV`} value={value.sv ?? ""} onChange={(sv) => onChange({ ...value, sv })} multiline={multiline} disabled={disabled} />
+  </div>;
+}
+
+function Panel({ title, kicker, actions, children, className = "" }: { title: string; kicker?: string; actions?: ReactNode; children: ReactNode; className?: string }) {
+  return <section className={`panel ${className}`}><header className="panel-head"><div>{kicker && <span className="kicker">{kicker}</span>}<h2>{title}</h2></div>{actions && <div className="panel-actions">{actions}</div>}</header><div className="panel-body">{children}</div></section>;
+}
+
+function App() {
+  const [locale, setLocale] = useState<Locale>(() => (localStorage.getItem(LOCALE_KEY) as Locale) || "en");
   const [project, setProject] = useState<ForgeProject>(loadProject);
-  const [activeType, setActiveType] = useState<EntityType>(
-    project.entities[0]?.entityType ?? "class",
-  );
-  const [activeId, setActiveId] = useState(project.entities[0]?.id ?? "");
+  const [page, setPage] = useState<Page>("overview");
+  const [dialog, setDialog] = useState<Dialog>(null);
   const [search, setSearch] = useState("");
-  const [rightPanel, setRightPanel] = useState<"validation" | "json">(
-    "validation",
-  );
-  const [issueScope, setIssueScope] = useState<"all" | "active">("active");
-  const [showRight, setShowRight] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(false);
-  const [showProject, setShowProject] = useState(false);
-  const [collapsedSubclassGroups, setCollapsedSubclassGroups] = useState<
-    Set<string>
-  >(() => new Set());
-  const [toastKey, setToastKey] = useState<
-    | "app.saved"
-    | "app.savedChange"
-    | "app.createdDraft"
-    | "app.createdCopy"
-    | "app.deleted"
-    | "app.imported"
-    | "app.importFailed"
-  >("app.saved");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [selectedId, setSelectedId] = useState<string>("");
+  const [referenceKind, setReferenceKind] = useState<ReferenceKind>("parameter");
+  const [entityType, setEntityType] = useState<EntityType>("class");
+  const [debugTab, setDebugTab] = useState<"issues" | "json">("issues");
+  const [exportAccess, setExportAccess] = useState<"editable" | "read_only">("editable");
+  const [notice, setNotice] = useState("");
+  const importRef = useRef<HTMLInputElement>(null);
+  const t = (key: LabelKey) => labels[locale][key] || labels.en[key];
 
   useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ ...project, updatedAt: new Date().toISOString() }),
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
   }, [project]);
+  useEffect(() => {
+    localStorage.setItem(LOCALE_KEY, locale);
+    document.documentElement.lang = locale;
+  }, [locale]);
+  useEffect(() => {
+    if (!selectedId) return;
+    const all = [...project.atomics, ...project.references, ...project.templates, ...project.entities, ...project.influences];
+    if (all.some((item) => item.id === selectedId)) return;
+    const renamed = all.find((item) => item.previousIds?.includes(selectedId));
+    if (renamed) setSelectedId(renamed.id);
+  }, [project, selectedId]);
 
-  const issues = useMemo(
-    () => validateProject(project, locale),
-    [project, locale],
-  );
-  const errorCount = issues.filter(
-    (issue) => issue.severity === "error",
-  ).length;
-  const warningCount = issues.length - errorCount;
-  const activeEntity = project.entities.find(
-    (entity) => entity.id === activeId,
-  );
-  const normalizedSearch = search.trim().toLowerCase();
-  const matchingClassIds = new Set(
-    project.entities
-      .filter(
-        (entity) =>
-          entity.entityType === "class" &&
-          `${entity.localization.ru.name} ${entity.localization.en.name} ${entity.id}`
-            .toLowerCase()
-            .includes(normalizedSearch),
-      )
-      .map((entity) => entity.id),
-  );
-  const shownEntities = project.entities.filter(
-    (entity) =>
-      entity.entityType === activeType &&
-      (!normalizedSearch ||
-        `${entity.localization.ru.name} ${entity.localization.en.name} ${entity.id}`
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        (activeType === "subclass" &&
-          matchingClassIds.has(entity.classId ?? ""))),
-  );
-  const subclassGroups: Array<{
-    key: string;
-    classEntity?: ForgeEntity;
-    entities: ForgeEntity[];
-  }> = project.entities
-    .filter((entity) => entity.entityType === "class")
-    .map((classEntity) => ({
-      key: classEntity.id,
-      classEntity,
-      entities: shownEntities.filter(
-        (entity) => entity.classId === classEntity.id,
-      ),
-    }))
-    .filter((group) => !normalizedSearch || group.entities.length > 0);
-  const unassignedSubclasses = shownEntities.filter(
-    (entity) =>
-      !entity.classId ||
-      !project.entities.some(
-        (candidate) =>
-          candidate.entityType === "class" && candidate.id === entity.classId,
-      ),
-  );
-  if (unassignedSubclasses.length)
-    subclassGroups.push({
-      key: "__unassigned__",
-      classEntity: undefined,
-      entities: unassignedSubclasses,
-    });
-  const activeIssues = issues.filter((issue) => issue.entityId === activeId);
-  const visibleIssues = issueScope === "all" ? issues : activeIssues;
-  const canonical = useMemo(() => toCanonicalPack(project), [project]);
-  const debugJson = activeEntity
-    ? canonical.entities.find(
-        (item) => (item as { id?: string }).id === activeEntity.id,
-      )
-    : canonical.manifest;
-  const visibleErrorCount = visibleIssues.filter(
-    (issue) => issue.severity === "error",
-  ).length;
-  const visibleWarningCount = visibleIssues.length - visibleErrorCount;
+  const issues = useMemo(() => validateProject(project), [project]);
+  const updateProject = (recipe: (draft: ForgeProject) => void) => setProject((current) => {
+    const draft = structuredClone(current);
+    recipe(draft);
+    draft.updatedAt = new Date().toISOString();
+    return recalculateProjectIds(draft);
+  });
 
-  function updateEntity(patch: Partial<ForgeEntity>) {
-    const index = project.entities.findIndex(
-      (entity) => entity.id === activeId,
-    );
-    const draft = {
-      ...project,
-      entities: project.entities.map((entity) =>
-        entity.id === activeId ? { ...entity, ...patch } : entity,
-      ),
-    };
-    const needsIdRefresh = Boolean(
-      patch.localization?.en?.name !== undefined ||
-        patch.choices ||
-        patch.equipmentOptions ||
-        patch.effects ||
-        patch.materialGroups,
-    );
-    const next = needsIdRefresh ? normalizeProject(draft) : draft;
-    setProject(next);
-    if (index >= 0) setActiveId(next.entities[index].id);
-    setToastKey("app.savedChange");
-  }
+  const changePage = (next: Page) => { setPage(next); setSelectedId(""); setSearch(""); };
+  const resetProject = () => {
+    if (!window.confirm(t("confirmReset"))) return;
+    setProject(createCleanProject()); setSelectedId(""); setPage("overview"); setNotice(t("clean"));
+  };
 
-  function addEntity(type = activeType) {
-    const entity = createEntity(
-      type,
-      project.entities.length + 1,
-      project.pack.id,
-    );
-    setProject((current) => ({
-      ...current,
-      entities: [...current.entities, entity],
-    }));
-    setActiveType(type);
-    setActiveId(entity.id);
-    setShowSidebar(false);
-    setToastKey("app.createdDraft");
-  }
-
-  function duplicateEntity() {
-    if (!activeEntity) return;
-    const copy = structuredClone(activeEntity);
-    copy.status = "draft";
-    copy.localization.ru.name += " — копия";
-    copy.localization.en.name += " — copy";
-    const next = normalizeProject({
-      ...project,
-      entities: [...project.entities, copy],
-    });
-    setProject(next);
-    setActiveId(next.entities.at(-1)?.id ?? activeId);
-    setToastKey("app.createdCopy");
-  }
-
-  function deleteEntity() {
-    if (
-      !activeEntity ||
-      !window.confirm(
-        t("app.deleteConfirm", {
-          name: activeEntity.localization[locale].name,
-        }),
-      )
-    )
-      return;
-    const remaining = project.entities.filter(
-      (entity) => entity.id !== activeId,
-    );
-    setProject((current) => ({ ...current, entities: remaining }));
-    const next =
-      remaining.find((entity) => entity.entityType === activeType) ??
-      remaining[0];
-    if (next) {
-      setActiveType(next.entityType);
-      setActiveId(next.id);
-    } else setActiveId("");
-    setToastKey("app.deleted");
-  }
-
-  async function importProject(file: File) {
+  async function importFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
     try {
-      const imported = JSON.parse(await file.text()) as ForgeProject;
-      if (!imported.pack?.id || !Array.isArray(imported.entities))
-        throw new Error("invalid");
-      const normalized = normalizeProject(imported);
-      setProject(normalized);
-      const first = normalized.entities[0];
-      if (first) {
-        setActiveType(first.entityType);
-        setActiveId(first.id);
+      const source = await file.text();
+      if (file.name.toLowerCase().endsWith(".json")) {
+        const next = JSON.parse(source) as ForgeProject;
+        if (next.format !== "wsg-forge-project" || next.schemaVersion !== 3) throw new Error("This is not a Forge schema v3 project.");
+        setProject(next); setNotice(`${t("import")}: ${file.name}`); return;
       }
-      setToastKey("app.imported");
-    } catch {
-      setToastKey("app.importFailed");
-    }
-  }
-
-  async function loadBundledProject() {
-    try {
-      const response = await fetch(BUNDLED_PROJECT_URL);
-      if (!response.ok) throw new Error("download failed");
-      const imported = normalizeProject(
-        (await response.json()) as ForgeProject,
-      );
-      setProject(imported);
-      const first = imported.entities[0];
-      if (first) {
-        setActiveType(first.entityType);
-        setActiveId(first.id);
+      const { envelope, verified } = await decodeBundle(source);
+      if (!verified && !window.confirm("Checksum mismatch. Open this file as UNVERIFIED?")) return;
+      if (envelope.format === "wsgref") {
+        const payload = envelope.payload as Partial<ForgeProject> & { reference?: ForgeProject["reference"] };
+        updateProject((draft) => {
+          const dependencyProject = { ...createCleanProject(), ...payload } as ForgeProject;
+          const existing = draft.dependencies.find((item) => item.refId === payload.reference?.id);
+          const dependency = { refId: payload.reference?.id ?? file.name, minimumVersion: payload.reference?.version ?? "0.0.0", compatibleMajor: Number((payload.reference?.version ?? "0").split(".")[0]), access: envelope.access, verified, embedded: dependencyProject } as const;
+          if (existing) Object.assign(existing, dependency); else draft.dependencies.push(dependency);
+        });
+        setPage("dependencies");
+      } else {
+        const payload = envelope.payload as { pack: ForgeProject["pack"]; entities: ForgeEntity[] };
+        const installedRefs = new Map<string, string>([[project.reference.id, project.reference.version], ...project.dependencies.map((item) => [item.refId, item.minimumVersion] as [string, string])]);
+        const missing = payload.pack.requiredRefs.filter((required) => {
+          const installed = installedRefs.get(required.id);
+          return !installed || Number(installed.split(".")[0]) !== required.compatibleMajor || compareVersions(installed, required.minimumVersion) < 0;
+        });
+        if (missing.length) throw new Error(`Required reference is not installed: ${missing.map((item) => item.id).join(", ")}`);
+        if (envelope.access === "read_only") {
+          setNotice(`${file.name}: ${t("readOnly")}`);
+        } else {
+          updateProject((draft) => { draft.pack = payload.pack; draft.entities = payload.entities; });
+          setPage("entities");
+        }
       }
-      setShowProject(false);
-      setToastKey("app.imported");
-    } catch {
-      setToastKey("app.importFailed");
-    }
+    } catch (error) { window.alert(error instanceof Error ? error.message : String(error)); }
   }
 
-  function selectType(type: EntityType) {
-    setActiveType(type);
-    const first = project.entities.find((entity) => entity.entityType === type);
-    if (first) setActiveId(first.id);
-    setShowSidebar(false);
+  async function exportFile(kind: "json" | "wsgref" | "wsgpack") {
+    if (kind !== "json" && issues.some((issue) => issue.severity === "error")) { setDialog("debug"); setDebugTab("issues"); return; }
+    const root = kind === "wsgref" ? project.reference.id : project.pack.id;
+    if (kind === "json") downloadText(`${project.namespace}.forge.json`, JSON.stringify(project, null, 2), "application/json");
+    else downloadText(`${root}.${kind}`, await encodeBundle(project, kind, exportAccess));
+    setDialog(null);
   }
 
-  function openIssue(entityId?: string) {
-    if (!entityId) return;
-    const entity = project.entities.find((item) => item.id === entityId);
-    if (!entity) return;
-    setActiveType(entity.entityType);
-    setActiveId(entity.id);
-    setShowSidebar(false);
-  }
+  const nav: Array<[Page, string, number]> = [
+    ["overview", t("overview"), 0], ["atomics", t("atomics"), project.atomics.length], ["references", t("references"), project.references.length],
+    ["templates", t("templates"), project.templates.length], ["entities", t("entities"), project.entities.length], ["dependencies", t("dependencies"), project.dependencies.length],
+  ];
 
-  function toggleSubclassGroup(groupId: string) {
-    setCollapsedSubclassGroups((current) => {
-      const next = new Set(current);
-      if (next.has(groupId)) next.delete(groupId);
-      else next.add(groupId);
-      return next;
-    });
-  }
+  return <div className="app-shell">
+    <aside className="sidebar">
+      <button className="brand" onClick={() => changePage("overview")}><img src="/forge-logo.svg" alt="Forge" /><span><strong>Forge</strong><small>WSGuild visual compiler</small></span></button>
+      <div className="project-card"><span>{t("project")}</span><strong>{localized(project.pack.name, locale)}</strong><code>{project.pack.id}</code></div>
+      <nav>{nav.map(([id, name, count], index) => <button key={id} className={page === id ? "active" : ""} onClick={() => changePage(id)}><span className="nav-index">{String(index + 1).padStart(2, "0")}</span><span>{name}</span>{count > 0 && <em>{count}</em>}</button>)}</nav>
+      <div className="sidebar-foot"><button className="quiet" onClick={() => setDialog("settings")}>{t("settings")}</button><div className="locale-switch">{(["en", "ru", "sv"] as Locale[]).map((id) => <button key={id} className={locale === id ? "active" : ""} onClick={() => setLocale(id)}>{id.toUpperCase()}</button>)}</div></div>
+    </aside>
 
-  function renderEntityRow(entity: ForgeEntity) {
-    const count = issues.filter(
-      (issue) => issue.entityId === entity.id && issue.severity === "error",
-    ).length;
-    return (
-      <button
-        className={`entity-row${entity.id === activeId ? " active" : ""}`}
-        type="button"
-        key={entity.id}
-        onClick={() => {
-          setActiveId(entity.id);
-          setShowSidebar(false);
-        }}
-      >
-        <span className={`status-bar status-${entity.status}`} />
-        <span>
-          <strong>
-            {entity.localization[locale].name || t("app.untitled")}
-          </strong>
-          <small>{entity.id}</small>
-        </span>
-        {count > 0 && <b>{count}</b>}
-      </button>
-    );
-  }
+    <main>
+      <header className="topbar"><div><span className="eyebrow">{project.reference.id} · {project.version}</span><h1>{t(page)}</h1></div><div className="top-actions"><button className="button ghost" onClick={() => setDialog("debug")}><span className={issues.some((item) => item.severity === "error") ? "status-dot error" : "status-dot"} />{t("debug")}<b>{issues.length}</b></button><button className="button ghost" onClick={() => importRef.current?.click()}>{t("import")}</button><button className="button primary" onClick={() => setDialog("export")}>{t("export")}</button><input ref={importRef} className="hidden" type="file" accept=".json,.wsgref,.wsgpack" onChange={importFile} /></div></header>
+      {notice && <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button>}
+      <div className="workspace">
+        {page === "overview" && <Overview project={project} locale={locale} t={t} onClean={resetProject} onNavigate={changePage} />}
+        {page === "atomics" && <AtomicsPage project={project} locale={locale} t={t} search={search} setSearch={setSearch} selectedId={selectedId} setSelectedId={setSelectedId} updateProject={updateProject} />}
+        {page === "references" && <ReferencesPage project={project} locale={locale} t={t} search={search} setSearch={setSearch} selectedId={selectedId} setSelectedId={setSelectedId} kind={referenceKind} setKind={setReferenceKind} updateProject={updateProject} />}
+        {page === "templates" && <TemplatesPage project={project} locale={locale} t={t} selectedId={selectedId} setSelectedId={setSelectedId} updateProject={updateProject} />}
+        {page === "entities" && <EntitiesPage project={project} locale={locale} t={t} type={entityType} setType={setEntityType} search={search} setSearch={setSearch} selectedId={selectedId} setSelectedId={setSelectedId} updateProject={updateProject} />}
+        {page === "dependencies" && <DependenciesPage project={project} locale={locale} t={t} importRef={importRef} updateProject={updateProject} />}
+      </div>
+    </main>
 
-  return (
-    <div className="forge-shell" data-locale={locale}>
-      <header className="topbar">
-        <button
-          className="mobile-menu"
-          type="button"
-          onClick={() => setShowSidebar((value) => !value)}
-          aria-label={t("app.openMenu")}
-        >
-          ☰
-        </button>
-        <div className="brand">
-          <img
-            className="brand-mark"
-            src={`${import.meta.env.BASE_URL}forge-logo.svg`}
-            alt="Forge"
-          />
-          <span>
-            <strong>WSGuild</strong>
-            <small>{t("app.brand")}</small>
-          </span>
-        </div>
-        <button
-          className="project-chip"
-          type="button"
-          onClick={() => setShowProject(true)}
-        >
-          <span>{project.pack.name}</span>
-          <small>{project.pack.version}</small>
-        </button>
-        <div className="save-state">
-          <i />
-          {t(toastKey)}
-        </div>
-        <div className="top-actions">
-          <div className="language-switch" aria-label="Language">
-            <button
-              className={locale === "en" ? "active" : ""}
-              type="button"
-              onClick={() => setLocale("en")}
-            >
-              EN
-            </button>
-            <button
-              className={locale === "ru" ? "active" : ""}
-              type="button"
-              onClick={() => setLocale("ru")}
-            >
-              RU
-            </button>
-          </div>
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={() => fileRef.current?.click()}
-          >
-            {t("app.import")}
-          </button>
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={() =>
-              downloadJson(
-                `${project.pack.id}.forge.json`,
-                normalizeProject(project),
-              )
-            }
-          >
-            {t("app.project")}
-          </button>
-          <button
-            type="button"
-            className="primary-button"
-            disabled={errorCount > 0}
-            onClick={() =>
-              downloadJson(
-                `${project.pack.id}-${project.pack.version}.wsgpack`,
-                canonical,
-              )
-            }
-          >
-            {t("app.export")}
-          </button>
-          <input
-            ref={fileRef}
-            hidden
-            type="file"
-            accept=".json,.wsgpack"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void importProject(file);
-              event.target.value = "";
-            }}
-          />
-        </div>
-      </header>
-
-      <aside className={`nav-sidebar ${showSidebar ? "open" : ""}`}>
-        <div className="nav-title">
-          <span>{t("app.packContent")}</span>
-          <button type="button" onClick={() => addEntity()}>
-            ＋
-          </button>
-        </div>
-        <nav>
-          {entityTypes.map((type) => {
-            const count = project.entities.filter(
-              (entity) => entity.entityType === type,
-            ).length;
-            return (
-              <button
-                className={activeType === type ? "active" : ""}
-                type="button"
-                key={type}
-                onClick={() => selectType(type)}
-              >
-                <span className={`entity-icon icon-${type}`}>
-                  {type.slice(0, 2).toUpperCase()}
-                </span>
-                <strong>{entityTypeLabels[type][locale]}</strong>
-                <em>{count}</em>
-              </button>
-            );
-          })}
-        </nav>
-        <div className="nav-footer">
-          <button
-            type="button"
-            onClick={() => {
-              setShowRight(true);
-              setRightPanel("validation");
-              setIssueScope("all");
-            }}
-          >
-            <span className="validation-ring">{errorCount}</span>
-            <span>
-              <strong>{t("app.packValidation")}</strong>
-              <small>
-                {t("app.counts", {
-                  errors: errorCount,
-                  warnings: warningCount,
-                })}
-              </small>
-            </span>
-          </button>
-        </div>
-      </aside>
-
-      <aside className={`entity-sidebar ${showSidebar ? "open-list" : ""}`}>
-        <div className="entity-list-head">
-          <div>
-            <span className="eyebrow">
-              {entityTypeLabels[activeType][locale]}
-            </span>
-            <strong>{t("app.records", { count: shownEntities.length })}</strong>
-          </div>
-          <button
-            className="square-button"
-            type="button"
-            onClick={() => addEntity(activeType)}
-          >
-            ＋
-          </button>
-        </div>
-        <div className="search">
-          <span>⌕</span>
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={t("app.search")}
-          />
-        </div>
-        <div className="entity-list">
-          {activeType === "subclass" ? (
-            <>
-              {subclassGroups.map((group) => {
-                const expanded =
-                  Boolean(normalizedSearch) ||
-                  !collapsedSubclassGroups.has(group.key);
-                const groupName =
-                  group.classEntity?.localization[locale].name ||
-                  (locale === "en" ? "Unassigned" : "Без класса");
-                return (
-                  <section className="subclass-group" key={group.key}>
-                    <button
-                      className="subclass-group-toggle"
-                      type="button"
-                      aria-expanded={expanded}
-                      onClick={() => toggleSubclassGroup(group.key)}
-                    >
-                      <span>{expanded ? "⌄" : "›"}</span>
-                      <strong>{groupName}</strong>
-                      <em>{group.entities.length}</em>
-                    </button>
-                    {expanded && (
-                      <div className="subclass-group-items">
-                        {group.entities.map(renderEntityRow)}
-                        {group.entities.length === 0 && (
-                          <small className="subclass-group-empty">
-                            {locale === "en"
-                              ? "No subclasses"
-                              : "Нет подклассов"}
-                          </small>
-                        )}
-                      </div>
-                    )}
-                  </section>
-                );
-              })}
-              {shownEntities.length === 0 && (
-                <div className="empty-list">
-                  <p>{t("app.emptyList")}</p>
-                  <button type="button" onClick={() => addEntity(activeType)}>
-                    {t("app.createFirstRecord")}
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              {shownEntities.map(renderEntityRow)}
-              {shownEntities.length === 0 && (
-                <div className="empty-list">
-                  <p>{t("app.emptyList")}</p>
-                  <button type="button" onClick={() => addEntity(activeType)}>
-                    {t("app.createFirstRecord")}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </aside>
-
-      <main className={`workspace ${showRight ? "with-inspector" : ""}`}>
-        {activeEntity ? (
-          <>
-            <div className="workspace-head">
-              <div>
-                <span className="eyebrow">
-                  {entityTypeLabels[activeEntity.entityType][locale]} · {optionLabel(activeEntity.status, locale)}
-                </span>
-                <h1>
-                  {activeEntity.localization[locale].name || t("app.untitled")}
-                </h1>
-                <code>{activeEntity.id}</code>
-              </div>
-              <div className="workspace-actions">
-                <button type="button" onClick={duplicateEntity}>
-                  {t("app.duplicate")}
-                </button>
-                <button
-                  className="danger-text"
-                  type="button"
-                  onClick={deleteEntity}
-                >
-                  {t("app.delete")}
-                </button>
-                <button
-                  className={showRight ? "active" : ""}
-                  type="button"
-                  onClick={() => {
-                    setShowRight((value) => !value);
-                    setRightPanel("validation");
-                    setIssueScope("active");
-                  }}
-                >
-                  {t("app.validation")}{" "}
-                  {issues.filter((issue) => issue.entityId === activeId).length}
-                </button>
-              </div>
-            </div>
-            <EntityEditor
-              entity={activeEntity}
-              entities={project.entities}
-              locale={locale}
-              onLocale={setLocale}
-              onPatch={updateEntity}
-            />
-          </>
-        ) : (
-          <div className="empty-workspace">
-            <img
-              className="brand-mark large"
-              src={`${import.meta.env.BASE_URL}forge-logo.svg`}
-              alt="Forge"
-            />
-            <h1>{t("app.createFirst")}</h1>
-            <p>{t("app.emptyDescription")}</p>
-            <button
-              className="primary-button"
-              type="button"
-              onClick={() => addEntity("class")}
-            >
-              {t("app.createClass")}
-            </button>
-          </div>
-        )}
-      </main>
-
-      {showRight && (
-        <aside className="inspector">
-          <header>
-            <div className="inspector-tabs">
-              <button
-                className={rightPanel === "validation" ? "active" : ""}
-                type="button"
-                onClick={() => setRightPanel("validation")}
-              >
-                {locale === "en" ? "Errors" : "Ошибки"} ({visibleIssues.length})
-              </button>
-              <button
-                className={rightPanel === "json" ? "active" : ""}
-                type="button"
-                onClick={() => setRightPanel("json")}
-              >
-                JSON
-              </button>
-            </div>
-            <button
-              className="icon-button"
-              type="button"
-              onClick={() => setShowRight(false)}
-            >
-              ×
-            </button>
-          </header>
-          {rightPanel === "validation" ? (
-            <div className="validation-panel">
-              <div
-                className={`validation-summary ${visibleErrorCount ? "has-errors" : "valid"}`}
-              >
-                <span>{visibleErrorCount ? "!" : "✓"}</span>
-                <div>
-                  <strong>
-                    {visibleErrorCount ? t("app.needsAttention") : t("app.ready")}
-                  </strong>
-                  <small>
-                    {t("app.counts", {
-                      errors: visibleErrorCount,
-                      warnings: visibleWarningCount,
-                    })}
-                  </small>
-                </div>
-              </div>
-              <div
-                className="issue-scope"
-                role="group"
-                aria-label={
-                  locale === "en" ? "Validation scope" : "Область проверки"
-                }
-              >
-                <button
-                  className={issueScope === "all" ? "active" : ""}
-                  type="button"
-                  onClick={() => setIssueScope("all")}
-                >
-                  {locale === "en"
-                    ? `Whole pack (${issues.length})`
-                    : `Весь пакет (${issues.length})`}
-                </button>
-                <button
-                  className={issueScope === "active" ? "active" : ""}
-                  type="button"
-                  onClick={() => setIssueScope("active")}
-                >
-                  {locale === "en"
-                    ? `Current entity (${activeIssues.length})`
-                    : `Текущая сущность (${activeIssues.length})`}
-                </button>
-              </div>
-              <div className="issues">
-                {visibleIssues.length ? (
-                  visibleIssues.map((issue, index) => (
-                    <button
-                      type="button"
-                      className={`issue issue-${issue.severity}`}
-                      key={`${issue.entityId}-${issue.path}-${index}`}
-                      onClick={() => openIssue(issue.entityId)}
-                    >
-                      <span>{issue.severity === "error" ? "×" : "!"}</span>
-                      <div>
-                        <strong>{issue.message}</strong>
-                        <small>
-                          {issue.entityId ?? "manifest"} · {issue.path}
-                        </small>
-                        <em>
-                          {issue.entityId
-                            ? locale === "en"
-                              ? "Open record →"
-                              : "Открыть запись →"
-                            : locale === "en"
-                              ? "Project setting"
-                              : "Настройка проекта"}
-                        </em>
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="no-issues">
-                    <span>✓</span>
-                    <p>{t("app.noIssues")}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="json-panel">
-              <div className="json-toolbar">
-                <span>{activeEntity ? `${activeEntity.id}.json` : "manifest.json"}</span>
-                <em className="read-only-badge">
-                  {locale === "en" ? "Read only" : "Только чтение"}
-                </em>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void navigator.clipboard.writeText(
-                      JSON.stringify(debugJson, null, 2),
-                    )
-                  }
-                >
-                  {t("app.copy")}
-                </button>
-              </div>
-              <pre aria-readonly="true">{JSON.stringify(debugJson, null, 2)}</pre>
-            </div>
-          )}
-        </aside>
-      )}
-
-      {showProject && (
-        <div
-          className="modal-backdrop"
-          onMouseDown={() => setShowProject(false)}
-        >
-          <section
-            className="project-modal"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <header>
-              <div>
-                <span className="eyebrow">Pack</span>
-                <h2>{t("app.projectSettings")}</h2>
-              </div>
-              <button
-                className="icon-button"
-                type="button"
-                onClick={() => setShowProject(false)}
-              >
-                ×
-              </button>
-            </header>
-            <div className="form-grid">
-              <label className="field">
-                <span>{t("app.packName")}</span>
-                <input
-                  value={project.pack.name}
-                  onChange={(event) =>
-                    setProject({
-                      ...project,
-                      pack: { ...project.pack, name: event.target.value },
-                    })
-                  }
-                />
-              </label>
-              <label className="field">
-                <span>Pack ID</span>
-                <input
-                  value={project.pack.id}
-                  onChange={(event) =>
-                    setProject({
-                      ...project,
-                      pack: { ...project.pack, id: event.target.value },
-                    })
-                  }
-                />
-              </label>
-              <label className="field">
-                <span>{t("app.version")}</span>
-                <input
-                  value={project.pack.version}
-                  onChange={(event) =>
-                    setProject({
-                      ...project,
-                      pack: { ...project.pack, version: event.target.value },
-                    })
-                  }
-                />
-              </label>
-              <label className="field">
-                <span>Ruleset</span>
-                <input
-                  value={project.pack.rulesetId}
-                  onChange={(event) =>
-                    setProject({
-                      ...project,
-                      pack: { ...project.pack, rulesetId: event.target.value },
-                    })
-                  }
-                />
-              </label>
-              <label className="field">
-                <span>{t("app.author")}</span>
-                <input
-                  value={project.pack.author}
-                  onChange={(event) =>
-                    setProject({
-                      ...project,
-                      pack: { ...project.pack, author: event.target.value },
-                    })
-                  }
-                />
-              </label>
-              <label className="field">
-                <span>License</span>
-                <input
-                  value={project.pack.licenseId}
-                  onChange={(event) =>
-                    setProject({
-                      ...project,
-                      pack: { ...project.pack, licenseId: event.target.value },
-                    })
-                  }
-                />
-              </label>
-            </div>
-            <footer>
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={() => void loadBundledProject()}
-              >
-                {locale === "en"
-                  ? "Load complete SRD 5.2.1 project"
-                  : "Загрузить полный проект SRD 5.2.1"}
-              </button>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => {
-                  if (window.confirm(t("app.resetConfirm"))) {
-                    setProject(structuredClone(initialProject));
-                    setActiveType("class");
-                    setActiveId("");
-                    setShowProject(false);
-                  }
-                }}
-              >
-                {t("app.clearProject")}
-              </button>
-              <button
-                className="primary-button"
-                type="button"
-                onClick={() => {
-                  const index = project.entities.findIndex(
-                    (entity) => entity.id === activeId,
-                  );
-                  const normalized = normalizeProject(project);
-                  setProject(normalized);
-                  if (index >= 0) setActiveId(normalized.entities[index].id);
-                  setShowProject(false);
-                }}
-              >
-                {t("app.done")}
-              </button>
-            </footer>
-          </section>
-        </div>
-      )}
-    </div>
-  );
+    {dialog && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setDialog(null)}><div className={`modal ${dialog === "debug" ? "wide" : ""}`}>
+      {dialog === "settings" && <Settings project={project} locale={locale} t={t} updateProject={updateProject} close={() => setDialog(null)} />}
+      {dialog === "debug" && <DebugDialog project={project} issues={issues} tab={debugTab} setTab={setDebugTab} t={t} close={() => setDialog(null)} />}
+      {dialog === "export" && <ExportDialog access={exportAccess} setAccess={setExportAccess} t={t} close={() => setDialog(null)} exportFile={exportFile} />}
+    </div></div>}
+  </div>;
 }
+
+function Overview({ project, locale, t, onClean, onNavigate }: { project: ForgeProject; locale: Locale; t: (key: LabelKey) => string; onClean: () => void; onNavigate: (page: Page) => void }) {
+  const cards: Array<[Page, string, string, number]> = [
+    ["atomics", "01", t("flow1"), project.atomics.length], ["references", "02", t("flow2"), project.references.length], ["templates", "03", t("flow3"), project.templates.length], ["entities", "04", t("flow4"), project.entities.length],
+  ];
+  return <>
+    <section className="hero"><div><span className="kicker">FORGE SCHEMA 3</span><h2>{localized(project.pack.name, locale)}</h2><p>{t("cleanIntro")}</p><div className="hero-actions"><button className="button primary" onClick={() => onNavigate("atomics")}>{t("atomics")}</button><button className="button ghost" onClick={onClean}>{t("clean")}</button></div></div><div className="seal"><span>{project.entities.length}</span><small>{t("packContent")}</small></div></section>
+    <div className="flow-grid">{cards.map(([page, index, text, count]) => <button key={page} className="flow-card" onClick={() => onNavigate(page)}><span>{index}</span><strong>{t(page)}</strong><p>{text}</p><em>{count} {t("records")}</em></button>)}</div>
+    <div className="overview-grid"><Panel title={t("refContent")} kicker={project.reference.id}><dl className="metrics"><div><dt>{t("atomics")}</dt><dd>{project.atomics.length}</dd></div><div><dt>{t("references")}</dt><dd>{project.references.length}</dd></div><div><dt>{t("templates")}</dt><dd>{project.templates.length}</dd></div></dl></Panel><Panel title={t("packContent")} kicker={project.pack.id}><dl className="metrics"><div><dt>{t("entities")}</dt><dd>{project.entities.length}</dd></div><div><dt>{t("dependencies")}</dt><dd>{project.dependencies.length}</dd></div><div><dt>{t("version")}</dt><dd>{project.pack.version}</dd></div></dl></Panel></div>
+    <div className="info-strip">{t("localStorage")}</div>
+  </>;
+}
+
+interface CollectionProps { project: ForgeProject; locale: Locale; t: (key: LabelKey) => string; search: string; setSearch: (value: string) => void; selectedId: string; setSelectedId: (value: string) => void; updateProject: (recipe: (draft: ForgeProject) => void) => void }
+
+function CollectionLayout({ toolbar, list, editor }: { toolbar: ReactNode; list: ReactNode; editor: ReactNode }) {
+  return <><div className="collection-toolbar">{toolbar}</div><div className="collection-layout"><aside className="record-list">{list}</aside><div className="record-editor">{editor}</div></div></>;
+}
+
+function GroupedList({ items, categories, locale, selectedId, setSelectedId, empty }: { items: Array<{ id: string; name: LocalText; categoryId: string; locked: boolean }>; categories: ForgeProject["categories"]; locale: Locale; selectedId: string; setSelectedId: (id: string) => void; empty: string }) {
+  if (!items.length) return <div className="empty">{empty}</div>;
+  const used = categories.filter((category) => items.some((item) => item.categoryId === category.id));
+  return <>{used.map((category) => <details key={category.id} open><summary><span>{localized(category.name, locale)}</span><em>{items.filter((item) => item.categoryId === category.id).length}</em></summary><div>{items.filter((item) => item.categoryId === category.id).map((item) => <button key={item.id} className={selectedId === item.id ? "selected" : ""} onClick={() => setSelectedId(item.id)}><span>{localized(item.name, locale)}</span><small>{item.locked ? "WSG" : item.id.split(".")[0]}</small></button>)}</div></details>)}</>;
+}
+
+function AtomicsPage(props: CollectionProps) {
+  const { project, locale, t, search, setSearch, selectedId, setSelectedId, updateProject } = props;
+  const filtered = project.atomics.filter((item) => `${localized(item.name, locale)} ${item.id}`.toLowerCase().includes(search.toLowerCase()));
+  const selected = project.atomics.find((item) => item.id === selectedId);
+  const create = () => {
+    const index = project.atomics.filter((item) => !item.locked).length + 1;
+    const id = `${project.namespace}.atomic.atomic_${index}`;
+    updateProject((draft) => {
+      const item: AtomicRecord = { id, key: `atomic_${index}`, name: { en: `Atomic ${index}` }, categoryId: "wsg.category.custom", dataType: "integer", storageMode: "input", packId: draft.namespace, locked: false, previousIds: [] };
+      draft.atomics.push(item);
+    });
+    setSelectedId(id);
+  };
+  const remove = () => {
+    if (!selected || selected.locked) return;
+    const used = project.references.some((item) => item.operations?.some((operation) => operation.targetAtomicId === selected.id));
+    if (used && !window.confirm(t("removeBlocked"))) return;
+    updateProject((draft) => { draft.atomics = draft.atomics.filter((item) => item.id !== selected.id); }); setSelectedId("");
+  };
+  return <CollectionLayout toolbar={<><input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("search")} /><button className="button primary" onClick={create}>+ {t("add")}</button></>} list={<GroupedList items={filtered} categories={project.categories} locale={locale} selectedId={selectedId} setSelectedId={setSelectedId} empty={t("noItems")} />} editor={selected ? <Panel title={localized(selected.name, locale)} kicker={selected.locked ? t("locked") : t("custom")} actions={!selected.locked && <button className="icon-button danger" onClick={remove}>×</button>}><div className="editor-stack"><TextField label={t("id")} value={selected.id} onChange={() => {}} disabled /><LocalizedFields value={selected.name} t={t} disabled={selected.locked} onChange={(name) => updateProject((draft) => { Object.assign(draft.atomics.find((item) => item.id === selected.id)!, { name }); })} /><div className="form-grid four"><SelectField label={t("category")} value={selected.categoryId} disabled={selected.locked} onChange={(categoryId) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.categoryId = categoryId; })}>{project.categories.map((category) => <option key={category.id} value={category.id}>{localized(category.name, locale)}</option>)}</SelectField><SelectField label={t("dataType")} value={selected.dataType} disabled={selected.locked} onChange={(dataType) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.dataType = dataType as AtomicDataType; })}>{["integer", "decimal", "boolean", "text", "die"].map((value) => <option key={value}>{value}</option>)}</SelectField><SelectField label={t("storage")} value={selected.storageMode} disabled={selected.locked || selected.dataType === "die"} onChange={(storageMode) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.storageMode = storageMode as StorageMode; })}><option value="input">{t("input")}</option><option value="derived">{t("derived")}</option><option value="runtime">{t("runtime")}</option></SelectField><TextField label={t("unit")} value={selected.unit ?? ""} disabled={selected.locked} onChange={(unit) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.unit = unit; })} /></div><div className="form-grid four"><TextField label={t("minimum")} value={selected.minimum ?? ""} disabled={selected.locked} onChange={(minimum) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.minimum = minimum === "" ? undefined : Number(minimum); })} /><TextField label={t("maximum")} value={selected.maximum ?? ""} disabled={selected.locked} onChange={(maximum) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.maximum = maximum === "" ? undefined : Number(maximum); })} />{selected.dataType === "die" && <TextField label={t("dieSides")} value={selected.dieSides ?? ""} disabled={selected.locked} onChange={(dieSides) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.dieSides = Number(dieSides); })} />}{selected.storageMode === "derived" && <TextField label={t("formula")} value={selected.formula ?? ""} disabled={selected.locked} onChange={(formula) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.formula = formula; })} />}</div></div></Panel> : <div className="empty editor-empty">{t("noSelection")}</div>} />;
+}
+
+function ReferencesPage(props: CollectionProps & { kind: ReferenceKind; setKind: (kind: ReferenceKind) => void }) {
+  const { project, locale, t, search, setSearch, selectedId, setSelectedId, updateProject, kind, setKind } = props;
+  const filtered = project.references.filter((item) => item.kind === kind && `${localized(item.name, locale)} ${item.id}`.toLowerCase().includes(search.toLowerCase()));
+  const selected = project.references.find((item) => item.id === selectedId);
+  const create = () => {
+    const index = project.references.filter((item) => item.kind === kind && !item.locked).length + 1;
+    const id = `${project.namespace}.ref.${kind}.${kind}_${index}`;
+    updateProject((draft) => {
+      const item: ReferenceRecord = { id, key: `${kind}_${index}`, kind, name: { en: `${kind[0].toUpperCase()}${kind.slice(1)} ${index}` }, description: { en: "" }, categoryId: kind === "effect" ? "wsg.category.effects" : "wsg.category.custom", packId: draft.namespace, locked: false, previousIds: [], propertyType: kind === "parameter" ? "string" : undefined, operations: kind === "effect" ? [] : undefined };
+      draft.references.push(item);
+    });
+    setSelectedId(id);
+  };
+  const remove = () => {
+    if (!selected || selected.locked) return;
+    const used = project.templates.some((item) => item.fields.some((field) => field.referenceId === selected.id));
+    if (used && !window.confirm(t("removeBlocked"))) return;
+    updateProject((draft) => { draft.references = draft.references.filter((item) => item.id !== selected.id); }); setSelectedId("");
+  };
+  return <><CollectionLayout toolbar={<><div className="segmented">{(["parameter", "value", "effect"] as ReferenceKind[]).map((id) => <button key={id} className={kind === id ? "active" : ""} onClick={() => { setKind(id); setSelectedId(""); }}>{t(id === "parameter" ? "parameters" : id === "value" ? "values" : "effects")}</button>)}</div><input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("search")} /><button className="button primary" onClick={create}>+ {t("add")}</button></>} list={<GroupedList items={filtered} categories={project.categories} locale={locale} selectedId={selectedId} setSelectedId={setSelectedId} empty={t("noItems")} />} editor={selected ? <ReferenceEditor item={selected} project={project} locale={locale} t={t} updateProject={updateProject} remove={remove} /> : <div className="empty editor-empty">{t("noSelection")}</div>} />{kind === "effect" && <InfluencesPanel project={project} locale={locale} t={t} updateProject={updateProject} />}</>;
+}
+
+function InfluencesPanel({ project, locale, t, updateProject }: { project: ForgeProject; locale: Locale; t: (key: LabelKey) => string; updateProject: (recipe: (draft: ForgeProject) => void) => void }) {
+  const effects = project.references.filter((item) => item.kind === "effect");
+  const create = () => {
+    const index = project.influences.length + 1;
+    updateProject((draft) => draft.influences.push({ id: `${draft.namespace}.influence.influence_${index}`, key: `influence_${index}`, name: { en: `Influence ${index}` }, effectIds: [], parameters: {}, previousIds: [] }));
+  };
+  return <Panel className="influence-panel" title={t("influences")} kicker="ENTITY → INFLUENCE → EFFECT → ATOMIC" actions={<button className="button primary" onClick={create}>+ {t("add")}</button>}><div className="info-strip">Entities link influences; influences combine reusable effects. Custom effects cannot call other custom effects.</div>{project.influences.length === 0 ? <div className="empty">{t("noItems")}</div> : <div className="influence-list">{project.influences.map((influence, index) => <details key={influence.id} open><summary><span className="step">{index + 1}</span><strong>{localized(influence.name, locale)}</strong><code>{influence.id}</code><button className="icon-button danger" onClick={(event) => { event.preventDefault(); if (window.confirm(`${t("delete")}: ${localized(influence.name, locale)}?`)) updateProject((draft) => { draft.influences = draft.influences.filter((item) => item.id !== influence.id); }); }}>×</button></summary><div className="influence-body"><LocalizedFields value={influence.name} t={t} onChange={(name) => updateProject((draft) => { draft.influences.find((item) => item.id === influence.id)!.name = name; })} /><div className="effect-picker">{effects.map((effect) => <CheckField key={effect.id} label={localized(effect.name, locale)} checked={influence.effectIds.includes(effect.id)} onChange={(checked) => updateProject((draft) => { const target = draft.influences.find((item) => item.id === influence.id)!; target.effectIds = checked ? [...target.effectIds, effect.id] : target.effectIds.filter((id) => id !== effect.id); })} />)}</div></div></details>)}</div>}</Panel>;
+}
+
+function ReferenceEditor({ item, project, locale, t, updateProject, remove }: { item: ReferenceRecord; project: ForgeProject; locale: Locale; t: (key: LabelKey) => string; updateProject: (recipe: (draft: ForgeProject) => void) => void; remove: () => void }) {
+  const change = (patch: Partial<ReferenceRecord>) => updateProject((draft) => Object.assign(draft.references.find((entry) => entry.id === item.id)!, patch));
+  const locked = item.locked;
+  return <Panel title={localized(item.name, locale)} kicker={`${item.kind} · ${locked ? t("locked") : t("custom")}`} actions={!locked && <button className="icon-button danger" onClick={remove}>×</button>}><div className="editor-stack"><TextField label={t("id")} value={item.id} onChange={() => {}} disabled /><LocalizedFields value={item.name} t={t} disabled={locked} onChange={(name) => change({ name })} /><LocalizedFields value={item.description} t={t} multiline disabled={locked} onChange={(description) => change({ description })} /><div className="form-grid three"><SelectField label={t("category")} value={item.categoryId} disabled={locked} onChange={(categoryId) => change({ categoryId })}>{project.categories.map((category) => <option key={category.id} value={category.id}>{localized(category.name, locale)}</option>)}</SelectField>{item.kind === "parameter" && <SelectField label={t("dataType")} value={item.propertyType ?? "string"} disabled={locked} onChange={(propertyType) => change({ propertyType: propertyType as PropertyType, table: propertyType === "table" ? item.table ?? { columns: [], rows: [] } : undefined })}>{propertyTypes.map((value) => <option key={value}>{value}</option>)}</SelectField>}{item.kind === "parameter" && <div className="checks"><CheckField label={t("required")} checked={Boolean(item.required)} disabled={locked} onChange={(required) => change({ required })} /><CheckField label={t("multiple")} checked={Boolean(item.multiple)} disabled={locked} onChange={(multiple) => change({ multiple })} /></div>}</div>{item.kind === "parameter" && item.propertyType === "table" && <TableBuilder definition={item.table ?? { columns: [], rows: [] }} disabled={locked} t={t} onChange={(table) => change({ table })} />}{item.kind === "effect" && <EffectBuilder item={item} project={project} locale={locale} disabled={locked} t={t} onChange={(operations) => change({ operations })} />}{item.kind === "value" && <TextField label={t("valueLabel")} value={String(item.value ?? "")} disabled={locked} onChange={(value) => change({ value })} />}</div></Panel>;
+}
+
+function EffectBuilder({ item, project, locale, disabled, t, onChange }: { item: ReferenceRecord; project: ForgeProject; locale: Locale; disabled: boolean; t: (key: LabelKey) => string; onChange: (operations: EffectOperation[]) => void }) {
+  const operations = item.operations ?? [];
+  const update = (index: number, patch: Partial<EffectOperation>) => onChange(operations.map((operation, current) => current === index ? { ...operation, ...patch } : operation));
+  return <div className="subsection"><div className="subsection-head"><div><span className="kicker">VISUAL RULE</span><h3>{t("effects")}</h3></div>{!disabled && <button className="button ghost compact" onClick={() => onChange([...operations, { id: `${item.key}.operation_${operations.length + 1}`, operator: "add", targetAtomicId: "", valueSource: "number", value: 0 }])}>+ {t("addOperation")}</button>}</div>{operations.length === 0 && <div className="empty">{t("noItems")}</div>}{operations.map((operation, index) => <div className="operation-row" key={operation.id}><span className="step">{index + 1}</span><SelectField label={t("operation")} value={operation.operator} disabled={disabled} onChange={(operator) => update(index, { operator: operator as EffectOperation["operator"] })}>{["add", "subtract", "multiply", "divide", "set", "minimum", "maximum", "roll", "grant", "remove"].map((value) => <option key={value}>{value}</option>)}</SelectField><SelectField label={t("target")} value={operation.targetAtomicId} disabled={disabled} onChange={(targetAtomicId) => update(index, { targetAtomicId })}><option value="">—</option>{project.atomics.map((atomic) => <option key={atomic.id} value={atomic.id}>{localized(atomic.name, locale)}</option>)}</SelectField><SelectField label={t("source")} value={operation.valueSource} disabled={disabled} onChange={(valueSource) => update(index, { valueSource: valueSource as EffectOperation["valueSource"] })}><option value="number">Number</option><option value="atomic">Atomic</option><option value="input">Effect input</option><option value="die">Die</option></SelectField>{operation.valueSource === "atomic" ? <SelectField label={t("valueLabel")} value={String(operation.value)} disabled={disabled} onChange={(value) => update(index, { value })}>{project.atomics.map((atomic) => <option key={atomic.id} value={atomic.id}>{localized(atomic.name, locale)}</option>)}</SelectField> : operation.valueSource === "die" ? <SelectField label={t("valueLabel")} value={String(operation.value)} disabled={disabled} onChange={(value) => update(index, { value })}>{project.atomics.filter((atomic) => atomic.dataType === "die").map((atomic) => <option key={atomic.id} value={atomic.id}>{localized(atomic.name, locale)}</option>)}</SelectField> : <TextField label={t("valueLabel")} value={String(operation.value)} disabled={disabled} onChange={(value) => update(index, { value: operation.valueSource === "number" ? Number(value) : value })} />}{!disabled && <button className="icon-button danger operation-delete" onClick={() => onChange(operations.filter((_, current) => current !== index))}>×</button>}</div>)}</div>;
+}
+
+function TableBuilder({ definition, disabled, t, onChange }: { definition: TableDefinition; disabled: boolean; t: (key: LabelKey) => string; onChange: (definition: TableDefinition) => void }) {
+  const updateColumn = (index: number, patch: Partial<TableDefinition["columns"][number]>) => onChange({ ...definition, columns: definition.columns.map((column, current) => current === index ? { ...column, ...patch } : column) });
+  const addColumn = () => { const index = definition.columns.length + 1; onChange({ ...definition, columns: [...definition.columns, { id: `column_${index}`, key: `column_${index}`, name: { en: `Column ${index}` }, type: "string", required: index === 1 }] }); };
+  const addRow = () => onChange({ ...definition, rows: [...definition.rows, { rowId: crypto.randomUUID(), values: Object.fromEntries(definition.columns.map((column) => [column.id, ""])) }] });
+  const setCell = (row: number, columnId: string, value: string) => onChange({ ...definition, rows: definition.rows.map((entry, index) => index === row ? { ...entry, values: { ...entry.values, [columnId]: value } } : entry) });
+  const paste = (event: React.ClipboardEvent<HTMLInputElement>, rowIndex: number, columnIndex: number) => {
+    const matrix = event.clipboardData.getData("text").trimEnd().split(/\r?\n/).map((row) => row.split("\t"));
+    if (matrix.length === 1 && matrix[0].length === 1) return;
+    event.preventDefault();
+    const rows = structuredClone(definition.rows);
+    while (rows.length < rowIndex + matrix.length) rows.push({ rowId: crypto.randomUUID(), values: {} });
+    matrix.forEach((values, rowOffset) => values.forEach((value, columnOffset) => { const column = definition.columns[columnIndex + columnOffset]; if (column) rows[rowIndex + rowOffset].values[column.id] = value; }));
+    onChange({ ...definition, rows });
+  };
+  return <div className="subsection table-builder"><div className="subsection-head"><div><span className="kicker">{t("table")}</span><h3>{t("columns")}</h3></div>{!disabled && <button className="button ghost compact" onClick={addColumn}>+ {t("addColumn")}</button>}</div><p className="hint">{t("pasteTable")}</p><div className="column-cards">{definition.columns.map((column, index) => <div className="column-card" key={column.id}><span className="step">{index + 1}</span><TextField label={index === 0 ? `${t("name")} · KEY` : t("name")} value={column.name.en} disabled={disabled} onChange={(en) => updateColumn(index, { name: { ...column.name, en }, key: slugify(en), id: slugify(en) || column.id })} /><SelectField label={t("dataType")} value={column.type} disabled={disabled} onChange={(type) => updateColumn(index, { type: type as PropertyType })}>{propertyTypes.filter((value) => value !== "table").map((value) => <option key={value}>{value}</option>)}</SelectField>{index > 0 && <TextField label={t("formula")} value={column.formula ?? ""} disabled={disabled} onChange={(formula) => updateColumn(index, { formula })} />}{!disabled && <button className="icon-button danger" onClick={() => onChange({ columns: definition.columns.filter((_, current) => current !== index), rows: definition.rows.map((row) => ({ ...row, values: Object.fromEntries(Object.entries(row.values).filter(([key]) => key !== column.id)) })) })}>×</button>}</div>)}</div>{definition.columns.length > 0 && <><div className="spreadsheet"><table><thead><tr>{definition.columns.map((column, index) => <th key={column.id}>{index === 0 && <small>KEY</small>}{column.name.en}</th>)}</tr></thead><tbody>{definition.rows.map((row, rowIndex) => <tr key={row.rowId}>{definition.columns.map((column, columnIndex) => <td key={column.id}><input value={String(row.values[column.id] ?? "")} disabled={disabled} onChange={(event) => setCell(rowIndex, column.id, event.target.value)} onPaste={(event) => paste(event, rowIndex, columnIndex)} /></td>)}</tr>)}</tbody></table></div>{!disabled && <button className="button ghost compact" onClick={addRow}>+ {t("addRow")}</button>}</>}</div>;
+}
+
+function TemplatesPage({ project, locale, t, selectedId, setSelectedId, updateProject }: Omit<CollectionProps, "search" | "setSearch">) {
+  const selected = project.templates.find((item) => item.id === selectedId) ?? project.templates[0];
+  return <><div className="entity-tabs">{project.templates.map((template) => <button key={template.id} className={selected?.id === template.id ? "active" : ""} onClick={() => setSelectedId(template.id)}>{localized(entityNames[template.type], locale)}<em>{template.fields.length}</em></button>)}</div><div className="info-strip">{t("templateHelp")}</div>{selected && <Panel title={localized(entityNames[selected.type], locale)} kicker={selected.id}><TemplateEditor template={selected} project={project} locale={locale} t={t} updateProject={updateProject} /></Panel>}</>;
+}
+
+function TemplateEditor({ template, project, locale, t, updateProject }: { template: EntityTemplate; project: ForgeProject; locale: Locale; t: (key: LabelKey) => string; updateProject: (recipe: (draft: ForgeProject) => void) => void }) {
+  const parameters = project.references.filter((item) => item.kind === "parameter" && item.key !== "name");
+  const add = () => { const first = parameters.find((parameter) => !template.fields.some((field) => field.referenceId === parameter.id)); if (!first) return; updateProject((draft) => { const target = draft.templates.find((item) => item.id === template.id)!; target.fields.push({ id: `${target.id}.field_${target.fields.length + 1}`, referenceId: first.id, required: Boolean(first.required), multiple: Boolean(first.multiple), order: target.fields.length }); }); };
+  return <div className="editor-stack"><LocalizedFields value={template.name} t={t} onChange={(name) => updateProject((draft) => { draft.templates.find((item) => item.id === template.id)!.name = name; })} /><div className="subsection"><div className="subsection-head"><div><span className="kicker">SCHEMA</span><h3>{t("fields")}</h3></div><button className="button ghost compact" onClick={add}>+ {t("add")}</button></div>{template.fields.length === 0 && <div className="empty">{t("noItems")}</div>}<div className="template-fields">{template.fields.sort((a, b) => a.order - b.order).map((field, index) => <div className="template-field" key={field.id}><span className="step">{index + 1}</span><SelectField label={t("parameters")} value={field.referenceId} onChange={(referenceId) => updateProject((draft) => { draft.templates.find((item) => item.id === template.id)!.fields[index].referenceId = referenceId; })}>{parameters.map((parameter) => <option key={parameter.id} value={parameter.id}>{localized(parameter.name, locale)} · {parameter.propertyType}</option>)}</SelectField><CheckField label={t("required")} checked={field.required} onChange={(required) => updateProject((draft) => { draft.templates.find((item) => item.id === template.id)!.fields[index].required = required; })} /><CheckField label={t("multiple")} checked={field.multiple} onChange={(multiple) => updateProject((draft) => { draft.templates.find((item) => item.id === template.id)!.fields[index].multiple = multiple; })} /><div className="order-buttons"><button disabled={index === 0} onClick={() => updateProject((draft) => { const list = draft.templates.find((item) => item.id === template.id)!.fields; [list[index - 1], list[index]] = [list[index], list[index - 1]]; list.forEach((entry, order) => entry.order = order); })}>↑</button><button disabled={index === template.fields.length - 1} onClick={() => updateProject((draft) => { const list = draft.templates.find((item) => item.id === template.id)!.fields; [list[index + 1], list[index]] = [list[index], list[index + 1]]; list.forEach((entry, order) => entry.order = order); })}>↓</button></div><button className="icon-button danger" onClick={() => updateProject((draft) => { const target = draft.templates.find((item) => item.id === template.id)!; target.fields = target.fields.filter((item) => item.id !== field.id).map((item, order) => ({ ...item, order })); })}>×</button></div>)}</div></div></div>;
+}
+
+function EntitiesPage({ project, locale, t, type, setType, search, setSearch, selectedId, setSelectedId, updateProject }: CollectionProps & { type: EntityType; setType: (type: EntityType) => void }) {
+  const template = project.templates.find((item) => item.type === type)!;
+  const filtered = project.entities.filter((item) => item.type === type && `${localized(item.name, locale)} ${item.id}`.toLowerCase().includes(search.toLowerCase()));
+  const selected = project.entities.find((item) => item.id === selectedId);
+  const create = () => {
+    const index = project.entities.filter((item) => item.type === type).length + 1;
+    const id = `${project.namespace}.${type}.${type}_${index}`;
+    updateProject((draft) => {
+      const entity: ForgeEntity = { id, key: `${type}_${index}`, type, templateId: `${draft.namespace}.temp.${type}`, name: { en: `${type[0].toUpperCase()}${type.slice(1)} ${index}` }, values: {}, previousIds: [] };
+      draft.entities.push(entity);
+    });
+    setSelectedId(id);
+  };
+  const remove = () => { if (!selected || !window.confirm(`${t("delete")}: ${localized(selected.name, locale)}?`)) return; updateProject((draft) => { draft.entities = draft.entities.filter((item) => item.id !== selected.id); }); setSelectedId(""); };
+  return <><div className="entity-tabs">{ENTITY_TYPES.map((id) => <button key={id} className={type === id ? "active" : ""} onClick={() => { setType(id); setSelectedId(""); }}>{localized(entityNames[id], locale)}<em>{project.entities.filter((item) => item.type === id).length}</em></button>)}</div><div className="info-strip">{t("entityHelp")}</div><CollectionLayout toolbar={<><input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("search")} /><button className="button primary" onClick={create}>+ {t("add")}</button></>} list={filtered.length ? filtered.map((item) => <button key={item.id} className={`flat-record ${item.id === selectedId ? "selected" : ""}`} onClick={() => setSelectedId(item.id)}><span>{localized(item.name, locale)}</span><small>{item.id}</small></button>) : <div className="empty">{t("noItems")}</div>} editor={selected ? <Panel title={localized(selected.name, locale)} kicker={selected.id} actions={<button className="icon-button danger" onClick={remove}>×</button>}><EntityEditor entity={selected} template={template} project={project} locale={locale} t={t} updateProject={updateProject} /></Panel> : <div className="empty editor-empty">{t("noSelection")}</div>} /></>;
+}
+
+function EntityEditor({ entity, template, project, locale, t, updateProject }: { entity: ForgeEntity; template: EntityTemplate; project: ForgeProject; locale: Locale; t: (key: LabelKey) => string; updateProject: (recipe: (draft: ForgeProject) => void) => void }) {
+  const setValue = (referenceId: string, value: unknown) => updateProject((draft) => { draft.entities.find((item) => item.id === entity.id)!.values[referenceId] = value; });
+  return <div className="editor-stack"><TextField label={t("id")} value={entity.id} onChange={() => {}} disabled /><LocalizedFields value={entity.name} t={t} onChange={(name) => updateProject((draft) => { draft.entities.find((item) => item.id === entity.id)!.name = name; })} />{template.fields.length === 0 ? <div className="empty">{t("templateHelp")}</div> : <div className="dynamic-form">{template.fields.map((field) => { const parameter = project.references.find((item) => item.id === field.referenceId); if (!parameter) return <div className="missing" key={field.id}>Missing: {field.referenceId}</div>; const value = entity.values[field.referenceId]; return <DynamicField key={field.id} parameter={parameter} value={value} locale={locale} project={project} required={field.required} multiple={field.multiple} onChange={(next) => setValue(field.referenceId, next)} />; })}</div>}</div>;
+}
+
+function DynamicField({ parameter, value, locale, project, required, multiple, onChange }: { parameter: ReferenceRecord; value: unknown; locale: Locale; project: ForgeProject; required: boolean; multiple: boolean; onChange: (value: unknown) => void }) {
+  const label = `${localized(parameter.name, locale)}${required ? " *" : ""}`;
+  if (parameter.propertyType === "boolean") return <CheckField label={label} checked={Boolean(value)} onChange={onChange} />;
+  if (parameter.propertyType === "localized_short" || parameter.propertyType === "localized_long") return <LocalizedFields value={(value as LocalText) ?? { en: "" }} t={(key) => labels[locale][key]} multiline={parameter.propertyType === "localized_long"} onChange={onChange} />;
+  if (parameter.key === "influences") return <MultiPicker label={label} value={Array.isArray(value) ? value as string[] : []} options={project.influences.map((item) => ({ id: item.id, name: localized(item.name, locale) }))} onChange={onChange} />;
+  if (parameter.propertyType === "select") return <SelectField label={label} value={String(value ?? "")} onChange={onChange}><option value="">—</option>{project.references.filter((item) => item.kind === "value" && item.categoryId === parameter.categoryId).map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}</SelectField>;
+  if (["reference", "references", "effect"].includes(parameter.propertyType ?? "")) {
+    const options = project.references.filter((item) => parameter.propertyType !== "effect" || item.kind === "effect");
+    if (multiple || parameter.propertyType === "references") return <MultiPicker label={label} value={Array.isArray(value) ? value as string[] : []} options={options.map((item) => ({ id: item.id, name: localized(item.name, locale) }))} onChange={onChange} />;
+    return <SelectField label={label} value={String(value ?? "")} onChange={onChange}><option value="">—</option>{options.map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}</SelectField>;
+  }
+  if (["entity", "entities"].includes(parameter.propertyType ?? "")) {
+    const options = project.entities.map((item) => ({ id: item.id, name: `${localized(item.name, locale)} · ${item.type}` }));
+    if (multiple || parameter.propertyType === "entities") return <MultiPicker label={label} value={Array.isArray(value) ? value as string[] : []} options={options} onChange={onChange} />;
+    return <SelectField label={label} value={String(value ?? "")} onChange={onChange}><option value="">—</option>{options.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectField>;
+  }
+  if (parameter.propertyType === "dice") return <DiceField label={label} value={(value as DiceValue | undefined) ?? { count: 1, dieId: "wsg.atomic.d20", modifier: 0 }} project={project} locale={locale} onChange={onChange} />;
+  if (parameter.propertyType === "formula" || parameter.propertyType === "condition") return <RuleValueField label={label} condition={parameter.propertyType === "condition"} value={(value as RuleValue | undefined) ?? { left: "wsg.atomic.level", operator: parameter.propertyType === "condition" ? "equals" : "add", rightSource: "number", right: 0 }} project={project} locale={locale} onChange={onChange} />;
+  if (parameter.propertyType === "list" || parameter.propertyType === "group") return <RepeatField label={label} value={Array.isArray(value) ? value.map(String) : []} onChange={onChange} />;
+  if (parameter.propertyType === "table" && parameter.table) return <EntityTableField label={label} definition={parameter.table} value={Array.isArray(value) ? value as TableDefinition["rows"] : []} onChange={onChange} />;
+  return <TextField label={`${label}${multiple ? " · []" : ""}`} value={String(value ?? "")} multiline={parameter.propertyType === "string" && String(value ?? "").length > 80} onChange={(next) => onChange(["integer", "decimal"].includes(parameter.propertyType ?? "") ? Number(next) : next)} />;
+}
+
+function MultiPicker({ label, value, options, onChange }: { label: string; value: string[]; options: Array<{ id: string; name: string }>; onChange: (value: string[]) => void }) {
+  const available = options.find((option) => !value.includes(option.id));
+  return <div className="dynamic-card"><span className="dynamic-label">{label}</span><div className="token-list">{value.map((id) => { const option = options.find((item) => item.id === id); return <span className="token" key={id}>{option?.name ?? `Missing: ${id}`}<button onClick={() => onChange(value.filter((item) => item !== id))}>×</button></span>; })}</div><select value="" onChange={(event) => event.target.value && onChange([...value, event.target.value])}><option value="">+ Select</option>{options.filter((option) => !value.includes(option.id)).map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select>{!available && value.length === 0 && <small>No available records</small>}</div>;
+}
+
+interface DiceValue { count: number; dieId: string; modifier: number }
+function DiceField({ label, value, project, locale, onChange }: { label: string; value: DiceValue; project: ForgeProject; locale: Locale; onChange: (value: DiceValue) => void }) {
+  return <div className="dynamic-card"><span className="dynamic-label">{label}</span><div className="rule-line"><TextField label="Count" value={value.count} onChange={(count) => onChange({ ...value, count: Number(count) })} /><SelectField label="Die" value={value.dieId} onChange={(dieId) => onChange({ ...value, dieId })}>{project.atomics.filter((item) => item.dataType === "die").map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}</SelectField><TextField label="Modifier" value={value.modifier} onChange={(modifier) => onChange({ ...value, modifier: Number(modifier) })} /></div></div>;
+}
+
+interface RuleValue { left: string; operator: string; rightSource: "number" | "atomic"; right: number | string }
+function RuleValueField({ label, condition, value, project, locale, onChange }: { label: string; condition: boolean; value: RuleValue; project: ForgeProject; locale: Locale; onChange: (value: RuleValue) => void }) {
+  const operators = condition ? ["equals", "not_equals", "greater_than", "at_least", "less_than", "at_most"] : ["add", "subtract", "multiply", "divide", "minimum", "maximum"];
+  return <div className="dynamic-card"><span className="dynamic-label">{label}</span><div className="rule-line"><SelectField label="Left value" value={value.left} onChange={(left) => onChange({ ...value, left })}>{project.atomics.map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}</SelectField><SelectField label="Operator" value={value.operator} onChange={(operator) => onChange({ ...value, operator })}>{operators.map((operator) => <option key={operator} value={operator}>{operator.replaceAll("_", " ")}</option>)}</SelectField><SelectField label="Right source" value={value.rightSource} onChange={(rightSource) => onChange({ ...value, rightSource: rightSource as RuleValue["rightSource"], right: rightSource === "number" ? 0 : "wsg.atomic.level" })}><option value="number">Number</option><option value="atomic">Atomic value</option></SelectField>{value.rightSource === "atomic" ? <SelectField label="Right value" value={String(value.right)} onChange={(right) => onChange({ ...value, right })}>{project.atomics.map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}</SelectField> : <TextField label="Right value" value={Number(value.right)} onChange={(right) => onChange({ ...value, right: Number(right) })} />}</div></div>;
+}
+
+function RepeatField({ label, value, onChange }: { label: string; value: string[]; onChange: (value: string[]) => void }) {
+  return <div className="dynamic-card"><span className="dynamic-label">{label}</span><div className="repeat-list">{value.map((entry, index) => <div key={index}><input value={entry} onChange={(event) => onChange(value.map((item, current) => current === index ? event.target.value : item))} /><button className="icon-button danger" onClick={() => onChange(value.filter((_, current) => current !== index))}>×</button></div>)}</div><button className="button ghost compact" onClick={() => onChange([...value, ""])}>+ Add row</button></div>;
+}
+
+function EntityTableField({ label, definition, value, onChange }: { label: string; definition: TableDefinition; value: TableDefinition["rows"]; onChange: (value: TableDefinition["rows"]) => void }) {
+  const rows = value;
+  const setCell = (rowIndex: number, columnId: string, cell: string) => onChange(rows.map((row, index) => index === rowIndex ? { ...row, values: { ...row.values, [columnId]: cell } } : row));
+  const paste = (event: React.ClipboardEvent<HTMLInputElement>, rowIndex: number, columnIndex: number) => {
+    const matrix = event.clipboardData.getData("text").trimEnd().split(/\r?\n/).map((row) => row.split("\t"));
+    if (matrix.length === 1 && matrix[0].length === 1) return;
+    event.preventDefault(); const next = structuredClone(rows);
+    while (next.length < rowIndex + matrix.length) next.push({ rowId: crypto.randomUUID(), values: {} });
+    matrix.forEach((line, rowOffset) => line.forEach((cell, columnOffset) => { const column = definition.columns[columnIndex + columnOffset]; if (column) next[rowIndex + rowOffset].values[column.id] = cell; }));
+    onChange(next);
+  };
+  return <div className="dynamic-card table-value"><span className="dynamic-label">{label}</span><div className="spreadsheet"><table><thead><tr>{definition.columns.map((column, index) => <th key={column.id}>{index === 0 && <small>KEY</small>}{column.name.en}</th>)}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={row.rowId}>{definition.columns.map((column, columnIndex) => <td key={column.id}><input value={String(row.values[column.id] ?? "")} onChange={(event) => setCell(rowIndex, column.id, event.target.value)} onPaste={(event) => paste(event, rowIndex, columnIndex)} /></td>)}</tr>)}</tbody></table></div><button className="button ghost compact" onClick={() => onChange([...rows, { rowId: crypto.randomUUID(), values: {} }])}>+ Add row</button></div>;
+}
+
+function DependenciesPage({ project, locale, t, importRef, updateProject }: { project: ForgeProject; locale: Locale; t: (key: LabelKey) => string; importRef: React.RefObject<HTMLInputElement | null>; updateProject: (recipe: (draft: ForgeProject) => void) => void }) {
+  return <><div className="info-strip">{t("dependencyHelp")}</div><Panel title={t("dependencies")} kicker="LOCAL INSTALLS" actions={<button className="button primary" onClick={() => importRef.current?.click()}>+ {t("attach")}</button>}>{project.dependencies.length === 0 ? <div className="empty">{t("noItems")}</div> : <div className="dependency-list">{project.dependencies.map((item) => <article key={item.refId}><span className={`status-dot ${item.verified ? "" : "error"}`} /><div><strong>{item.embedded ? localized(item.embedded.reference.name, locale) : item.refId}</strong><code>{item.refId}</code></div><span className="badge">≥ {item.minimumVersion}</span><span className="badge">{item.access === "editable" ? t("editable") : t("readOnly")}</span><button className="icon-button danger" onClick={() => updateProject((draft) => { draft.dependencies = draft.dependencies.filter((dependency) => dependency.refId !== item.refId); })}>×</button></article>)}</div>}</Panel></>;
+}
+
+function Settings({ project, locale, t, updateProject, close }: { project: ForgeProject; locale: Locale; t: (key: LabelKey) => string; updateProject: (recipe: (draft: ForgeProject) => void) => void; close: () => void }) {
+  return <><header className="modal-head"><div><span className="kicker">MANIFEST</span><h2>{t("settings")}</h2></div><button className="icon-button" onClick={close}>×</button></header><div className="modal-body editor-stack"><div className="form-grid three"><TextField label={t("namespace")} value={project.namespace} onChange={(namespace) => updateProject((draft) => { draft.namespace = slugify(namespace); })} /><TextField label={`${t("version")} · REF`} value={project.reference.version} onChange={(version) => updateProject((draft) => { draft.reference.version = version; })} /><TextField label={`${t("version")} · PACK`} value={project.pack.version} onChange={(version) => updateProject((draft) => { draft.pack.version = version; draft.version = version; })} /></div><div className="form-grid two"><TextField label={`${t("key")} · REF`} value={project.reference.key} onChange={(key) => updateProject((draft) => { draft.reference.key = slugify(key); })} /><TextField label={`${t("key")} · PACK`} value={project.pack.key} onChange={(key) => updateProject((draft) => { draft.pack.key = slugify(key); })} /></div><div className="subsection"><h3>{t("refName")}</h3><LocalizedFields value={project.reference.name} t={t} onChange={(name) => updateProject((draft) => { draft.reference.name = name; })} /></div><div className="subsection"><h3>{t("packName")}</h3><LocalizedFields value={project.pack.name} t={t} onChange={(name) => updateProject((draft) => { draft.pack.name = name; })} /></div><p className="hint">{t("englishRequired")}</p></div><footer className="modal-foot"><button className="button primary" onClick={close}>{t("done")}</button></footer></>;
+}
+
+function DebugDialog({ project, issues, tab, setTab, t, close }: { project: ForgeProject; issues: ReturnType<typeof validateProject>; tab: "issues" | "json"; setTab: (tab: "issues" | "json") => void; t: (key: LabelKey) => string; close: () => void }) {
+  return <><header className="modal-head"><div><span className="kicker">READ-ONLY INSPECTOR</span><h2>{t("debug")}</h2></div><button className="icon-button" onClick={close}>×</button></header><div className="debug-tabs"><button className={tab === "issues" ? "active" : ""} onClick={() => setTab("issues")}>{t("errors")} · {issues.length}</button><button className={tab === "json" ? "active" : ""} onClick={() => setTab("json")}>{t("json")}</button></div><div className="modal-body debug-body">{tab === "issues" ? issues.length === 0 ? <div className="success-card"><span>✓</span><strong>{t("valid")}</strong></div> : <div className="issue-list">{issues.map((issue, index) => <article key={`${issue.code}-${index}`} className={issue.severity}><span>{issue.severity === "error" ? "!" : "i"}</span><div><strong>{issue.code}</strong><p>{issue.message}</p>{issue.targetId && <code>{issue.targetId}</code>}</div></article>)}</div> : <><p className="hint">{t("readonlyJson")}</p><pre className="json-view">{JSON.stringify(project, null, 2)}</pre></>}</div></>;
+}
+
+function ExportDialog({ access, setAccess, t, close, exportFile }: { access: "editable" | "read_only"; setAccess: (value: "editable" | "read_only") => void; t: (key: LabelKey) => string; close: () => void; exportFile: (kind: "json" | "wsgref" | "wsgpack") => void }) {
+  return <><header className="modal-head"><div><span className="kicker">LOCAL FILES</span><h2>{t("export")}</h2></div><button className="icon-button" onClick={close}>×</button></header><div className="modal-body editor-stack"><div className="segmented full"><button className={access === "editable" ? "active" : ""} onClick={() => setAccess("editable")}>{t("editable")}</button><button className={access === "read_only" ? "active" : ""} onClick={() => setAccess("read_only")}>{t("readOnly")}</button></div><button className="export-choice" onClick={() => exportFile("wsgref")}><span>.wsgref</span><strong>{t("exportRefs")}</strong><em>→</em></button><button className="export-choice" onClick={() => exportFile("wsgpack")}><span>.wsgpack</span><strong>{t("exportPack")}</strong><em>→</em></button><button className="export-choice" onClick={() => exportFile("json")}><span>.json</span><strong>{t("exportProject")}</strong><em>→</em></button></div></>;
+}
+
+export default App;
