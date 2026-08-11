@@ -1,6 +1,7 @@
 import type { Effect, ForgeEntity, ForgeProject, ValidationIssue } from "./types";
 
 const idPattern = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)+$/;
+const packIdPattern = /^[a-z][a-z0-9_]*$/;
 const targetPattern = /^[a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9_*-]+)+$/;
 const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 const allowedFunctions = new Set(["character_level", "class_level", "ability_score", "ability_modifier", "proficiency_bonus", "has_feature", "min", "max", "floor", "ceil", "abs"]);
@@ -41,7 +42,7 @@ function validateEffect(effect: Effect, entity: ForgeEntity, index: number): Val
 
 export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en"): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  if (!idPattern.test(project.pack.id)) issues.push({ severity: "error", path: "pack.id", message: "ID пакета имеет неверный формат" });
+  if (!packIdPattern.test(project.pack.id)) issues.push({ severity: "error", path: "pack.id", message: "ID пакета имеет неверный формат" });
   if (!semverPattern.test(project.pack.version)) issues.push({ severity: "error", path: "pack.version", message: "Версия должна иметь формат 1.0.0" });
   const ids = new Set<string>();
   const allIds = new Set(project.entities.map((entity) => entity.id));
@@ -53,7 +54,6 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
     ids.add(entity.id);
     if (!entity.localization.ru.name.trim()) issues.push({ severity: "error", entityId: entity.id, path: "name_ru", message: "Русское название обязательно" });
     if (!entity.localization.en.name.trim()) issues.push({ severity: "error", entityId: entity.id, path: "name_en", message: "Английское название обязательно" });
-    if (!entity.rulesetId || !entity.sourceId || !entity.licenseId) issues.push({ severity: "error", entityId: entity.id, path: "provenance", message: "Нужны ruleset, источник и лицензия" });
 
     for (const [formulaIndex, formula] of (entity.prerequisites ?? []).entries()) {
       const error = validateFormula(formula);
@@ -72,12 +72,11 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
       if (entity.casterProgression !== "none" && !entity.spellcastingAbility) issues.push({ severity: "error", entityId: entity.id, path: "spellcastingAbility", message: "Заклинательному классу нужна базовая характеристика" });
     }
     if (entity.entityType === "subclass" && !entity.classId) issues.push({ severity: "error", entityId: entity.id, path: "classId", message: "Подкласс должен ссылаться на базовый класс" });
-    if (entity.entityType === "species" && !entity.creatureTypeId) issues.push({ severity: "error", entityId: entity.id, path: "creatureTypeId", message: "Виду нужен тип существа" });
     if (entity.entityType === "background" && entity.abilityOptions?.length !== 3) issues.push({ severity: "error", entityId: entity.id, path: "abilityOptions", message: "Предыстория должна предлагать ровно 3 характеристики" });
     if (entity.entityType === "background" && (!entity.abilityScoreIncrease || entity.abilityScoreIncrease.allowedAbilities.length !== 3 || !entity.abilityScoreIncrease.distributions.length)) issues.push({ severity: "error", entityId: entity.id, path: "abilityScoreIncrease", message: "Предыстории нужна схема повышения характеристик" });
     if (entity.entityType === "feature" && entity.mode === "limited_use" && (!entity.resource?.id || !entity.resource.maximumFormula)) issues.push({ severity: "error", entityId: entity.id, path: "resource", message: "Активному умению нужен ресурс, максимум и восстановление" });
     if (entity.entityType === "item") {
-      if ((entity.weightLb ?? 0) < 0 || (entity.costCp ?? 0) < 0) issues.push({ severity: "error", entityId: entity.id, path: "item", message: "Вес и стоимость не могут быть отрицательными" });
+      if ((entity.weightLb ?? 0) < 0 || (entity.costCp ?? 0) < 0 || (entity.costCp ?? 0) > 999999) issues.push({ severity: "error", entityId: entity.id, path: "item", message: "Вес не может быть отрицательным, стоимость должна быть от 0 до 999999 cp" });
       if (entity.itemType === "weapon" && !entity.weaponProfile) issues.push({ severity: "error", entityId: entity.id, path: "weaponProfile", message: "Оружию нужен профиль урона" });
       if (["armor", "shield"].includes(entity.itemType ?? "") && !entity.armorProfile) issues.push({ severity: "error", entityId: entity.id, path: "armorProfile", message: "Доспеху нужен профиль КД" });
       for (const [requirementIndex, requirement] of (entity.requirements ?? []).entries()) {
@@ -116,10 +115,14 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
     for (const level of entity.levels ?? []) for (const id of level.featureIds) references.push({ owner: entity, id, path: `levels.${level.level}` });
     for (const level of entity.subclassLevels ?? []) for (const id of level.featureIds) references.push({ owner: entity, id, path: `subclassLevels.${level.level}` });
     if (entity.classId) references.push({ owner: entity, id: entity.classId, path: "classId" });
-    if (entity.featId) references.push({ owner: entity, id: entity.featId, path: "featId" });
+    for (const id of entity.featIds ?? []) references.push({ owner: entity, id, path: "featIds" });
+    for (const id of entity.skillProficiencySlots ?? []) if (id) references.push({ owner: entity, id, path: "skillProficiencySlots" });
+    for (const id of entity.toolProficiencySlots ?? []) if (id) references.push({ owner: entity, id, path: "toolProficiencySlots" });
+    for (const id of entity.backgroundFeatureSlots ?? []) if (id) references.push({ owner: entity, id, path: "backgroundFeatureSlots" });
     for (const [grantIndex, grant] of (entity.spellGrants ?? []).entries()) references.push({ owner: entity, id: grant.spellId, path: `spellGrants.${grantIndex}.spellId` });
   }
-  for (const reference of references) if (reference.id && !allIds.has(reference.id) && !reference.id.startsWith("srd52.")) issues.push({ severity: "warning", entityId: reference.owner.id, path: reference.path, message: `Ссылка ${reference.id} не найдена в этом пакете` });
+  const externalReferencePrefixes = ["skill.", "tool.", "language.", "weapon.", "armor.", "save."];
+  for (const reference of references) if (reference.id && !allIds.has(reference.id) && !reference.id.startsWith("srd52.") && !externalReferencePrefixes.some((prefix) => reference.id.startsWith(prefix))) issues.push({ severity: "warning", entityId: reference.owner.id, path: reference.path, message: `Ссылка ${reference.id} не найдена в этом пакете` });
   return locale === "en" ? issues.map((issue) => ({ ...issue, message: translateValidationMessage(issue.message) })) : issues;
 }
 
@@ -130,19 +133,17 @@ const validationTranslations: Record<string, string> = {
   "Такой ID уже существует в пакете": "This ID already exists in the pack",
   "Русское название обязательно": "Russian name is required",
   "Английское название обязательно": "English name is required",
-  "Нужны ruleset, источник и лицензия": "Ruleset, source, and license are required",
   "Класс должен содержать ровно 20 уровней": "A class must contain exactly 20 levels",
   "Таблица прогрессии класса должна содержать ровно 20 уровней": "The class progression table must contain exactly 20 levels",
   "Строка прогрессии должна содержать 9 уровней ячеек": "Each progression row must contain all 9 spell-slot levels",
   "Выберите минимум одну основную характеристику": "Select at least one primary ability",
   "Заклинательному классу нужна базовая характеристика": "A spellcasting class needs a spellcasting ability",
   "Подкласс должен ссылаться на базовый класс": "A subclass must reference its base class",
-  "Виду нужен тип существа": "A species needs a creature type",
   "Предыстория должна предлагать ровно 3 характеристики": "A background must offer exactly 3 abilities",
   "Предыстории нужна схема повышения характеристик": "A background needs an ability-score increase scheme",
   "Применение ссылается на отсутствующий выбор": "A choice application references a missing choice",
   "Активному умению нужен ресурс, максимум и восстановление": "A limited-use feature needs a resource, maximum, and recovery",
-  "Вес и стоимость не могут быть отрицательными": "Weight and cost cannot be negative",
+  "Вес не может быть отрицательным, стоимость должна быть от 0 до 999999 cp": "Weight cannot be negative; cost must be between 0 and 999999 cp",
   "Оружию нужен профиль урона": "A weapon needs a damage profile",
   "Доспеху нужен профиль КД": "Armor needs an AC profile",
   "Уровень заклинания должен быть от 0 до 9": "Spell level must be between 0 and 9",

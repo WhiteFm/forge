@@ -5,7 +5,7 @@ import { buildSrdOrigins } from "./srd-origins-data.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = resolve(root, "projects");
-const source = { rulesetId: "dnd5e.2024", sourceId: "srd52.source.core", sourceVersion: "5.2.1", licenseId: "license.cc-by-4.0", status: "published", tags: ["official", "srd52"] };
+const source = { status: "published", tags: ["official", "srd52"] };
 const attribution = "This work includes material from the System Reference Document 5.2.1 (SRD 5.2.1) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.";
 
 const localized = (nameEn, nameRu, descriptionEn, descriptionRu) => ({ en: { name: nameEn, description: descriptionEn }, ru: { name: nameRu, description: descriptionRu } });
@@ -197,7 +197,7 @@ const catalogSpells = spellCatalog.spells.map((entry) => {
 });
 
 const project = {
-  schemaVersion: "1.1.0", projectId: "srd52-wizard-evoker", pack: { id: "srd52.pack.wizard-evoker", version: "1.1.0", name: "SRD 5.2.1 Character Origins, Wizard & Evoker", rulesetId: "dnd5e.2024", sourceId: "srd52.source.core", licenseId: "license.cc-by-4.0", author: "WSGuild", defaultLocale: "en", attribution },
+  schemaVersion: "2.0.0", pack: { id: "srd52", version: "1.1.0", name: "SRD 5.2.1 Character Origins, Wizard & Evoker", rulesetId: "dnd5e.2024", licenseId: "license.cc-by-4.0", author: "WSGuild", defaultLocale: "en", attribution },
   entities: [wizard, evoker, ...features, ...evokerFeatures, ...origins.species, ...origins.backgrounds, ...origins.feats, ...origins.speciesFeatures, ...origins.featFeatures, ...items, ...origins.originItems, ...materialItems, ...catalogSpells], updatedAt: new Date().toISOString(),
 };
 
@@ -224,4 +224,5 @@ function toPack(value) {
 await mkdir(outDir, { recursive: true });
 await writeFile(resolve(outDir, "srd52-wizard-evoker.forge.json"), JSON.stringify(project, null, 2) + "\n", "utf8");
 await writeFile(resolve(outDir, "srd52-wizard-evoker.wsgpack"), JSON.stringify(toPack(project), null, 2) + "\n", "utf8");
+await import("./migrate-forge-v2.mjs");
 console.log(`Created ${project.entities.length} entities in ${outDir}`);

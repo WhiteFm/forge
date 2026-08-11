@@ -26,6 +26,8 @@ export interface RuleExpression {
 
 export interface Effect {
   id: string;
+  name?: string;
+  nameRu?: string;
   target: string;
   operation: "add" | "subtract" | "set" | "set_minimum" | "set_maximum" | "multiply" | "replace_formula" | "grant" | "grant_proficiency" | "upgrade_proficiency" | "grant_advantage" | "grant_disadvantage" | "create_resource" | "restore_resource";
   valueType: "number" | "boolean" | "string" | "formula" | "dice" | "reference";
@@ -49,6 +51,8 @@ export interface Effect {
 
 export interface ChoiceDefinition {
   id: string;
+  name: string;
+  nameRu?: string;
   selectionType: "reference" | "entity" | "number" | "text";
   min: number;
   max: number;
@@ -96,10 +100,6 @@ export interface ClassProgressionEntry {
 export interface ForgeEntity {
   id: string;
   entityType: EntityType;
-  rulesetId: string;
-  sourceId: string;
-  sourceVersion: string;
-  licenseId: string;
   status: ContentStatus;
   tags: string[];
   localization: Record<Locale, LocalizedText>;
@@ -108,9 +108,9 @@ export interface ForgeEntity {
   referenceValue?: Record<string, unknown>;
 
   sizeOptions?: string[];
-  creatureTypeId?: string;
   lifespanYears?: number;
   baseSpeeds?: Record<string, number>;
+  senses?: { vision: number; darkvision: number; blindsight: number };
   featureIds?: string[];
   choices?: ChoiceDefinition[];
   choiceApplications?: ChoiceApplication[];
@@ -137,10 +137,12 @@ export interface ForgeEntity {
 
   abilityOptions?: AbilityId[];
   abilityScoreIncrease?: AbilityScoreIncrease;
-  featId?: string;
+  featIds?: string[];
+  skillProficiencySlots?: string[];
+  toolProficiencySlots?: string[];
+  backgroundFeatureSlots?: string[];
   featChoiceSelections?: Array<{ choiceId: string; optionIds: string[] }>;
-  proficiencyGrants?: string[];
-  equipmentOptions?: Array<{ id: string; items: Array<{ itemId: string; quantity: number }>; choiceItems?: Array<{ choiceId: string; quantity: number }>; currencyCp: number }>;
+  equipmentOptions?: Array<{ id: string; name?: string; nameRu?: string; items: Array<{ itemId: string; quantity: number }>; choiceItems?: Array<{ choiceId: string; quantity: number }>; currencyCp: number }>;
 
   featCategory?: "origin" | "general" | "fighting_style" | "epic_boon" | "custom";
   repeatable?: boolean;
@@ -195,7 +197,7 @@ export interface ForgeEntity {
   areas?: Array<{ shape: "none" | "cone" | "cube" | "cylinder" | "emanation" | "line" | "sphere" | "wall" | string; sizeFeet: number; rawShape: string; rawSize: string; dimensionsFeet: Array<{ value: number; kind: string }> }>;
   duration?: { type: "instant" | "rounds" | "minutes" | "hours" | "days" | "until_dispelled" | "special"; value: number; concentration: boolean; raw?: string };
   components?: { verbal: boolean; somatic: boolean; material: boolean; materialText: string; materialCostCp: number; materialConsumed: boolean };
-  materialGroups?: Array<{ id: string; sourceText: string; minimumTotalCostCp: number; sourceCurrency: string; consumed: boolean; entries: Array<{ itemId: string; quantity: number; minimumCostCp: number; consumed: boolean }> }>;
+  materialGroups?: Array<{ id: string; name?: string; nameRu?: string; sourceText: string; minimumTotalCostCp: number; sourceCurrency: string; consumed: boolean; entries: Array<{ itemId: string; quantity: number; minimumCostCp: number; consumed: boolean }> }>;
   spellCategories?: Array<"damage" | "healing" | "neutral" | string>;
   spellProfiles?: Array<{ sourceSheet: string; sourceRow: number; category: string; dice: { initialCount: number; initialDie: string; periodicCount: number; periodicDie: string; periodRounds: number }; higherLevel: { enabled: boolean } }>;
   ritual?: boolean;
@@ -207,13 +209,11 @@ export interface ForgeEntity {
 
 export interface ForgeProject {
   schemaVersion: string;
-  projectId: string;
   pack: {
     id: string;
     version: string;
     name: string;
     rulesetId: string;
-    sourceId: string;
     licenseId: string;
     author: string;
     defaultLocale?: Locale;

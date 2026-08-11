@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import EntityEditor from "./EntityEditor";
-import { createEntity, entityTypeLabels, entityTypes, initialProject } from "./data";
+import { createEntity, entityTypeLabels, entityTypes, initialProject, normalizeProject } from "./data";
 import type { EntityType, ForgeEntity, ForgeProject } from "./types";
 import { useUi } from "./ui-i18n";
 import { toCanonicalPack, validateProject } from "./validation";
@@ -11,7 +11,7 @@ const BUNDLED_PROJECT_URL = new URL("../projects/srd52-wizard-evoker.forge.json"
 function loadProject(): ForgeProject {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved) as ForgeProject;
+    if (saved) return normalizeProject(JSON.parse(saved) as ForgeProject);
   } catch { /* start with a valid empty project */ }
   return initialProject;
 }
@@ -53,13 +53,17 @@ export default function App() {
   const canonical = useMemo(() => toCanonicalPack(project), [project]);
 
   function updateEntity(patch: Partial<ForgeEntity>) {
-    setProject((current) => ({ ...current, entities: current.entities.map((entity) => entity.id === activeId ? { ...entity, ...patch } : entity) }));
-    if (patch.id) setActiveId(patch.id);
+    const index = project.entities.findIndex((entity) => entity.id === activeId);
+    const draft = { ...project, entities: project.entities.map((entity) => entity.id === activeId ? { ...entity, ...patch } : entity) };
+    const needsIdRefresh = Boolean(patch.localization?.en?.name !== undefined || patch.choices || patch.equipmentOptions || patch.effects || patch.materialGroups);
+    const next = needsIdRefresh ? normalizeProject(draft) : draft;
+    setProject(next);
+    if (index >= 0) setActiveId(next.entities[index].id);
     setToastKey("app.savedChange");
   }
 
   function addEntity(type = activeType) {
-    const entity = createEntity(type, project.entities.length + 1);
+    const entity = createEntity(type, project.entities.length + 1, project.pack.id);
     setProject((current) => ({ ...current, entities: [...current.entities, entity] }));
     setActiveType(type);
     setActiveId(entity.id);
@@ -70,12 +74,12 @@ export default function App() {
   function duplicateEntity() {
     if (!activeEntity) return;
     const copy = structuredClone(activeEntity);
-    copy.id = `${activeEntity.id}.copy`;
     copy.status = "draft";
     copy.localization.ru.name += " — копия";
     copy.localization.en.name += " — copy";
-    setProject((current) => ({ ...current, entities: [...current.entities, copy] }));
-    setActiveId(copy.id);
+    const next = normalizeProject({ ...project, entities: [...project.entities, copy] });
+    setProject(next);
+    setActiveId(next.entities.at(-1)?.id ?? activeId);
     setToastKey("app.createdCopy");
   }
 
@@ -91,9 +95,10 @@ export default function App() {
   async function importProject(file: File) {
     try {
       const imported = JSON.parse(await file.text()) as ForgeProject;
-      if (!imported.projectId || !Array.isArray(imported.entities)) throw new Error("invalid");
-      setProject(imported);
-      const first = imported.entities[0];
+      if (!imported.pack?.id || !Array.isArray(imported.entities)) throw new Error("invalid");
+      const normalized = normalizeProject(imported);
+      setProject(normalized);
+      const first = normalized.entities[0];
       if (first) { setActiveType(first.entityType); setActiveId(first.id); }
       setToastKey("app.imported");
     } catch {
@@ -105,7 +110,7 @@ export default function App() {
     try {
       const response = await fetch(BUNDLED_PROJECT_URL);
       if (!response.ok) throw new Error("download failed");
-      const imported = await response.json() as ForgeProject;
+      const imported = normalizeProject(await response.json() as ForgeProject);
       setProject(imported);
       const first = imported.entities[0];
       if (first) { setActiveType(first.entityType); setActiveId(first.id); }
@@ -141,7 +146,7 @@ export default function App() {
       <div className="top-actions">
         <div className="language-switch" aria-label="Language"><button className={locale === "en" ? "active" : ""} type="button" onClick={() => setLocale("en")}>EN</button><button className={locale === "ru" ? "active" : ""} type="button" onClick={() => setLocale("ru")}>RU</button></div>
         <button type="button" className="ghost-button" onClick={() => fileRef.current?.click()}>{t("app.import")}</button>
-        <button type="button" className="ghost-button" onClick={() => downloadJson(`${project.projectId}.forge.json`, project)}>{t("app.project")}</button>
+        <button type="button" className="ghost-button" onClick={() => downloadJson(`${project.pack.id}.forge.json`, normalizeProject(project))}>{t("app.project")}</button>
         <button type="button" className="primary-button" disabled={errorCount > 0} onClick={() => downloadJson(`${project.pack.id}-${project.pack.version}.wsgpack`, canonical)}>{t("app.export")}</button>
         <input ref={fileRef} hidden type="file" accept=".json,.wsgpack" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importProject(file); event.target.value = ""; }} />
       </div>
@@ -165,6 +170,6 @@ export default function App() {
 
     {showRight && <aside className="inspector"><header><div className="inspector-tabs"><button className={rightPanel === "validation" ? "active" : ""} type="button" onClick={() => setRightPanel("validation")}>{t("app.validation")}</button><button className={rightPanel === "json" ? "active" : ""} type="button" onClick={() => setRightPanel("json")}>JSON</button></div><button className="icon-button" type="button" onClick={() => setShowRight(false)}>×</button></header>{rightPanel === "validation" ? <div className="validation-panel"><div className={`validation-summary ${errorCount ? "has-errors" : "valid"}`}><span>{errorCount ? "!" : "✓"}</span><div><strong>{errorCount ? t("app.needsAttention") : t("app.ready")}</strong><small>{t("app.counts", { errors: errorCount, warnings: warningCount })}</small></div></div><div className="coverage"><span><strong>{Math.max(0, 100 - errorCount * 8 - warningCount * 2)}%</strong> {t("app.coverage")}</span><i><b style={{ width: `${Math.max(0, 100 - errorCount * 8 - warningCount * 2)}%` }} /></i></div><div className="issue-scope" role="group" aria-label={locale === "en" ? "Validation scope" : "Область проверки"}><button className={issueScope === "all" ? "active" : ""} type="button" onClick={() => setIssueScope("all")}>{locale === "en" ? `Whole pack (${issues.length})` : `Весь пакет (${issues.length})`}</button><button className={issueScope === "active" ? "active" : ""} type="button" onClick={() => setIssueScope("active")}>{locale === "en" ? `Current record (${issues.filter((issue) => !issue.entityId || issue.entityId === activeId).length})` : `Текущая запись (${issues.filter((issue) => !issue.entityId || issue.entityId === activeId).length})`}</button></div><div className="issues">{visibleIssues.length ? visibleIssues.map((issue, index) => <button type="button" className={`issue issue-${issue.severity}`} key={`${issue.entityId}-${issue.path}-${index}`} onClick={() => openIssue(issue.entityId)}><span>{issue.severity === "error" ? "×" : "!"}</span><div><strong>{issue.message}</strong><small>{issue.entityId ?? "manifest"} · {issue.path}</small><em>{issue.entityId ? (locale === "en" ? "Open record →" : "Открыть запись →") : (locale === "en" ? "Project setting" : "Настройка проекта")}</em></div></button>) : <div className="no-issues"><span>✓</span><p>{t("app.noIssues")}</p></div>}</div><div className="logic-note"><span>{t("app.rule")}</span><p>{t("app.ruleText")}</p></div></div> : <div className="json-panel"><div className="json-toolbar"><span>canonical-pack.json</span><button type="button" onClick={() => void navigator.clipboard.writeText(JSON.stringify(canonical, null, 2))}>{t("app.copy")}</button></div><pre>{JSON.stringify(activeEntity ? canonical.entities.find((item) => (item as { id?: string }).id === activeEntity.id) : canonical.manifest, null, 2)}</pre></div>}</aside>}
 
-    {showProject && <div className="modal-backdrop" onMouseDown={() => setShowProject(false)}><section className="project-modal" onMouseDown={(event) => event.stopPropagation()}><header><div><span className="eyebrow">Manifest</span><h2>{t("app.projectSettings")}</h2></div><button className="icon-button" type="button" onClick={() => setShowProject(false)}>×</button></header><div className="form-grid"><label className="field"><span>Project ID</span><input value={project.projectId} onChange={(event) => setProject({ ...project, projectId: event.target.value })} /></label><label className="field"><span>{t("app.packName")}</span><input value={project.pack.name} onChange={(event) => setProject({ ...project, pack: { ...project.pack, name: event.target.value } })} /></label><label className="field"><span>Pack ID</span><input value={project.pack.id} onChange={(event) => setProject({ ...project, pack: { ...project.pack, id: event.target.value } })} /></label><label className="field"><span>{t("app.version")}</span><input value={project.pack.version} onChange={(event) => setProject({ ...project, pack: { ...project.pack, version: event.target.value } })} /></label><label className="field"><span>Ruleset</span><input value={project.pack.rulesetId} onChange={(event) => setProject({ ...project, pack: { ...project.pack, rulesetId: event.target.value } })} /></label><label className="field"><span>{t("app.author")}</span><input value={project.pack.author} onChange={(event) => setProject({ ...project, pack: { ...project.pack, author: event.target.value } })} /></label><label className="field"><span>Source ID</span><input value={project.pack.sourceId} onChange={(event) => setProject({ ...project, pack: { ...project.pack, sourceId: event.target.value } })} /></label><label className="field"><span>License ID</span><input value={project.pack.licenseId} onChange={(event) => setProject({ ...project, pack: { ...project.pack, licenseId: event.target.value } })} /></label></div><footer><button className="secondary-button" type="button" onClick={() => void loadBundledProject()}>{locale === "en" ? "Load complete SRD 5.2.1 project" : "Загрузить полный проект SRD 5.2.1"}</button><button className="ghost-button" type="button" onClick={() => { if (window.confirm(t("app.resetConfirm"))) { setProject(structuredClone(initialProject)); setActiveType("class"); setActiveId(""); setShowProject(false); } }}>{t("app.clearProject")}</button><button className="primary-button" type="button" onClick={() => setShowProject(false)}>{t("app.done")}</button></footer></section></div>}
+    {showProject && <div className="modal-backdrop" onMouseDown={() => setShowProject(false)}><section className="project-modal" onMouseDown={(event) => event.stopPropagation()}><header><div><span className="eyebrow">Pack</span><h2>{t("app.projectSettings")}</h2></div><button className="icon-button" type="button" onClick={() => setShowProject(false)}>×</button></header><div className="form-grid"><label className="field"><span>{t("app.packName")}</span><input value={project.pack.name} onChange={(event) => setProject({ ...project, pack: { ...project.pack, name: event.target.value } })} /></label><label className="field"><span>Pack ID</span><input value={project.pack.id} onChange={(event) => setProject({ ...project, pack: { ...project.pack, id: event.target.value } })} /></label><label className="field"><span>{t("app.version")}</span><input value={project.pack.version} onChange={(event) => setProject({ ...project, pack: { ...project.pack, version: event.target.value } })} /></label><label className="field"><span>Ruleset</span><input value={project.pack.rulesetId} onChange={(event) => setProject({ ...project, pack: { ...project.pack, rulesetId: event.target.value } })} /></label><label className="field"><span>{t("app.author")}</span><input value={project.pack.author} onChange={(event) => setProject({ ...project, pack: { ...project.pack, author: event.target.value } })} /></label><label className="field"><span>License</span><input value={project.pack.licenseId} onChange={(event) => setProject({ ...project, pack: { ...project.pack, licenseId: event.target.value } })} /></label></div><footer><button className="secondary-button" type="button" onClick={() => void loadBundledProject()}>{locale === "en" ? "Load complete SRD 5.2.1 project" : "Загрузить полный проект SRD 5.2.1"}</button><button className="ghost-button" type="button" onClick={() => { if (window.confirm(t("app.resetConfirm"))) { setProject(structuredClone(initialProject)); setActiveType("class"); setActiveId(""); setShowProject(false); } }}>{t("app.clearProject")}</button><button className="primary-button" type="button" onClick={() => { const index = project.entities.findIndex((entity) => entity.id === activeId); const normalized = normalizeProject(project); setProject(normalized); if (index >= 0) setActiveId(normalized.entities[index].id); setShowProject(false); }}>{t("app.done")}</button></footer></section></div>}
   </div>;
 }

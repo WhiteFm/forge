@@ -66,8 +66,8 @@ export function parseLegacyExpression(value: string, condition = false): RuleExp
   return normalized.trim() ? { operands: [parseOperand(normalized)], operators: [] } : defaultExpression(condition);
 }
 
-function EntitySelect({ entities, value, onChange, type }: { entities: ForgeEntity[]; value: string; onChange: (value: string) => void; type?: ForgeEntity["entityType"] }) {
-  const options = entities.filter((entity) => !type || entity.entityType === type).sort((a, b) => a.localization.en.name.localeCompare(b.localization.en.name));
+function EntitySelect({ entities, value, onChange, type, referenceCategory }: { entities: ForgeEntity[]; value: string; onChange: (value: string) => void; type?: ForgeEntity["entityType"]; referenceCategory?: ForgeEntity["referenceCategory"] }) {
+  const options = entities.filter((entity) => (!type || entity.entityType === type) && (!referenceCategory || entity.referenceCategory === referenceCategory)).sort((a, b) => a.localization.en.name.localeCompare(b.localization.en.name));
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const selected = options.find((entity) => entity.id === value);
@@ -100,8 +100,8 @@ export function VisualExpressionList({ values, expressions, entities, locale, on
   return <div className="visual-rule-list">{values.map((value, index) => <article className="visual-rule-row" key={index}><VisualExpressionBuilder value={value} expression={models[index]} entities={entities} locale={locale} condition onChange={(nextValue, nextExpression) => updateOne(index, nextValue, nextExpression)} /><button className="icon-button danger" type="button" onClick={() => onChange(values.filter((_, valueIndex) => valueIndex !== index), models.filter((_, modelIndex) => modelIndex !== index))}>×</button></article>)}<button className="secondary-button" type="button" onClick={() => { const model = defaultExpression(true); onChange([...values, compileExpression(model)], [...models, model]); }}>{locale === "en" ? "+ Add condition" : "+ Добавить условие"}</button></div>;
 }
 
-export function EntityPicker({ entities, value, onChange, type }: { entities: ForgeEntity[]; value: string; onChange: (value: string) => void; type?: ForgeEntity["entityType"] }) {
-  return <EntitySelect entities={entities} value={value} onChange={onChange} type={type} />;
+export function EntityPicker({ entities, value, onChange, type, referenceCategory }: { entities: ForgeEntity[]; value: string; onChange: (value: string) => void; type?: ForgeEntity["entityType"]; referenceCategory?: ForgeEntity["referenceCategory"] }) {
+  return <EntitySelect entities={entities} value={value} onChange={onChange} type={type} referenceCategory={referenceCategory} />;
 }
 
 export function EntityMultiPicker({ entities, value, locale, onChange, type }: { entities: ForgeEntity[]; value: string[]; locale: Locale; onChange: (value: string[]) => void; type?: ForgeEntity["entityType"] }) {
