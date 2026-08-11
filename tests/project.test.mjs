@@ -1,15 +1,39 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 test("ships the clean schema-v3 Forge architecture", async () => {
   const model = await readFile(new URL("../src/model.ts", import.meta.url), "utf8");
   assert.match(model, /schemaVersion:\s*3/);
+  assert.match(model, /catalogVersion:\s*2/);
   assert.match(model, /atomics:\s*structuredClone\(STANDARD_ATOMICS\)/);
-  assert.match(model, /references:\s*structuredClone\(STANDARD_REFERENCES\)/);
+  assert.match(model, /buildDndTemplateCatalog/);
   assert.match(model, /entities:\s*\[\]/);
   assert.match(model, /"multiclass"/);
   assert.doesNotMatch(model, /srd52\.class\.wizard|srd52\.spell\./);
+});
+
+test("builds complete editable templates without broken references", async () => {
+  const { createServer } = await import("vite");
+  const server = await createServer({ root: fileURLToPath(new URL("..", import.meta.url)), server: { middlewareMode: true }, appType: "custom" });
+  try {
+    const model = await server.ssrLoadModule("/src/model.ts");
+    const project = model.recalculateProjectIds(model.createCleanProject());
+    const expectedMinimums = { class: 20, multiclass: 14, subclass: 8, species: 18, background: 10, feat: 10, feature: 12, item: 28, spell: 32 };
+    assert.equal(project.entities.length, 0);
+    assert.ok(project.references.length >= 400);
+    assert.ok(project.atomics.every((item) => item.locked === false));
+    for (const template of project.templates) assert.ok(template.fields.length >= expectedMinimums[template.type], `${template.type} is incomplete`);
+    assert.deepEqual(model.validateProject(project).filter((issue) => issue.severity === "error"), []);
+  } finally {
+    await server.close();
+  }
+});
+
+test("keeps editors mounted while an English name changes its generated ID", async () => {
+  const app = await readFile(new URL("../src/App.tsx", import.meta.url), "utf8");
+  assert.match(app, /item\.id === selectedId \|\| item\.previousIds\.includes\(selectedId\)/);
 });
 
 test("supports English, Russian and Swedish with English as default", async () => {

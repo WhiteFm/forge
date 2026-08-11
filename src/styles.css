@@ -154,13 +154,17 @@ main { min-height: 100vh; margin-left: var(--sidebar); }
 .step { width: 28px; height: 28px; display: inline-grid; place-content: center; align-self: center; border-radius: 6px; color: #25180c; font: 700 14px Consolas, monospace; background: var(--gold); }
 .operation-delete { margin-bottom: 4px; }
 .column-cards, .template-fields { display: grid; gap: 8px; }
-.column-card { display: grid; grid-template-columns: 32px minmax(140px,1.3fr) minmax(130px,1fr) minmax(130px,1fr) 34px; gap: 8px; align-items: end; padding: 9px; border: 1px solid var(--line-soft); border-radius: 7px; background: var(--surface); }
+.column-card { display: grid; grid-template-columns: 32px minmax(320px,2.2fr) minmax(130px,.7fr) minmax(130px,.8fr) 34px; gap: 8px; align-items: end; padding: 9px; border: 1px solid var(--line-soft); border-radius: 7px; background: var(--surface); }
+.column-locales { min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(100px,1fr)); gap: 6px; }
 .spreadsheet { max-width: 100%; margin: 12px 0; overflow: auto; border: 1px solid var(--line); border-radius: 7px; }
 .spreadsheet table { width: 100%; min-width: 640px; border-collapse: collapse; table-layout: fixed; }
 .spreadsheet th { height: 42px; padding: 4px 8px; border-right: 1px solid var(--line); color: #e3bdbf; font-size: clamp(10px, .9vw, 13px); text-transform: uppercase; background: var(--surface-3); }
 .spreadsheet th small { display: block; color: var(--gold); font: 8px Consolas, monospace; }
 .spreadsheet td { height: 36px; padding: 0; border-top: 1px solid var(--line-soft); border-right: 1px solid var(--line-soft); }
 .spreadsheet input { width: 100%; height: 35px; padding: 5px 8px; border: 0; color: var(--ink); text-align: center; background: var(--black); }
+.spreadsheet input[readonly] { color: #20170a; font-weight: 700; background: var(--gold); }
+.spreadsheet .row-action { width: 34px; min-width: 34px; padding: 0; background: var(--surface-2); }
+.spreadsheet .row-action button { width: 33px; height: 35px; padding: 0; border: 0; color: var(--red-soft); background: transparent; }
 
 .entity-tabs { display: grid; grid-template-columns: repeat(9, minmax(88px,1fr)); gap: 5px; margin-bottom: 12px; padding: 5px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--surface); overflow: auto; }
 .entity-tabs button { min-width: 88px; height: 42px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 5px; padding: 0 9px; border: 1px solid transparent; border-radius: 5px; color: var(--muted); background: transparent; }
