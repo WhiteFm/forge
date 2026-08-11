@@ -586,7 +586,9 @@ textarea { padding: 8px 9px; }
 .entity-multi-picker { display: flex; flex-flow: row wrap; align-items: center; gap: 5px; }
 .entity-multi-picker .inline-row { flex: 1 1 145px; min-width: 130px; max-width: 190px; display: grid; grid-template-columns: minmax(0,1fr) 28px; align-items: center; gap: 4px; padding: 3px; border-radius: 8px; }
 .entity-multi-picker .entity-picker { min-width: 0; }
-.entity-multi-picker .entity-picker-trigger { min-height: 34px; height: 34px; padding: 4px 7px; gap: 5px; }
+.entity-multi-picker .entity-picker-trigger { min-height: 34px; height: 34px; grid-template-columns: minmax(0,1fr) 14px; padding: 4px 7px; gap: 4px; }
+.entity-multi-picker .entity-picker-trigger span { overflow: visible; font-size: clamp(7px, .6vw, 9px); line-height: 1; text-overflow: clip; }
+.entity-multi-picker .entity-picker-trigger small { display: none; }
 .entity-multi-picker .inline-row .icon-button { width: 28px; height: 28px; }
 .entity-multi-picker > .text-action { flex: 0 0 auto; min-height: 34px; height: 34px; padding: 0 8px; border: 1px dashed rgba(232,140,143,.28); border-radius: 8px; white-space: nowrap; }
 
