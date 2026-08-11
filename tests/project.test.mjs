@@ -117,3 +117,23 @@ test("groups subclasses by class and removes choices atomically", async () => {
   assert.match(editor, /onRemoveChoice=.*choiceApplications:/);
   assert.match(components, /onClick=\{\(\) => onRemoveChoice\(choice\.id\)\}/);
 });
+
+test("ships complete Forge documentation", async () => {
+  const index = await readFile(new URL("../docs/README.md", import.meta.url), "utf8");
+  const guide = await readFile(new URL("../docs/user-guide.md", import.meta.url), "utf8");
+  const entities = await readFile(new URL("../docs/entity-reference.md", import.meta.url), "utf8");
+  const rules = await readFile(new URL("../docs/rules-and-effects.md", import.meta.url), "utf8");
+  const pack = await readFile(new URL("../docs/pack-format.md", import.meta.url), "utf8");
+  const validation = await readFile(new URL("../docs/validation.md", import.meta.url), "utf8");
+  const glossary = await readFile(new URL("../docs/glossary.md", import.meta.url), "utf8");
+  assert.match(index, /Руководство пользователя/);
+  assert.match(guide, /\.forge\.json/);
+  assert.match(guide, /Ctrl\/Cmd \+ V/);
+  assert.match(entities, /Class \/ Класс/);
+  assert.match(entities, /Spell \/ Заклинание/);
+  assert.match(rules, /ChoiceApplication/);
+  assert.match(rules, /Атомарный эффект/);
+  assert.match(pack, /Канонический `\.wsgpack`/);
+  assert.match(validation, /Что валидация пока не проверяет/);
+  assert.match(glossary, /`PB` \/ `БМ`/);
+});
