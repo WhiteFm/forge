@@ -25,6 +25,48 @@ export const targetSuggestions = [
   "spellcasting.save_dc", "spellcasting.attack_bonus", "spellcasting.slots.*", "spellcasting.prepared.spells", "spellcasting.spellbook.spells", "inventory.carry_capacity", "inventory.items", "inventory.currency",
 ];
 
+const legacyEffectTargets = new Map([
+  ["senses.darkvision.range", "senses.darkvision"],
+  ["senses.tremorsense.range", "senses.tremorsense"],
+  ["senses.truesight.range", "senses.truesight"],
+  ["movement.walk.speed", "movement.walk"],
+  ["movement.fly.speed", "movement.fly"],
+]);
+
+/** Keep every rule path in the vocabulary used by the character sheet. */
+export function normalizeEffectTarget(target: string) {
+  const normalized = target
+    .split(".")
+    .map((segment) => segment
+      .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+      .replace(/-/g, "_")
+      .toLowerCase())
+    .join(".");
+  return legacyEffectTargets.get(normalized) ?? normalized;
+}
+
+export function deriveSpeciesSenses(
+  featureIds: string[],
+  entities: ForgeEntity[],
+  current: ForgeEntity["senses"] = { vision: 0, darkvision: 0, blindsight: 0 },
+) {
+  const result = { vision: current?.vision ?? 0, darkvision: current?.darkvision ?? 0, blindsight: current?.blindsight ?? 0 };
+  const featureById = new Map(entities.filter((entry) => entry.entityType === "feature").map((entry) => [entry.id, entry]));
+  const senseTargets = new Map<string, "vision" | "darkvision" | "blindsight">([
+    ["senses.vision", "vision"],
+    ["senses.darkvision", "darkvision"],
+    ["senses.blindsight", "blindsight"],
+  ]);
+  for (const featureId of featureIds) {
+    for (const rule of featureById.get(featureId)?.effects ?? []) {
+      const sense = senseTargets.get(normalizeEffectTarget(rule.target));
+      const value = Number(rule.value);
+      if (sense && Number.isFinite(value) && ["set", "set_minimum"].includes(rule.operation)) result[sense] = Math.max(result[sense], value);
+    }
+  }
+  return result;
+}
+
 export const emptyEffect = (index = 1): Effect => ({
   id: `effect.${index}`,
   target: "combat.initiative",
@@ -158,7 +200,7 @@ export function normalizeProject(input: ForgeProject): ForgeProject {
     });
     entity.effects = (entity.effects ?? []).map((effect, index) => {
       const name = effect.name || `Effect ${index + 1}`;
-      return { ...effect, name, nameRu: effect.nameRu || `Эффект ${index + 1}`, id: makeSubentityId(entity.id, name, `effect_${index + 1}`) };
+      return { ...effect, target: normalizeEffectTarget(effect.target), name, nameRu: effect.nameRu || `Эффект ${index + 1}`, id: makeSubentityId(entity.id, name, `effect_${index + 1}`) };
     });
     entity.materialGroups = (entity.materialGroups ?? []).map((group, index) => {
       const name = group.name || `Material Group ${index + 1}`;
@@ -166,6 +208,9 @@ export function normalizeProject(input: ForgeProject): ForgeProject {
     });
     return entity;
   });
+  project.entities = project.entities.map((entity) => entity.entityType === "species"
+    ? { ...entity, senses: deriveSpeciesSenses(entity.featureIds ?? [], project.entities, entity.senses) }
+    : entity);
   project.updatedAt ||= new Date().toISOString();
   return project;
 }

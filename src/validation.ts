@@ -1,4 +1,5 @@
 import type { Effect, ForgeEntity, ForgeProject, ValidationIssue } from "./types";
+import { normalizeEffectTarget } from "./data";
 
 const idPattern = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)+$/;
 const packIdPattern = /^[a-z][a-z0-9_]*$/;
@@ -26,6 +27,7 @@ function validateEffect(effect: Effect, entity: ForgeEntity, index: number): Val
   const path = `effects.${index}`;
   if (!idPattern.test(effect.id)) issues.push({ severity: "error", entityId: entity.id, path: `${path}.id`, message: "ID эффекта должен быть стабильным техническим идентификатором" });
   if (!targetPattern.test(effect.target)) issues.push({ severity: "error", entityId: entity.id, path: `${path}.target`, message: "Цель эффекта должна иметь вид combat.initiative" });
+  if (effect.target !== normalizeEffectTarget(effect.target)) issues.push({ severity: "error", entityId: entity.id, path: `${path}.target`, message: "Цель эффекта использует устаревший или несовместимый путь" });
   if (!effect.value.trim()) issues.push({ severity: "error", entityId: entity.id, path: `${path}.value`, message: "Укажите значение эффекта" });
   if (effect.valueType === "formula") {
     const formulaError = validateFormula(effect.value);
@@ -45,6 +47,8 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
   if (!packIdPattern.test(project.pack.id)) issues.push({ severity: "error", path: "pack.id", message: "ID пакета имеет неверный формат" });
   if (!semverPattern.test(project.pack.version)) issues.push({ severity: "error", path: "pack.version", message: "Версия должна иметь формат 1.0.0" });
   const ids = new Set<string>();
+  const localizedNames = new Map<string, string>();
+  const russianNames = new Map<string, string>();
   const allIds = new Set(project.entities.map((entity) => entity.id));
   const entityById = new Map(project.entities.map((entity) => [entity.id, entity]));
 
@@ -52,8 +56,21 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
     if (!idPattern.test(entity.id)) issues.push({ severity: "error", entityId: entity.id, path: "id", message: "ID должен содержать namespace, тип и машинное имя" });
     if (ids.has(entity.id)) issues.push({ severity: "error", entityId: entity.id, path: "id", message: "Такой ID уже существует в пакете" });
     ids.add(entity.id);
+    const nameKey = `${entity.entityType}:${entity.localization.en.name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "")}`;
+    const entityWithSameName = localizedNames.get(nameKey);
+    if (entityWithSameName) issues.push({ severity: "error", entityId: entity.id, path: "name_en", message: `Дубликат английского названия сущности: ${entityWithSameName}` });
+    localizedNames.set(nameKey, entity.id);
+    const russianNameKey = `${entity.entityType}:${entity.localization.ru.name.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "")}`;
+    const entityWithSameRussianName = russianNames.get(russianNameKey);
+    if (entityWithSameRussianName) issues.push({ severity: "error", entityId: entity.id, path: "name_ru", message: `Дубликат русского названия сущности: ${entityWithSameRussianName}` });
+    russianNames.set(russianNameKey, entity.id);
     if (!entity.localization.ru.name.trim()) issues.push({ severity: "error", entityId: entity.id, path: "name_ru", message: "Русское название обязательно" });
     if (!entity.localization.en.name.trim()) issues.push({ severity: "error", entityId: entity.id, path: "name_en", message: "Английское название обязательно" });
+    const duplicateReferences = (values: string[] | undefined, path: string) => {
+      if (values && new Set(values).size !== values.length) issues.push({ severity: "error", entityId: entity.id, path, message: "Одна и та же ссылка назначена несколько раз" });
+    };
+    duplicateReferences(entity.featureIds, "featureIds");
+    duplicateReferences(entity.featIds, "featIds");
 
     for (const [formulaIndex, formula] of (entity.prerequisites ?? []).entries()) {
       const error = validateFormula(formula);
@@ -66,6 +83,7 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
 
     if (entity.entityType === "class") {
       const levels = entity.levels ?? [];
+      for (const [levelIndex, level] of levels.entries()) duplicateReferences(level.featureIds, `levels.${levelIndex}.featureIds`);
       if (levels.length < 1 || levels.length > 20) issues.push({ severity: "error", entityId: entity.id, path: "levels", message: "Класс должен содержать от 1 до 20 уровней" });
       if (levels.some((level, index) => level.level !== index + 1)) issues.push({ severity: "error", entityId: entity.id, path: "levels", message: "Уровни класса должны идти подряд с первого уровня" });
       if (entity.classProgression && entity.classProgression.length !== levels.length) issues.push({ severity: "error", entityId: entity.id, path: "classProgression", message: "Таблица прогрессии должна совпадать с количеством уровней класса" });
@@ -74,9 +92,15 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
       if (entity.casterProgression !== "none" && !entity.spellcastingAbility) issues.push({ severity: "error", entityId: entity.id, path: "spellcastingAbility", message: "Заклинательному классу нужна базовая характеристика" });
     }
     if (entity.entityType === "subclass" && !entity.classId) issues.push({ severity: "error", entityId: entity.id, path: "classId", message: "Подкласс должен ссылаться на базовый класс" });
+    if (entity.entityType === "subclass") for (const [levelIndex, level] of (entity.subclassLevels ?? []).entries()) duplicateReferences(level.featureIds, `subclassLevels.${levelIndex}.featureIds`);
     if (entity.entityType === "background" && entity.abilityOptions?.length !== 3) issues.push({ severity: "error", entityId: entity.id, path: "abilityOptions", message: "Предыстория должна предлагать ровно 3 характеристики" });
     if (entity.entityType === "background" && (!entity.abilityScoreIncrease || entity.abilityScoreIncrease.allowedAbilities.length !== 3 || !entity.abilityScoreIncrease.distributions.length)) issues.push({ severity: "error", entityId: entity.id, path: "abilityScoreIncrease", message: "Предыстории нужна схема повышения характеристик" });
     if (entity.entityType === "feature" && entity.mode === "limited_use" && (!entity.resource?.id || !entity.resource.maximumFormula)) issues.push({ severity: "error", entityId: entity.id, path: "resource", message: "Активному умению нужен ресурс, максимум и восстановление" });
+    if (entity.entityType === "species") {
+      let grantedDarkvision = 0;
+      for (const featureId of entity.featureIds ?? []) for (const rule of entityById.get(featureId)?.effects ?? []) if (normalizeEffectTarget(rule.target) === "senses.darkvision" && ["set", "set_minimum"].includes(rule.operation)) grantedDarkvision = Math.max(grantedDarkvision, Number(rule.value) || 0);
+      if ((entity.senses?.darkvision ?? 0) < grantedDarkvision) issues.push({ severity: "error", entityId: entity.id, path: "senses.darkvision", message: "Дальность тёмного зрения не соответствует назначенным умениям" });
+    }
     if (entity.entityType === "item") {
       if ((entity.weightLb ?? 0) < 0 || (entity.costCp ?? 0) < 0 || (entity.costCp ?? 0) > 999999) issues.push({ severity: "error", entityId: entity.id, path: "item", message: "Вес не может быть отрицательным, стоимость должна быть от 0 до 999999 cp" });
       if (entity.itemType === "weapon" && !entity.weaponProfile) issues.push({ severity: "error", entityId: entity.id, path: "weaponProfile", message: "Оружию нужен профиль урона" });
@@ -102,11 +126,17 @@ export function validateProject(project: ForgeProject, locale: "en" | "ru" = "en
     }
 
     const effectIds = new Set<string>();
+    const effectSemantics = new Set<string>();
     for (const [effectIndex, effect] of (entity.effects ?? []).entries()) {
       issues.push(...validateEffect(effect, entity, effectIndex));
       if (effectIds.has(effect.id)) issues.push({ severity: "error", entityId: entity.id, path: `effects.${effectIndex}.id`, message: "ID эффекта дублируется внутри сущности" });
       effectIds.add(effect.id);
+      const semanticKey = JSON.stringify([effect.target, effect.operation, effect.valueType, effect.value, effect.activation, effect.conditions]);
+      if (effectSemantics.has(semanticKey)) issues.push({ severity: "error", entityId: entity.id, path: `effects.${effectIndex}`, message: "Одинаковый эффект добавлен в сущность несколько раз" });
+      effectSemantics.add(semanticKey);
+      if (!effect.name?.trim() || !effect.nameRu?.trim() || /^(effect|эффект)\s*\d+$/i.test(effect.name) || /^(effect|эффект)\s*\d+$/i.test(effect.nameRu)) issues.push({ severity: "warning", entityId: entity.id, path: `effects.${effectIndex}`, message: "Эффекту нужны понятные названия на английском и русском" });
     }
+    for (const [choiceIndex, choice] of (entity.choices ?? []).entries()) if (!choice.name?.trim() || !choice.nameRu?.trim() || /^(choice|выбор)\s*\d+$/i.test(choice.name) || /^(choice|выбор)\s*\d+$/i.test(choice.nameRu)) issues.push({ severity: "warning", entityId: entity.id, path: `choices.${choiceIndex}`, message: "Выбору нужны понятные названия на английском и русском" });
     const choiceIds = new Set((entity.choices ?? []).map((choice) => choice.id));
     for (const [applicationIndex, application] of (entity.choiceApplications ?? []).entries()) if (!choiceIds.has(application.choiceId)) issues.push({ severity: "error", entityId: entity.id, path: `choiceApplications.${applicationIndex}.choiceId`, message: "Применение ссылается на отсутствующий выбор" });
   }
@@ -158,10 +188,16 @@ const validationTranslations: Record<string, string> = {
   "Количество материального компонента должно быть не меньше 1": "Material-component quantity must be at least 1",
   "ID эффекта должен быть стабильным техническим идентификатором": "Effect ID must be a stable technical identifier",
   "Цель эффекта должна иметь вид combat.initiative": "Effect target must use a path such as combat.initiative",
+  "Цель эффекта использует устаревший или несовместимый путь": "Effect target uses a deprecated or incompatible path",
   "Укажите значение эффекта": "Enter an effect value",
   "Ограниченный эффект должен ссылаться на ресурс": "A limited-use effect must reference a resource",
   "Без группы нельзя надёжно определить дублирование эффекта": "A stacking group is required to detect duplicate effects reliably",
   "ID эффекта дублируется внутри сущности": "Effect ID is duplicated inside the entity",
+  "Одинаковый эффект добавлен в сущность несколько раз": "The same effect was added to the entity more than once",
+  "Одна и та же ссылка назначена несколько раз": "The same reference was assigned more than once",
+  "Дальность тёмного зрения не соответствует назначенным умениям": "Darkvision range does not match the assigned features",
+  "Эффекту нужны понятные названия на английском и русском": "The effect needs meaningful English and Russian names",
+  "Выбору нужны понятные названия на английском и русском": "The choice needs meaningful English and Russian names",
   "Формула не заполнена": "Formula is empty",
   "Формула содержит запрещённые символы": "Formula contains forbidden characters",
   "Нарушен порядок скобок": "Parentheses are in the wrong order",
@@ -173,6 +209,10 @@ function translateValidationMessage(message: string) {
   if (message.startsWith("Неизвестная функция ")) return message.replace("Неизвестная функция ", "Unknown function ");
   const missingReference = message.match(/^Ссылка (.+) не найдена в этом пакете$/);
   if (missingReference) return `Reference ${missingReference[1]} was not found in this pack`;
+  const duplicateName = message.match(/^Дубликат английского названия сущности: (.+)$/);
+  if (duplicateName) return `Duplicate English entity name: ${duplicateName[1]}`;
+  const duplicateRussianName = message.match(/^Дубликат русского названия сущности: (.+)$/);
+  if (duplicateRussianName) return `Duplicate Russian entity name: ${duplicateRussianName[1]}`;
   return message;
 }
 

@@ -149,7 +149,7 @@ test("includes the SRD Wizard, Evoker, and complete Character Origins project", 
     (entity) =>
       entity.entityType === "item" && entity.itemType === "spell_material",
   );
-  assert.equal(spellMaterials.length, 179);
+  assert.equal(spellMaterials.length, 177);
   assert.ok(
     spells
       .filter((spell) => spell.components.material)
@@ -160,9 +160,32 @@ test("includes the SRD Wizard, Evoker, and complete Character Origins project", 
       .flatMap((spell) => spell.materialGroups ?? [])
       .flatMap((group) => group.entries)
       .every((entry) =>
-        spellMaterials.some((item) => item.id === entry.itemId),
+        project.entities.some(
+          (item) => item.entityType === "item" && item.id === entry.itemId,
+        ),
       ),
   );
+  const normalizedNames = new Set();
+  for (const entity of project.entities) {
+    const key = `${entity.entityType}:${entity.localization.en.name.toLowerCase().replace(/[^a-z0-9]+/g, "")}`;
+    assert.ok(!normalizedNames.has(key), `duplicate entity name ${key}`);
+    normalizedNames.add(key);
+    assert.ok((entity.effects ?? []).every((effect) => effect.name && effect.nameRu));
+    assert.ok((entity.choices ?? []).every((choice) => choice.name && choice.nameRu));
+  }
+  const darkvisionFeatures = project.entities.filter(
+    (entity) => entity.entityType === "feature" && entity.localization.en.name.startsWith("Darkvision"),
+  );
+  assert.deepEqual(
+    darkvisionFeatures.map((feature) => Number(feature.effects[0].value)).sort((a, b) => a - b),
+    [60, 120],
+  );
+  assert.ok(darkvisionFeatures.every((feature) => feature.effects[0].target === "senses.darkvision"));
+  const expectedDarkvision = { dragonborn: 60, dwarf: 120, elf: 60, gnome: 60, goliath: 0, halfling: 0, human: 0, orc: 120, tiefling: 60 };
+  for (const [speciesName, range] of Object.entries(expectedDarkvision)) {
+    const species = project.entities.find((entity) => entity.id === `srd52.species.${speciesName}`);
+    assert.equal(species.senses.darkvision, range, `${speciesName} darkvision`);
+  }
   const messageWire = spells.find((spell) => spell.id === "srd52.spell.message")
     .materialGroups[0].entries[0].itemId;
   assert.equal(messageWire, "srd52.item.copper_wire");
@@ -188,7 +211,7 @@ test("includes the SRD Wizard, Evoker, and complete Character Origins project", 
   ]);
   assert.equal(
     soldier.equipmentOptions[0].choiceItems[0].choiceId,
-    "srd52.background.soldier.gaming_set",
+    "srd52.background.soldier.gaming_set_choice",
   );
   const elf = project.entities.find(
     (entity) => entity.id === "srd52.species.elf",

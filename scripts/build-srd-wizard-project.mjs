@@ -10,7 +10,21 @@ const attribution = "This work includes material from the System Reference Docum
 
 const localized = (nameEn, nameRu, descriptionEn, descriptionRu) => ({ en: { name: nameEn, description: descriptionEn }, ru: { name: nameRu, description: descriptionRu } });
 const base = (id, entityType, nameEn, nameRu, descriptionEn, descriptionRu) => ({ id, entityType, ...source, localization: localized(nameEn, nameRu, descriptionEn, descriptionRu) });
-const effect = (id, target, operation, valueType, value, extra = {}) => ({ id, target, operation, valueType, value, activation: "always_on", actionCost: "none", trigger: "", conditions: [], stacking: "unique_by_source", stackingGroup: id, priority: 100, resourceId: "", durationType: "permanent", durationValue: 1, restType: "long", automationLevel: "full", notes: "", ...extra });
+const targetAliases = new Map([
+  ["senses.darkvision.range", "senses.darkvision"],
+  ["senses.tremorsense.range", "senses.tremorsense"],
+  ["senses.truesight.range", "senses.truesight"],
+  ["movement.walk.speed", "movement.walk"],
+  ["movement.fly.speed", "movement.fly"],
+]);
+const normalizeEffectTarget = (target) => {
+  const normalized = target.split(".").map((segment) => segment
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replaceAll("-", "_")
+    .toLowerCase()).join(".");
+  return targetAliases.get(normalized) ?? normalized;
+};
+const effect = (id, target, operation, valueType, value, extra = {}) => ({ id, target: normalizeEffectTarget(target), operation, valueType, value, activation: "always_on", actionCost: "none", trigger: "", conditions: [], stacking: "unique_by_source", stackingGroup: id, priority: 100, resourceId: "", durationType: "permanent", durationValue: 1, restType: "long", automationLevel: "full", notes: "", ...extra });
 const choice = (id, min, max, filter, optionIds = []) => ({ id, selectionType: "entity", min, max, optionIds, filter });
 
 const progression = [
@@ -24,7 +38,7 @@ const progression = [
 ].map(([level, proficiencyBonus, cantripsKnown, preparedSpells, spellSlots]) => ({ level, proficiencyBonus, cantripsKnown, preparedSpells, spellSlots }));
 
 const featureIds = {
-  spellcasting: "srd52.feature.wizard-spellcasting", ritual: "srd52.feature.ritual-adept", recovery: "srd52.feature.arcane-recovery", scholar: "srd52.feature.scholar", subclass: "srd52.feature.wizard-subclass", asi: "srd52.feature.ability-score-improvement", memorize: "srd52.feature.memorize-spell", mastery: "srd52.feature.spell-mastery", boon: "srd52.feature.epic-boon", signature: "srd52.feature.signature-spells",
+  spellcasting: "srd52.feature.wizard-spellcasting", ritual: "srd52.feature.ritual-adept", recovery: "srd52.feature.arcane-recovery", scholar: "srd52.feature.scholar", subclass: "srd52.feature.wizard-subclass", asi: "srd52.feature.wizard-level-feat", memorize: "srd52.feature.memorize-spell", mastery: "srd52.feature.spell-mastery", boon: "srd52.feature.epic-boon", signature: "srd52.feature.signature-spells",
 };
 const levels = Array.from({ length: 20 }, (_, index) => ({ level: index + 1, featureIds: ({
   1: [featureIds.spellcasting, featureIds.ritual, featureIds.recovery], 2: [featureIds.scholar], 3: [featureIds.subclass], 4: [featureIds.asi], 5: [featureIds.memorize], 8: [featureIds.asi], 12: [featureIds.asi], 16: [featureIds.asi], 18: [featureIds.mastery], 19: [featureIds.boon], 20: [featureIds.signature],
@@ -47,7 +61,7 @@ const features = [
   { ...base(featureIds.recovery, "feature", "Arcane Recovery", "Магическое восстановление", "After a Short Rest, recover expended spell slots with a combined level up to half your Wizard level, rounded up. No recovered slot can be level 6 or higher. Once per Long Rest.", "После короткого отдыха восстанавливает потраченные ячейки суммарным уровнем не выше половины уровня волшебника с округлением вверх. Ячейки 6+ уровня восстановить нельзя. Один раз до продолжительного отдыха."), mode: "limited_use", activation: "special", prerequisites: [], choices: [], resource: { id: "resource.wizard.arcane-recovery", maximumFormula: "1", recovery: "long_rest", recoveryFormula: "1" }, effects: [effect("effect.arcane-recovery", "spellcasting.slots.expended", "restore_resource", "formula", 'ceil(class_level("srd52.class.wizard") / 2)', { activation: "limited_use", actionCost: "special", trigger: "after finishing a Short Rest", resourceId: "resource.wizard.arcane-recovery", automationLevel: "partial", notes: "Select slots with combined levels up to the formula; no slot may be level 6+." })], automationLevel: "partial" },
   { ...base(featureIds.scholar, "feature", "Scholar", "Учёный", "Choose Arcana, History, Investigation, Medicine, Nature, or Religion in which you are proficient; gain Expertise in that skill.", "Выберите Аркану, Историю, Анализ, Медицину, Природу или Религию, которой уже владеете; получите компетентность в выбранном навыке."), mode: "always_on", activation: "none", prerequisites: [], choices: [choice("choice.scholar.skill",1,1,"proficient == true",["skill.arcana","skill.history","skill.investigation","skill.medicine","skill.nature","skill.religion"])], effects: [effect("effect.scholar.expertise", "skills.selected.proficiency", "upgrade_proficiency", "string", "expertise", { automationLevel: "partial" })], automationLevel: "partial" },
   { ...base(featureIds.subclass, "feature", "Wizard Subclass", "Подкласс волшебника", "Choose a Wizard subclass and gain its features at the listed Wizard levels.", "Выберите подкласс волшебника и получайте его умения на указанных уровнях волшебника."), mode: "always_on", activation: "none", prerequisites: [], choices: [choice("choice.wizard.subclass",1,1,"entityType == subclass && classId == srd52.class.wizard",["srd52.subclass.evoker"])], effects: [], automationLevel: "full" },
-  { ...base(featureIds.asi, "feature", "Ability Score Improvement", "Улучшение характеристик", "Gain the Ability Score Improvement feat or another feat for which you qualify. Wizard gains this at levels 4, 8, 12, and 16.", "Получите черту «Улучшение характеристик» или другую доступную черту. Волшебник получает это умение на уровнях 4, 8, 12 и 16."), mode: "always_on", activation: "none", prerequisites: [], choices: [choice("choice.wizard.level-feat",1,1,"entityType == feat && prerequisites satisfied",["srd52.feat.ability-score-improvement"])], effects: [], automationLevel: "partial" },
+  { ...base(featureIds.asi, "feature", "Wizard Level Feat", "Черта уровня волшебника", "Gain the Ability Score Improvement feat or another feat for which you qualify. Wizard gains this at levels 4, 8, 12, and 16.", "Получите черту «Улучшение характеристик» или другую доступную черту. Волшебник получает это умение на уровнях 4, 8, 12 и 16."), mode: "always_on", activation: "none", prerequisites: [], choices: [choice("choice.wizard.level-feat",1,1,"entityType == feat && prerequisites satisfied",["srd52.feat.ability-score-improvement"])], effects: [], automationLevel: "partial" },
   { ...base(featureIds.memorize, "feature", "Memorize Spell", "Запоминание заклинания", "After a Short Rest, replace one prepared level 1+ Wizard spell with another level 1+ spell from your spellbook.", "После короткого отдыха замените одно подготовленное заклинание волшебника 1+ уровня другим заклинанием 1+ уровня из своей книги."), mode: "manual_unlimited", activation: "special", prerequisites: [], choices: [], effects: [effect("effect.memorize-spell", "spellcasting.prepared.spells", "replace_formula", "string", "one-spell-from-spellbook", { activation: "manual_unlimited", trigger: "after finishing a Short Rest", automationLevel: "partial" })], automationLevel: "partial" },
   { ...base(featureIds.mastery, "feature", "Spell Mastery", "Мастерство заклинаний", "Choose one level 1 and one level 2 action spell in your spellbook. They are always prepared and can be cast at their lowest level without a spell slot. Choices can change after a Long Rest.", "Выберите в книге одно заклинание 1 уровня и одно 2 уровня со временем сотворения «Действие». Они всегда подготовлены и могут сотворяться на минимальном уровне без ячейки. После продолжительного отдыха выбор можно заменить."), mode: "always_on", activation: "action", prerequisites: ['class_level("srd52.class.wizard") >= 18'], choices: [choice("choice.spell-mastery.level1",1,1,"entityType == spell && spellLevel == 1 && casting.actionType == action"), choice("choice.spell-mastery.level2",1,1,"entityType == spell && spellLevel == 2 && casting.actionType == action")], effects: [effect("effect.spell-mastery.cast", "spellcasting.slot-cost.selected", "set", "number", "0", { automationLevel: "partial", notes: "Applies only to the two selected spells at their lowest level." })], automationLevel: "partial" },
   { ...base(featureIds.boon, "feature", "Epic Boon", "Эпическая черта", "Gain an Epic Boon feat or another feat for which you qualify. Boon of Spell Recall is recommended.", "Получите эпическую черту или другую доступную черту. Рекомендована «Черта возврата заклинания»."), mode: "always_on", activation: "none", prerequisites: ['class_level("srd52.class.wizard") >= 19'], choices: [choice("choice.wizard.epic-boon",1,1,"entityType == feat && featCategory == epic_boon",["srd52.feat.boon-of-spell-recall"])], effects: [], automationLevel: "partial" },
@@ -146,7 +160,29 @@ for (const correction of officialMaterialCorrections) {
 }
 spellCatalog.stats.materialItems = spellCatalog.materials.length;
 
-const materialItems = spellCatalog.materials.map((material) => ({
+const normalizedItemName = (value) => value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+const coreItems = [...items, ...origins.originItems];
+const coreItemByName = new Map(coreItems.map((entry) => [normalizedItemName(entry.localization.en.name), entry]));
+const materialRedirects = new Map();
+for (const material of spellCatalog.materials) {
+  const existing = coreItemByName.get(normalizedItemName(material.name));
+  if (!existing) continue;
+  materialRedirects.set(material.id, existing.id);
+  existing.materialProfile = {
+    sourceName: material.name,
+    observedCostsCp: [...new Set([...(existing.materialProfile?.observedCostsCp ?? []), ...(material.costsCp ?? [])])].sort((a, b) => a - b),
+    usedBySpellIds: [...new Set([...(existing.materialProfile?.usedBySpellIds ?? []), ...(material.usedBy ?? [])])].sort(),
+  };
+  existing.stackable ||= true;
+  existing.consumable ||= Boolean(material.consumed);
+}
+for (const catalogSpell of spellCatalog.spells) {
+  for (const group of catalogSpell.materialGroups ?? []) {
+    for (const entry of group.entries ?? []) entry.itemId = materialRedirects.get(entry.itemId) ?? entry.itemId;
+  }
+}
+
+const materialItems = spellCatalog.materials.filter((material) => !materialRedirects.has(material.id)).map((material) => ({
   ...base(material.id, "item", material.name, material.name, `A spellcasting material component referenced by ${material.usedBy.length} spell${material.usedBy.length === 1 ? "" : "s"} in the imported SRD catalog.`, `Материальный компонент заклинаний из импортированного каталога SRD. Используется заклинаниями: ${material.usedBy.length}.`, ["equipment", "spell-material", "spreadsheet-import"]),
   itemType: "spell_material",
   weightLb: 0,
@@ -196,9 +232,66 @@ const catalogSpells = spellCatalog.spells.map((entry) => {
   };
 });
 
+const words = (value) => value
+  .replace(/[._-]+/g, " ")
+  .replace(/\b\w/g, (letter) => letter.toUpperCase())
+  .trim();
+const effectLabels = [
+  [/darkvision/, ["Darkvision range", "Дальность тёмного зрения"]],
+  [/truesight/, ["Truesight range", "Дальность истинного зрения"]],
+  [/tremorsense/, ["Tremorsense range", "Дальность чувства вибрации"]],
+  [/blindsight/, ["Blindsight range", "Дальность слепого зрения"]],
+  [/hit_points.*current/, ["Hit point change", "Изменение хитов"]],
+  [/hit_points.*maximum/, ["Maximum hit points", "Максимум хитов"]],
+  [/resistance/, ["Damage resistance", "Сопротивление урону"]],
+  [/immunit/, ["Immunity", "Иммунитет"]],
+  [/proficien/, ["Proficiency", "Владение"]],
+  [/movement|speed/, ["Movement speed", "Скорость перемещения"]],
+  [/armor_class/, ["Armor Class", "Класс Доспеха"]],
+  [/initiative/, ["Initiative", "Инициатива"]],
+  [/saving_throw/, ["Saving throw", "Спасбросок"]],
+  [/spellcasting/, ["Spellcasting", "Заклинания"]],
+  [/abilities\./, ["Ability score", "Характеристика"]],
+];
+const choiceLabels = [
+  [/skill/, ["Skill choice", "Выбор навыка"]],
+  [/cantrip/, ["Cantrip choice", "Выбор заговора"]],
+  [/spell/, ["Spell choice", "Выбор заклинания"]],
+  [/subclass/, ["Subclass choice", "Выбор подкласса"]],
+  [/level.feat|origin.feat|epic.boon/, ["Feat choice", "Выбор черты"]],
+  [/abilit/, ["Ability choice", "Выбор характеристики"]],
+  [/ancestry/, ["Ancestry choice", "Выбор происхождения"]],
+  [/lineage|legacy/, ["Lineage choice", "Выбор наследия"]],
+  [/proficien/, ["Proficiency choice", "Выбор владения"]],
+  [/gaming/, ["Gaming set choice", "Выбор игрового набора"]],
+];
+const uniqueLocalizedEntries = (entries, labelFor) => {
+  const counts = new Map();
+  return (entries ?? []).map((entry, index) => {
+    const [fallbackEn, fallbackRu] = labelFor(entry, index);
+    const rootEn = entry.name?.trim() || fallbackEn;
+    const count = (counts.get(rootEn) ?? 0) + 1;
+    counts.set(rootEn, count);
+    return { ...entry, name: count === 1 ? rootEn : `${rootEn} ${count}`, nameRu: entry.nameRu?.trim() || (count === 1 ? fallbackRu : `${fallbackRu} ${count}`) };
+  });
+};
+const prepareEntity = (entity) => ({
+  ...entity,
+  effects: uniqueLocalizedEntries(entity.effects, (entry) => {
+    const found = effectLabels.find(([pattern]) => pattern.test(entry.target));
+    return found?.[1] ?? [words(entry.target.split(".").at(-1) || "Effect"), `${entity.localization.ru.name}: эффект`];
+  }),
+  choices: uniqueLocalizedEntries(entity.choices, (entry) => {
+    const found = choiceLabels.find(([pattern]) => pattern.test(entry.id));
+    return found?.[1] ?? [words(entry.id.split(".").at(-1) || "Choice"), `Выбор: ${entity.localization.ru.name}`];
+  }),
+});
+
+const projectEntities = [wizard, evoker, ...features, ...evokerFeatures, ...origins.species, ...origins.backgrounds, ...origins.feats, ...origins.speciesFeatures, ...origins.featFeatures, ...coreItems, ...materialItems, ...catalogSpells].map(prepareEntity);
+
 const project = {
   schemaVersion: "2.0.0", pack: { id: "srd52", version: "1.1.0", name: "SRD 5.2.1 Character Origins, Wizard & Evoker", rulesetId: "dnd5e.2024", licenseId: "license.cc-by-4.0", author: "WSGuild", defaultLocale: "en", attribution },
-  entities: [wizard, evoker, ...features, ...evokerFeatures, ...origins.species, ...origins.backgrounds, ...origins.feats, ...origins.speciesFeatures, ...origins.featFeatures, ...items, ...origins.originItems, ...materialItems, ...catalogSpells], updatedAt: new Date().toISOString(),
+  entities: projectEntities, updatedAt: new Date().toISOString(),
 };
 
 function canonicalEffect(value) {

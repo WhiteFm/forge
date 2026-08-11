@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { abilities, makeSubentityId } from "./data";
+import { abilities, deriveSpeciesSenses, makeSubentityId } from "./data";
 import {
   AbilityPicker,
   ChoicesEditor,
@@ -490,7 +490,10 @@ export default function EntityEditor({
                   type="feature"
                   value={entity.featureIds ?? []}
                   locale={locale}
-                  onChange={(featureIds) => onPatch({ featureIds })}
+                  onChange={(featureIds) => onPatch({
+                    featureIds,
+                    senses: deriveSpeciesSenses(featureIds, entities, entity.senses),
+                  })}
                 />
               </section>
             </div>
