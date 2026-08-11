@@ -102,3 +102,14 @@ test("exposes pack-wide validation and a no-code rule builder", async () => {
   assert.match(components, /NumberControl/);
   assert.match(components, /EntityQuantityList/);
 });
+
+test("groups subclasses by class and removes choices atomically", async () => {
+  const app = await readFile(new URL("../src/App.tsx", import.meta.url), "utf8");
+  const editor = await readFile(new URL("../src/EntityEditor.tsx", import.meta.url), "utf8");
+  const components = await readFile(new URL("../src/components.tsx", import.meta.url), "utf8");
+  assert.match(app, /subclass-group-toggle/);
+  assert.match(app, /entity\.classId === classEntity\.id/);
+  assert.match(app, /collapsedSubclassGroups/);
+  assert.match(editor, /onRemoveChoice=.*choiceApplications:/);
+  assert.match(components, /onClick=\{\(\) => onRemoveChoice\(choice\.id\)\}/);
+});

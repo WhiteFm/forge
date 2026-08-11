@@ -19,7 +19,7 @@ export default function EntityEditor({ entity, entities, locale, onLocale, onPat
   const { t } = useUi();
   const text = entity.localization[locale];
   const patchText = (patch: Partial<typeof text>) => onPatch({ localization: { ...entity.localization, [locale]: { ...text, ...patch } } });
-  const choicesEditor = <ChoicesEditor entities={entities} entityId={entity.id} choices={entity.choices ?? []} applications={entity.choiceApplications ?? []} onChange={(choices) => onPatch({ choices })} onApplicationsChange={(choiceApplications) => onPatch({ choiceApplications })} />;
+  const choicesEditor = <ChoicesEditor entities={entities} entityId={entity.id} choices={entity.choices ?? []} applications={entity.choiceApplications ?? []} onChange={(choices) => onPatch({ choices })} onApplicationsChange={(choiceApplications) => onPatch({ choiceApplications })} onRemoveChoice={(choiceId) => onPatch({ choices: (entity.choices ?? []).filter((choice) => choice.id !== choiceId), choiceApplications: (entity.choiceApplications ?? []).filter((application) => application.choiceId !== choiceId) })} />;
 
   return <div className="entity-editor">
     <Section eyebrow="01 · Identity" title={t("editor.identity")} actions={<div className="locale-tabs"><button className={locale === "en" ? "active" : ""} onClick={() => onLocale("en")} type="button">EN</button><button className={locale === "ru" ? "active" : ""} onClick={() => onLocale("ru")} type="button">RU</button></div>}>

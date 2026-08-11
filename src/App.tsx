@@ -28,7 +28,7 @@ function downloadJson(filename: string, value: unknown) {
 
 function useAutoFitText(locale: string) {
   useEffect(() => {
-    const selector = [".primary-button", ".ghost-button", ".secondary-button", ".add-card-button", ".text-action", ".project-chip", ".section-toggle", ".entity-picker-trigger", ".workspace-actions button", ".issue-scope button", ".project-modal footer button", ".nav-sidebar nav > button", ".class-progression th", ".field > span", ".field > legend", ".levels-head > *"].join(",");
+    const selector = [".primary-button", ".ghost-button", ".secondary-button", ".add-card-button", ".text-action", ".project-chip", ".section-toggle", ".entity-picker-trigger", ".workspace-actions button", ".issue-scope button", ".project-modal footer button", ".nav-sidebar nav > button", ".subclass-group-toggle", ".class-progression th", ".field > span", ".field > legend", ".levels-head > *"].join(",");
     let frame = 0;
     const fit = () => {
       document.querySelectorAll<HTMLElement>(selector).forEach((element) => {
@@ -63,6 +63,7 @@ export default function App() {
   const [showRight, setShowRight] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showProject, setShowProject] = useState(false);
+  const [collapsedSubclassGroups, setCollapsedSubclassGroups] = useState<Set<string>>(() => new Set());
   const [toastKey, setToastKey] = useState<"app.saved" | "app.savedChange" | "app.createdDraft" | "app.createdCopy" | "app.deleted" | "app.imported" | "app.importFailed">("app.saved");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -74,7 +75,12 @@ export default function App() {
   const errorCount = issues.filter((issue) => issue.severity === "error").length;
   const warningCount = issues.length - errorCount;
   const activeEntity = project.entities.find((entity) => entity.id === activeId);
-  const shownEntities = project.entities.filter((entity) => entity.entityType === activeType && (`${entity.localization.ru.name} ${entity.localization.en.name} ${entity.id}`).toLowerCase().includes(search.toLowerCase()));
+  const normalizedSearch = search.trim().toLowerCase();
+  const matchingClassIds = new Set(project.entities.filter((entity) => entity.entityType === "class" && (`${entity.localization.ru.name} ${entity.localization.en.name} ${entity.id}`).toLowerCase().includes(normalizedSearch)).map((entity) => entity.id));
+  const shownEntities = project.entities.filter((entity) => entity.entityType === activeType && ((!normalizedSearch || (`${entity.localization.ru.name} ${entity.localization.en.name} ${entity.id}`).toLowerCase().includes(normalizedSearch)) || (activeType === "subclass" && matchingClassIds.has(entity.classId ?? ""))));
+  const subclassGroups: Array<{ key: string; classEntity?: ForgeEntity; entities: ForgeEntity[] }> = project.entities.filter((entity) => entity.entityType === "class").map((classEntity) => ({ key: classEntity.id, classEntity, entities: shownEntities.filter((entity) => entity.classId === classEntity.id) })).filter((group) => !normalizedSearch || group.entities.length > 0);
+  const unassignedSubclasses = shownEntities.filter((entity) => !entity.classId || !project.entities.some((candidate) => candidate.entityType === "class" && candidate.id === entity.classId));
+  if (unassignedSubclasses.length) subclassGroups.push({ key: "__unassigned__", classEntity: undefined, entities: unassignedSubclasses });
   const visibleIssues = issueScope === "all" ? issues : issues.filter((issue) => !issue.entityId || issue.entityId === activeId);
   const canonical = useMemo(() => toCanonicalPack(project), [project]);
 
@@ -163,6 +169,19 @@ export default function App() {
     setShowSidebar(false);
   }
 
+  function toggleSubclassGroup(groupId: string) {
+    setCollapsedSubclassGroups((current) => {
+      const next = new Set(current);
+      if (next.has(groupId)) next.delete(groupId); else next.add(groupId);
+      return next;
+    });
+  }
+
+  function renderEntityRow(entity: ForgeEntity) {
+    const count = issues.filter((issue) => issue.entityId === entity.id && issue.severity === "error").length;
+    return <button className={`entity-row${entity.id === activeId ? " active" : ""}`} type="button" key={entity.id} onClick={() => { setActiveId(entity.id); setShowSidebar(false); }}><span className={`status-bar status-${entity.status}`} /><span><strong>{entity.localization[locale].name || t("app.untitled")}</strong><small>{entity.id}</small></span>{count > 0 && <b>{count}</b>}</button>;
+  }
+
   return <div className="forge-shell" data-locale={locale}>
     <header className="topbar">
       <button className="mobile-menu" type="button" onClick={() => setShowSidebar((value) => !value)} aria-label={t("app.openMenu")}>☰</button>
@@ -187,7 +206,7 @@ export default function App() {
     <aside className={`entity-sidebar ${showSidebar ? "open-list" : ""}`}>
       <div className="entity-list-head"><div><span className="eyebrow">{entityTypeLabels[activeType][locale]}</span><strong>{t("app.records", { count: shownEntities.length })}</strong></div><button className="square-button" type="button" onClick={() => addEntity(activeType)}>＋</button></div>
       <div className="search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("app.search")} /></div>
-      <div className="entity-list">{shownEntities.map((entity) => { const count = issues.filter((issue) => issue.entityId === entity.id && issue.severity === "error").length; return <button className={entity.id === activeId ? "active" : ""} type="button" key={entity.id} onClick={() => { setActiveId(entity.id); setShowSidebar(false); }}><span className={`status-bar status-${entity.status}`} /><span><strong>{entity.localization[locale].name || t("app.untitled")}</strong><small>{entity.id}</small></span>{count > 0 && <b>{count}</b>}</button>; })}{shownEntities.length === 0 && <div className="empty-list"><p>{t("app.emptyList")}</p><button type="button" onClick={() => addEntity(activeType)}>{t("app.createFirstRecord")}</button></div>}</div>
+      <div className="entity-list">{activeType === "subclass" ? <>{subclassGroups.map((group) => { const expanded = Boolean(normalizedSearch) || !collapsedSubclassGroups.has(group.key); const groupName = group.classEntity?.localization[locale].name || (locale === "en" ? "Unassigned" : "Без класса"); return <section className="subclass-group" key={group.key}><button className="subclass-group-toggle" type="button" aria-expanded={expanded} onClick={() => toggleSubclassGroup(group.key)}><span>{expanded ? "⌄" : "›"}</span><strong>{groupName}</strong><em>{group.entities.length}</em></button>{expanded && <div className="subclass-group-items">{group.entities.map(renderEntityRow)}{group.entities.length === 0 && <small className="subclass-group-empty">{locale === "en" ? "No subclasses" : "Нет подклассов"}</small>}</div>}</section>; })}{shownEntities.length === 0 && <div className="empty-list"><p>{t("app.emptyList")}</p><button type="button" onClick={() => addEntity(activeType)}>{t("app.createFirstRecord")}</button></div>}</> : <>{shownEntities.map(renderEntityRow)}{shownEntities.length === 0 && <div className="empty-list"><p>{t("app.emptyList")}</p><button type="button" onClick={() => addEntity(activeType)}>{t("app.createFirstRecord")}</button></div>}</>}</div>
     </aside>
 
     <main className={`workspace ${showRight ? "with-inspector" : ""}`}>
