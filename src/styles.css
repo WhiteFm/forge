@@ -596,7 +596,10 @@ textarea { padding: 8px 9px; }
 .class-progression .level-cell { padding: 2px; }
 .class-progression .level-cell span { height: 30px; border-radius: 5px; }
 
-.project-chip span, .entity-picker-trigger span, .entity-list strong, .entity-list small { overflow: visible; text-overflow: clip; }
+.project-chip { width: 280px; height: 40px; }
+.project-chip span { min-width: 0; overflow: visible; font-size: clamp(7px, .6vw, 10px); line-height: 1.1; text-overflow: clip; }
+.project-chip small { flex: 0 0 auto; font-size: 8px; }
+.entity-picker-trigger span, .entity-list strong, .entity-list small { overflow: visible; text-overflow: clip; }
 .primary-button, .ghost-button, .secondary-button, .add-card-button, .text-action, .workspace-actions button { flex: 0 0 auto; white-space: nowrap; text-overflow: clip; }
 .secondary-button { width: 190px; height: 40px; padding-inline: 10px; }
 .text-action { width: 166px; min-height: 34px; height: 34px; padding-inline: 8px; }
