@@ -1,7 +1,9 @@
+import { buildCoreRulesCatalog } from "./rules-catalog";
+
 export type Locale = "en" | "ru" | "sv";
 export type LocalText = { en: string; ru?: string; sv?: string };
-export type StorageMode = "input" | "derived" | "runtime";
-export type AtomicDataType = "integer" | "decimal" | "boolean" | "text" | "die";
+export type StorageMode = "input" | "derived" | "runtime" | "constant";
+export type AtomicDataType = "integer" | "decimal" | "boolean" | "text" | "die" | "enum" | "reference" | "record" | "collection" | "action" | "event" | "position" | "duration" | "dice_expression";
 export type ReferenceKind = "parameter" | "value" | "effect";
 export type EntityType = "class" | "multiclass" | "subclass" | "species" | "background" | "feat" | "feature" | "item" | "spell";
 export type PropertyType = "string" | "localized_short" | "localized_long" | "integer" | "decimal" | "boolean" | "select" | "reference" | "references" | "entity" | "entities" | "group" | "list" | "formula" | "condition" | "effect" | "dice" | "table";
@@ -16,6 +18,7 @@ export interface AtomicRecord {
   id: string;
   key: string;
   name: LocalText;
+  description: LocalText;
   categoryId: string;
   dataType: AtomicDataType;
   storageMode: StorageMode;
@@ -24,9 +27,29 @@ export interface AtomicRecord {
   maximum?: number;
   formula?: string;
   dieSides?: number;
+  optionGroup?: string;
+  fields?: AtomicField[];
+  dependencyIds?: string[];
+  rule?: LocalText;
+  warningOnly?: boolean;
   packId?: string;
   locked: boolean;
   previousIds: string[];
+}
+
+export interface AtomicField {
+  id: string;
+  key: string;
+  name: LocalText;
+  dataType: AtomicDataType;
+  required: boolean;
+  storageMode?: StorageMode;
+  unit?: string;
+  minimum?: number;
+  maximum?: number;
+  optionGroup?: string;
+  atomicId?: string;
+  multiple?: boolean;
 }
 
 export interface TableColumn {
@@ -123,7 +146,7 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 5;
+  catalogVersion: 6;
   namespace: string;
   version: string;
   defaultLocale: "en";
@@ -236,12 +259,12 @@ const dice = [2, 3, 4, 6, 8, 10, 12, 20, 100];
 
 export const STANDARD_ATOMICS: AtomicRecord[] = [
   ...atomicRows.map(([key, en, ru, sv, category, dataType, storageMode, unit, minimum, maximum]) => ({
-    id: `wsg.atomic.${key}`, key, name: { en, ru, sv }, categoryId: `wsg.category.${category}`,
+    id: `wsg.atomic.${key}`, key, name: { en, ru, sv }, description: { en: "", ru: "", sv: "" }, categoryId: `wsg.category.${category}`,
     dataType, storageMode, unit, minimum, maximum, locked: true, previousIds: [],
   })),
   ...dice.map((sides) => ({
     id: `wsg.atomic.d${sides}`, key: `d${sides}`, name: { en: `d${sides}`, ru: `к${sides}`, sv: `t${sides}` },
-    categoryId: "wsg.category.dice_randomness", dataType: "die" as const, storageMode: "input" as const,
+    description: { en: "", ru: "", sv: "" }, categoryId: "wsg.category.dice_randomness", dataType: "die" as const, storageMode: "input" as const,
     dieSides: sides, minimum: 1, maximum: sides, locked: true, previousIds: [],
   })),
 ];
@@ -301,13 +324,14 @@ export function createCleanProject(): ForgeProject {
   const namespace = "mygame";
   const refKey = "core";
   const packKey = "characters";
+  const catalog = buildCoreRulesCatalog();
   const project: ForgeProject = {
-    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 5, namespace, version: "1.0.0", defaultLocale: "en",
+    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 6, namespace, version: "1.0.0", defaultLocale: "en",
     reference: { id: `${namespace}.ref.${refKey}`, key: refKey, name: { en: "Core Reference", ru: "Основной справочник", sv: "Grundreferens" }, version: "1.0.0" },
     pack: { id: `${namespace}.pack.${packKey}`, key: packKey, name: { en: "New Content Pack", ru: "Новый пак контента", sv: "Nytt innehållspaket" }, subtitle: { en: "" }, description: { en: "" }, version: "1.0.0", requiredRefs: [{ id: `${namespace}.ref.${refKey}`, minimumVersion: "1.0.0", compatibleMajor: 1 }] },
     categories: structuredClone(STANDARD_CATEGORIES),
-    atomics: [],
-    references: [],
+    atomics: catalog.atomics,
+    references: catalog.references,
     influences: [],
     templates: [],
     entities: [], dependencies: [], createdAt: now, updatedAt: now,
@@ -316,17 +340,18 @@ export function createCleanProject(): ForgeProject {
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 5) return project;
+  if (project.catalogVersion === 6) return project;
   const next = structuredClone(project);
+  const catalog = buildCoreRulesCatalog();
   next.pack.subtitle ??= { en: "" };
   next.pack.description ??= { en: "" };
-  next.atomics = [];
-  next.references = [];
+  next.atomics = catalog.atomics;
+  next.references = catalog.references;
   next.influences = [];
   next.templates = [];
   next.entities = [];
   next.dependencies = [];
-  next.catalogVersion = 5;
+  next.catalogVersion = 6;
   next.updatedAt = new Date().toISOString();
   return recalculateProjectIds(next);
 }
@@ -348,7 +373,8 @@ export function recalculateProjectIds(project: ForgeProject): ForgeProject {
   }
   for (const item of next.references.filter((entry) => !entry.locked)) {
     const owner = item.packId === "wsg" ? "wsg" : next.namespace;
-    const id = `${owner}.ref.${item.kind}.${slugify(item.name.en) || item.key}`;
+    const group = item.kind === "value" && item.optionGroup ? `${slugify(item.optionGroup)}.` : "";
+    const id = `${owner}.ref.${item.kind}.${group}${slugify(item.name.en) || item.key}`;
     mapping.set(item.id, id); if (item.id !== id) item.previousIds = [...new Set([...item.previousIds, item.id])]; item.id = id; item.key = slugify(item.name.en);
   }
   for (const item of next.templates) {
@@ -365,6 +391,12 @@ export function recalculateProjectIds(project: ForgeProject): ForgeProject {
   for (const item of next.influences) {
     const id = `${next.namespace}.influence.${slugify(item.name.en) || item.key}`;
     mapping.set(item.id, id); if (item.id !== id) item.previousIds = [...new Set([...item.previousIds, item.id])]; item.id = id; item.key = slugify(item.name.en);
+  }
+  for (const atomic of next.atomics) {
+    atomic.dependencyIds = atomic.dependencyIds?.map((id) => mapping.get(id) ?? id);
+    atomic.fields?.forEach((field) => {
+      if (field.atomicId) field.atomicId = mapping.get(field.atomicId) ?? field.atomicId;
+    });
   }
   for (const reference of next.references) reference.operations?.forEach((op) => { op.targetAtomicId = mapping.get(op.targetAtomicId) ?? op.targetAtomicId; });
   for (const template of next.templates) template.fields.forEach((field) => { field.referenceId = mapping.get(field.referenceId) ?? field.referenceId; });
@@ -389,6 +421,11 @@ export function validateProject(project: ForgeProject): ValidationIssue[] {
   const referenceIds = new Set(project.references.map((item) => item.id));
   const atomicIds = new Set(project.atomics.map((item) => item.id));
   const effectIds = new Set(project.references.filter((item) => item.kind === "effect").map((item) => item.id));
+  for (const atomic of project.atomics) {
+    if (!atomic.name.en.trim()) issues.push({ severity: "error", code: "english_required", message: `${atomic.id}: English atomic name is required.`, targetId: atomic.id });
+    for (const dependencyId of atomic.dependencyIds ?? []) if (!atomicIds.has(dependencyId)) issues.push({ severity: "error", code: "missing_atomic", message: `${atomic.id} depends on missing ${dependencyId}`, targetId: atomic.id });
+    for (const field of atomic.fields ?? []) if (field.atomicId && !atomicIds.has(field.atomicId)) issues.push({ severity: "error", code: "missing_atomic", message: `${atomic.id}.${field.key} uses missing ${field.atomicId}`, targetId: atomic.id });
+  }
   for (const template of project.templates) {
     if (!template.name.en.trim()) issues.push({ severity: "error", code: "english_required", message: `${template.id}: English template name is required.`, targetId: template.id });
     for (const field of template.fields) if (!referenceIds.has(field.referenceId)) issues.push({ severity: "error", code: "missing_reference", message: `${template.id} uses missing ${field.referenceId}`, targetId: template.id });
@@ -402,7 +439,7 @@ export function validateProject(project: ForgeProject): ValidationIssue[] {
   for (const dependency of project.dependencies) if (!dependency.verified) issues.push({ severity: "warning", code: "unverified", message: `${dependency.refId} has not passed checksum verification.`, targetId: dependency.refId });
   const signatures = new Map<string, string>();
   for (const reference of project.references.filter((item) => !item.locked)) {
-    const signature = JSON.stringify({ kind: reference.kind, name: reference.name.en.trim().toLowerCase(), propertyType: reference.propertyType, categoryId: reference.categoryId, value: reference.value, operations: reference.operations?.map(({ id: _id, ...operation }) => operation), table: reference.table?.columns.map(({ id: _id, name: _name, ...column }) => column) });
+    const signature = JSON.stringify({ kind: reference.kind, optionGroup: reference.optionGroup, name: reference.name.en.trim().toLowerCase(), propertyType: reference.propertyType, categoryId: reference.categoryId, value: reference.value, operations: reference.operations?.map(({ id: _id, ...operation }) => operation), table: reference.table?.columns.map(({ id: _id, name: _name, ...column }) => column) });
     const previous = signatures.get(signature);
     if (previous) issues.push({ severity: "error", code: "semantic_duplicate", message: `${reference.id} duplicates ${previous}`, targetId: reference.id });
     else signatures.set(signature, reference.id);

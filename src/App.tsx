@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { Children, isValidElement, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { decodeBundle, downloadText, encodeBundle } from "./codec";
 import {
   ENTITY_TYPES,
@@ -9,6 +9,7 @@ import {
   upgradeProjectCatalog,
   validateProject,
   type AtomicDataType,
+  type AtomicField,
   type AtomicRecord,
   type EffectOperation,
   type EntityTemplate,
@@ -37,7 +38,7 @@ const labels = {
     search: "Search by name or ID", add: "Create", delete: "Delete", english: "English", russian: "Russian", swedish: "Swedish",
     englishRequired: "English is required. Russian and Swedish fall back to English when empty.", locked: "Standard · locked", custom: "Custom",
     id: "ID", name: "Name", description: "Description", category: "Sorting category", type: "Type", dataType: "Data type", storage: "Storage",
-    input: "Persistent / input", derived: "Calculated", runtime: "Current / runtime", formula: "Formula", unit: "Unit", minimum: "Minimum", maximum: "Maximum", dieSides: "Die sides",
+    input: "Persistent / input", derived: "Calculated", runtime: "Current / runtime", constant: "Constant", formula: "Formula", unit: "Unit", minimum: "Minimum", maximum: "Maximum", dieSides: "Die sides",
     parameters: "Parameters", values: "Values", effects: "Effects", influences: "Influences", table: "Table", required: "Required", multiple: "Multiple", fields: "Template fields",
     noSelection: "Select a record on the left or create a new one.", emptyGroup: "No records in this category.", usedBy: "Used by", noItems: "Nothing has been created yet.",
     packContent: "Pack content", refContent: "Reference content", records: "records", errors: "Errors", warnings: "Warnings", json: "JSON",
@@ -57,7 +58,7 @@ const labels = {
     search: "Поиск по имени или ID", add: "Создать", delete: "Удалить", english: "Английский", russian: "Русский", swedish: "Шведский",
     englishRequired: "Английский обязателен. Пустой русский или шведский заменяется английским.", locked: "Стандартное · заблокировано", custom: "Пользовательское",
     id: "ID", name: "Название", description: "Описание", category: "Категория сортировки", type: "Тип", dataType: "Тип данных", storage: "Хранение",
-    input: "Постоянное / ввод", derived: "Вычисляемое", runtime: "Текущее / игровое", formula: "Формула", unit: "Единица", minimum: "Минимум", maximum: "Максимум", dieSides: "Грани кости",
+    input: "Постоянное / ввод", derived: "Вычисляемое", runtime: "Текущее / игровое", constant: "Константа", formula: "Формула", unit: "Единица", minimum: "Минимум", maximum: "Максимум", dieSides: "Грани кости",
     parameters: "Параметры", values: "Значения", effects: "Эффекты", influences: "Влияния", table: "Таблица", required: "Обязательно", multiple: "Несколько", fields: "Поля шаблона",
     noSelection: "Выберите запись слева или создайте новую.", emptyGroup: "В этой категории нет записей.", usedBy: "Используется", noItems: "Пока ничего не создано.",
     packContent: "Содержимое пака", refContent: "Содержимое справочника", records: "записей", errors: "Ошибки", warnings: "Предупреждения", json: "JSON",
@@ -77,7 +78,7 @@ const labels = {
     search: "Sök efter namn eller ID", add: "Skapa", delete: "Ta bort", english: "Engelska", russian: "Ryska", swedish: "Svenska",
     englishRequired: "Engelska krävs. Tom ryska eller svenska ersätts med engelska.", locked: "Standard · låst", custom: "Anpassad",
     id: "ID", name: "Namn", description: "Beskrivning", category: "Sorteringskategori", type: "Typ", dataType: "Datatyp", storage: "Lagring",
-    input: "Beständig / inmatning", derived: "Beräknad", runtime: "Aktuell / speltid", formula: "Formel", unit: "Enhet", minimum: "Minimum", maximum: "Maximum", dieSides: "Tärningssidor",
+    input: "Beständig / inmatning", derived: "Beräknad", runtime: "Aktuell / speltid", constant: "Konstant", formula: "Formel", unit: "Enhet", minimum: "Minimum", maximum: "Maximum", dieSides: "Tärningssidor",
     parameters: "Parametrar", values: "Värden", effects: "Effekter", influences: "Påverkningar", table: "Tabell", required: "Obligatorisk", multiple: "Flera", fields: "Mallfält",
     noSelection: "Välj en post till vänster eller skapa en ny.", emptyGroup: "Inga poster i kategorin.", usedBy: "Används av", noItems: "Inget har skapats ännu.",
     packContent: "Paketinnehåll", refContent: "Referensinnehåll", records: "poster", errors: "Fel", warnings: "Varningar", json: "JSON",
@@ -136,7 +137,9 @@ function TextField({ label, value, onChange, disabled, hint, multiline }: { labe
 }
 
 function SelectField({ label, value, onChange, children, disabled }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode; disabled?: boolean }) {
-  return <label className="field"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>{children}</select></label>;
+  const hasCurrentOption = Children.toArray(children).some((child) => isValidElement<{ value?: string }>(child) && child.props.value === value);
+  const fallbackLabel = value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+  return <label className="field"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>{!hasCurrentOption && value && <option value={value}>{fallbackLabel}</option>}{children}</select></label>;
 }
 
 function CheckField({ label, checked, onChange, disabled }: { label: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean }) {
@@ -265,7 +268,7 @@ function App() {
       {notice && <button className="notice" onClick={() => setNotice("")}>{notice}<span>×</span></button>}
       <div className="workspace">
         {page === "overview" && <Overview project={project} locale={locale} t={t} onClean={resetProject} onNavigate={changePage} />}
-        {page === "atomics" && <AtomicsPage project={project} locale={locale} t={t} search={search} setSearch={setSearch} selectedId={selectedId} setSelectedId={setSelectedId} updateProject={updateProject} />}
+        {page === "atomics" && <CoreAtomicsPage project={project} locale={locale} t={t} search={search} setSearch={setSearch} selectedId={selectedId} setSelectedId={setSelectedId} updateProject={updateProject} />}
         {page === "references" && <ReferencesPage project={project} locale={locale} t={t} search={search} setSearch={setSearch} selectedId={selectedId} setSelectedId={setSelectedId} kind={referenceKind} setKind={setReferenceKind} updateProject={updateProject} />}
         {page === "templates" && <TemplatesPage project={project} locale={locale} t={t} selectedId={selectedId} setSelectedId={setSelectedId} updateProject={updateProject} />}
         {page === "entities" && <EntitiesPage project={project} locale={locale} t={t} type={entityType} setType={setEntityType} search={search} setSearch={setSearch} selectedId={selectedId} setSelectedId={setSelectedId} updateProject={updateProject} />}
@@ -315,7 +318,7 @@ function AtomicsPage(props: CollectionProps) {
     const index = project.atomics.filter((item) => !item.locked).length + 1;
     const id = `${project.namespace}.atomic.atomic_${index}`;
     updateProject((draft) => {
-      const item: AtomicRecord = { id, key: `atomic_${index}`, name: { en: `Atomic ${index}` }, categoryId: "wsg.category.custom", dataType: "integer", storageMode: "input", packId: draft.namespace, locked: false, previousIds: [] };
+      const item: AtomicRecord = { id, key: `atomic_${index}`, name: { en: `Atomic ${index}` }, description: { en: "" }, categoryId: "wsg.category.custom", dataType: "integer", storageMode: "input", packId: draft.namespace, locked: false, previousIds: [] };
       draft.atomics.push(item);
     });
     setSelectedId(id);
@@ -327,6 +330,85 @@ function AtomicsPage(props: CollectionProps) {
     updateProject((draft) => { draft.atomics = draft.atomics.filter((item) => item.id !== selected.id); }); setSelectedId("");
   };
   return <CollectionLayout toolbar={<><input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("search")} /><button className="button primary" onClick={create}>+ {t("add")}</button></>} list={<GroupedList items={filtered} categories={project.categories} locale={locale} selectedId={selectedId} setSelectedId={setSelectedId} empty={t("noItems")} />} editor={selected ? <Panel title={localized(selected.name, locale)} kicker={selected.locked ? t("locked") : t("custom")} actions={!selected.locked && <button className="icon-button danger" onClick={remove}>×</button>}><div className="editor-stack"><TextField label={t("id")} value={selected.id} onChange={() => {}} disabled /><LocalizedFields value={selected.name} t={t} disabled={selected.locked} onChange={(name) => updateProject((draft) => { Object.assign(draft.atomics.find((item) => item.id === selected.id)!, { name }); })} /><div className="form-grid four"><SelectField label={t("category")} value={selected.categoryId} disabled={selected.locked} onChange={(categoryId) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.categoryId = categoryId; })}>{project.categories.map((category) => <option key={category.id} value={category.id}>{localized(category.name, locale)}</option>)}</SelectField><SelectField label={t("dataType")} value={selected.dataType} disabled={selected.locked} onChange={(dataType) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.dataType = dataType as AtomicDataType; })}>{["integer", "decimal", "boolean", "text", "die"].map((value) => <option key={value}>{value}</option>)}</SelectField><SelectField label={t("storage")} value={selected.storageMode} disabled={selected.locked || selected.dataType === "die"} onChange={(storageMode) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.storageMode = storageMode as StorageMode; })}><option value="input">{t("input")}</option><option value="derived">{t("derived")}</option><option value="runtime">{t("runtime")}</option></SelectField><TextField label={t("unit")} value={selected.unit ?? ""} disabled={selected.locked} onChange={(unit) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.unit = unit; })} /></div><div className="form-grid four"><TextField label={t("minimum")} value={selected.minimum ?? ""} disabled={selected.locked} onChange={(minimum) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.minimum = minimum === "" ? undefined : Number(minimum); })} /><TextField label={t("maximum")} value={selected.maximum ?? ""} disabled={selected.locked} onChange={(maximum) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.maximum = maximum === "" ? undefined : Number(maximum); })} />{selected.dataType === "die" && <TextField label={t("dieSides")} value={selected.dieSides ?? ""} disabled={selected.locked} onChange={(dieSides) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.dieSides = Number(dieSides); })} />}{selected.storageMode === "derived" && <TextField label={t("formula")} value={selected.formula ?? ""} disabled={selected.locked} onChange={(formula) => updateProject((draft) => { draft.atomics.find((item) => item.id === selected.id)!.formula = formula; })} />}</div></div></Panel> : <div className="empty editor-empty">{t("noSelection")}</div>} />;
+}
+
+const atomicDataTypes: AtomicDataType[] = ["integer", "decimal", "boolean", "text", "die", "enum", "reference", "record", "collection", "action", "event", "position", "duration", "dice_expression"];
+
+function CoreAtomicsPage(props: CollectionProps) {
+  const { project, locale, t, search, setSearch, selectedId, setSelectedId, updateProject } = props;
+  const filtered = project.atomics.filter((item) => `${localized(item.name, locale)} ${item.id}`.toLowerCase().includes(search.toLowerCase()));
+  const selected = project.atomics.find((item) => item.id === selectedId || item.previousIds.includes(selectedId));
+  const label = (en: string, ru: string, sv: string) => ({ en, ru, sv })[locale];
+  const mutate = (recipe: (item: AtomicRecord) => void) => updateProject((draft) => {
+    const item = draft.atomics.find((entry) => entry.id === selected?.id || entry.previousIds.includes(selected?.id ?? ""));
+    if (item) recipe(item);
+  });
+  const create = () => {
+    const index = project.atomics.filter((item) => item.packId !== "wsg").length + 1;
+    const id = `${project.namespace}.atomic.atomic_${index}`;
+    updateProject((draft) => draft.atomics.push({ id, key: `atomic_${index}`, name: { en: `Atomic ${index}` }, description: { en: "" }, categoryId: "wsg.category.custom", dataType: "integer", storageMode: "input", packId: draft.namespace, locked: false, previousIds: [] }));
+    setSelectedId(id);
+  };
+  const remove = () => {
+    if (!selected) return;
+    const usedBy = [
+      ...project.atomics.filter((item) => item.dependencyIds?.includes(selected.id) || item.fields?.some((field) => field.atomicId === selected.id)).map((item) => item.id),
+      ...project.references.filter((item) => item.operations?.some((operation) => operation.targetAtomicId === selected.id)).map((item) => item.id),
+    ];
+    const warning = usedBy.length ? `${t("removeBlocked")}\n\n${usedBy.join("\n")}` : `${t("delete")}: ${localized(selected.name, locale)}?`;
+    if (!window.confirm(warning)) return;
+    updateProject((draft) => { draft.atomics = draft.atomics.filter((item) => item.id !== selected.id); });
+    setSelectedId("");
+  };
+  const addField = () => mutate((item) => {
+    const index = (item.fields?.length ?? 0) + 1;
+    item.fields = [...(item.fields ?? []), { id: `field_${index}`, key: `field_${index}`, name: { en: `Field ${index}` }, dataType: "integer", required: false }];
+  });
+  return <CollectionLayout
+    toolbar={<><input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("search")} /><button className="button primary" onClick={create}>+ {t("add")}</button></>}
+    list={<GroupedList items={filtered} categories={project.categories} locale={locale} selectedId={selectedId} setSelectedId={setSelectedId} empty={t("noItems")} />}
+    editor={selected ? <Panel title={localized(selected.name, locale)} kicker={selected.packId === "wsg" ? "WSG CORE" : t("custom")} actions={<button className="icon-button danger" onClick={remove}>×</button>}>
+      <div className="editor-stack">
+        <TextField label={t("id")} value={selected.id} onChange={() => {}} disabled />
+        <LocalizedFields value={selected.name} t={t} onChange={(name) => mutate((item) => { item.name = name; })} />
+        <LocalizedFields value={selected.description} t={t} multiline onChange={(description) => mutate((item) => { item.description = description; })} />
+        <div className="form-grid four">
+          <SelectField label={t("category")} value={selected.categoryId} onChange={(categoryId) => mutate((item) => { item.categoryId = categoryId; })}>{project.categories.map((category) => <option key={category.id} value={category.id}>{localized(category.name, locale)}</option>)}</SelectField>
+          <SelectField label={t("dataType")} value={selected.dataType} onChange={(dataType) => mutate((item) => { item.dataType = dataType as AtomicDataType; })}>{atomicDataTypes.map((value) => <option key={value} value={value}>{optionLabel(value, locale)}</option>)}</SelectField>
+          <SelectField label={t("storage")} value={selected.storageMode} onChange={(storageMode) => mutate((item) => { item.storageMode = storageMode as StorageMode; })}><option value="input">{t("input")}</option><option value="derived">{t("derived")}</option><option value="runtime">{t("runtime")}</option><option value="constant">{t("constant")}</option></SelectField>
+          <TextField label={t("unit")} value={selected.unit ?? ""} onChange={(unit) => mutate((item) => { item.unit = unit || undefined; })} />
+          <TextField label={t("minimum")} value={selected.minimum ?? ""} onChange={(value) => mutate((item) => { item.minimum = value === "" ? undefined : Number(value); })} />
+          <TextField label={t("maximum")} value={selected.maximum ?? ""} onChange={(value) => mutate((item) => { item.maximum = value === "" ? undefined : Number(value); })} />
+          {selected.dataType === "die" && <TextField label={t("dieSides")} value={selected.dieSides ?? ""} onChange={(value) => mutate((item) => { item.dieSides = Number(value); item.minimum = 1; item.maximum = Number(value); })} />}
+          <CheckField label={label("Warning only", "Только предупреждение", "Endast varning")} checked={Boolean(selected.warningOnly)} onChange={(warningOnly) => mutate((item) => { item.warningOnly = warningOnly; })} />
+        </div>
+        <LocalizedFields value={selected.rule ?? { en: "" }} t={t} multiline onChange={(rule) => mutate((item) => { item.rule = rule; })} />
+        <MultiPicker label={label("Dependencies", "Зависимости", "Beroenden")} value={selected.dependencyIds ?? []} options={project.atomics.filter((item) => item.id !== selected.id).map((item) => ({ id: item.id, name: localized(item.name, locale) }))} onChange={(dependencyIds) => mutate((item) => { item.dependencyIds = dependencyIds; })} />
+        <div className="subsection">
+          <div className="subsection-head"><div><span className="kicker">STRUCTURE</span><h3>{label("Fields", "Поля", "Fält")}</h3></div><button className="button ghost compact" onClick={addField}>+ {t("add")}</button></div>
+          {(selected.fields ?? []).length === 0 ? <div className="empty">{t("noItems")}</div> : <div className="editor-stack">{(selected.fields ?? []).map((field, index) => <AtomicFieldEditor key={field.id} field={field} index={index} project={project} locale={locale} remove={() => mutate((item) => { item.fields = item.fields?.filter((_, current) => current !== index); })} change={(patch) => mutate((item) => { if (item.fields?.[index]) Object.assign(item.fields[index], patch); })} />)}</div>}
+        </div>
+      </div>
+    </Panel> : <div className="empty editor-empty">{t("noSelection")}</div>}
+  />;
+}
+
+function AtomicFieldEditor({ field, index, project, locale, change, remove }: { field: AtomicField; index: number; project: ForgeProject; locale: Locale; change: (patch: Partial<AtomicField>) => void; remove: () => void }) {
+  const label = (en: string, ru: string, sv: string) => ({ en, ru, sv })[locale];
+  return <div className="dynamic-card">
+    <div className="subsection-head"><span className="step">{index + 1}</span><strong>{localized(field.name, locale)}</strong><button className="icon-button danger" onClick={remove}>×</button></div>
+    <div className="form-grid three">
+      <TextField label="EN *" value={field.name.en} onChange={(en) => change({ name: { ...field.name, en }, key: slugify(en), id: slugify(en) || field.id })} />
+      <TextField label="RU" value={field.name.ru ?? ""} onChange={(ru) => change({ name: { ...field.name, ru } })} />
+      <TextField label="SV" value={field.name.sv ?? ""} onChange={(sv) => change({ name: { ...field.name, sv } })} />
+      <SelectField label={label("Data type", "Тип данных", "Datatyp")} value={field.dataType} onChange={(dataType) => change({ dataType: dataType as AtomicDataType })}>{atomicDataTypes.map((value) => <option key={value} value={value}>{optionLabel(value, locale)}</option>)}</SelectField>
+      <SelectField label={label("Storage override", "Режим хранения", "Lagringsläge")} value={field.storageMode ?? ""} onChange={(storageMode) => change({ storageMode: storageMode ? storageMode as StorageMode : undefined })}><option value="">—</option><option value="input">Input</option><option value="derived">Derived</option><option value="runtime">Runtime</option><option value="constant">Constant</option></SelectField>
+      <TextField label={label("Unit", "Единица", "Enhet")} value={field.unit ?? ""} onChange={(unit) => change({ unit: unit || undefined })} />
+      <TextField label={label("Option group", "Группа вариантов", "Alternativgrupp")} value={field.optionGroup ?? ""} onChange={(optionGroup) => change({ optionGroup: optionGroup || undefined })} />
+      <SelectField label={label("Atomic structure", "Атомарная структура", "Atomär struktur")} value={field.atomicId ?? ""} onChange={(atomicId) => change({ atomicId: atomicId || undefined })}><option value="">—</option>{project.atomics.map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}</SelectField>
+      <div className="checks"><CheckField label={label("Required", "Обязательно", "Obligatoriskt")} checked={field.required} onChange={(required) => change({ required })} /><CheckField label={label("Multiple", "Несколько", "Flera")} checked={Boolean(field.multiple)} onChange={(multiple) => change({ multiple })} /></div>
+    </div>
+  </div>;
 }
 
 function ReferencesPage(props: CollectionProps & { kind: ReferenceKind; setKind: (kind: ReferenceKind) => void }) {
