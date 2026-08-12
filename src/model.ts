@@ -1,5 +1,3 @@
-import { buildDndTemplateCatalog } from "./template-catalog";
-
 export type Locale = "en" | "ru" | "sv";
 export type LocalText = { en: string; ru?: string; sv?: string };
 export type StorageMode = "input" | "derived" | "runtime";
@@ -125,7 +123,7 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 4;
+  catalogVersion: 5;
   namespace: string;
   version: string;
   defaultLocale: "en";
@@ -303,14 +301,13 @@ export function createCleanProject(): ForgeProject {
   const namespace = "mygame";
   const refKey = "core";
   const packKey = "characters";
-  const catalog = buildDndTemplateCatalog(namespace);
   const project: ForgeProject = {
-    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 4, namespace, version: "1.0.0", defaultLocale: "en",
+    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 5, namespace, version: "1.0.0", defaultLocale: "en",
     reference: { id: `${namespace}.ref.${refKey}`, key: refKey, name: { en: "Core Reference", ru: "Основной справочник", sv: "Grundreferens" }, version: "1.0.0" },
     pack: { id: `${namespace}.pack.${packKey}`, key: packKey, name: { en: "New Content Pack", ru: "Новый пак контента", sv: "Nytt innehållspaket" }, subtitle: { en: "" }, description: { en: "" }, version: "1.0.0", requiredRefs: [{ id: `${namespace}.ref.${refKey}`, minimumVersion: "1.0.0", compatibleMajor: 1 }] },
     categories: structuredClone(STANDARD_CATEGORIES),
-    atomics: structuredClone(STANDARD_ATOMICS).map((item) => ({ ...item, locked: false, packId: "wsg" })),
-    references: catalog.references,
+    atomics: [],
+    references: [],
     influences: [],
     templates: [],
     entities: [], dependencies: [], createdAt: now, updatedAt: now,
@@ -319,42 +316,17 @@ export function createCleanProject(): ForgeProject {
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 4) return project;
+  if (project.catalogVersion === 5) return project;
   const next = structuredClone(project);
-  const catalog = buildDndTemplateCatalog(next.namespace);
   next.pack.subtitle ??= { en: "" };
   next.pack.description ??= { en: "" };
-  next.atomics = next.atomics.map((item) => ({ ...item, locked: false, packId: item.id.startsWith("wsg.") ? "wsg" : item.packId ?? next.namespace }));
-  const signature = (item: ReferenceRecord) => `${item.kind}:${item.optionGroup ?? ""}:${item.name.en.trim().toLowerCase()}`;
-  const existingByKey = new Map(next.references.map((item) => [`${item.kind}:${item.key}`, item]));
-  const existingBySignature = new Map(next.references.map((item) => [signature(item), item]));
-  for (const reference of catalog.references) {
-    const existing = existingByKey.get(`${reference.kind}:${reference.key}`) ?? existingBySignature.get(signature(reference));
-    if (!existing) {
-      next.references.push(reference);
-      existingByKey.set(`${reference.kind}:${reference.key}`, reference);
-      existingBySignature.set(signature(reference), reference);
-      continue;
-    }
-    Object.assign(existing, { ...reference, id: existing.id, previousIds: [...new Set([...existing.previousIds, ...reference.previousIds])] });
-  }
-  const catalogByKindAndKey = new Map(next.references.map((item) => [`${item.kind}:${item.key}`, item.id]));
-  const migratedReferenceIds = new Map(next.references.filter((item) => item.id.startsWith("wsg.ref.")).flatMap((item) => {
-    const replacement = catalogByKindAndKey.get(`${item.kind}:${item.key}`);
-    return replacement && replacement !== item.id ? [[item.id, replacement] as const] : [];
-  }));
-  for (const template of next.templates) for (const field of template.fields) field.referenceId = migratedReferenceIds.get(field.referenceId) ?? field.referenceId;
-  for (const entity of next.entities) entity.values = Object.fromEntries(Object.entries(entity.values).map(([key, value]) => [migratedReferenceIds.get(key) ?? key, value]));
-  for (const influence of next.influences) influence.effectIds = influence.effectIds.map((id) => migratedReferenceIds.get(id) ?? id);
-  const usedReferenceIds = new Set([
-    ...next.templates.flatMap((template) => template.fields.map((field) => field.referenceId)),
-    ...next.entities.flatMap((entity) => Object.keys(entity.values)),
-    ...next.influences.flatMap((influence) => influence.effectIds),
-  ]);
-  next.references = next.references.filter((item) => !item.id.startsWith("wsg.ref.") || usedReferenceIds.has(item.id));
+  next.atomics = [];
+  next.references = [];
+  next.influences = [];
   next.templates = [];
   next.entities = [];
-  next.catalogVersion = 4;
+  next.dependencies = [];
+  next.catalogVersion = 5;
   next.updatedAt = new Date().toISOString();
   return recalculateProjectIds(next);
 }

@@ -3,12 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-test("ships the clean schema-v3 Forge architecture with catalog v4", async () => {
+test("ships the empty schema-v3 Forge architecture with catalog v5", async () => {
   const model = await readFile(new URL("../src/model.ts", import.meta.url), "utf8");
   assert.match(model, /schemaVersion:\s*3/);
-  assert.match(model, /catalogVersion:\s*4/);
-  assert.match(model, /atomics:\s*structuredClone\(STANDARD_ATOMICS\)/);
-  assert.match(model, /buildDndTemplateCatalog/);
+  assert.match(model, /catalogVersion:\s*5/);
+  assert.match(model, /atomics:\s*\[\]/);
+  assert.match(model, /references:\s*\[\]/);
+  assert.doesNotMatch(model, /buildDndTemplateCatalog/);
   assert.doesNotMatch(model, /buildSrdItemEntities/);
   assert.match(model, /"multiclass"/);
   assert.doesNotMatch(model, /srd52\.class\.wizard|srd52\.spell\./);
@@ -22,8 +23,9 @@ test("starts with no templates and no entities", async () => {
     const project = model.recalculateProjectIds(model.createCleanProject());
     assert.equal(project.templates.length, 0);
     assert.equal(project.entities.length, 0);
-    assert.ok(project.references.length >= 400);
-    assert.ok(project.atomics.every((item) => item.locked === false));
+    assert.equal(project.atomics.length, 0);
+    assert.equal(project.references.length, 0);
+    assert.equal(project.influences.length, 0);
     assert.deepEqual(model.validateProject(project).filter((issue) => issue.severity === "error"), []);
   } finally {
     await server.close();
@@ -54,11 +56,15 @@ test("clears templates and entities when upgrading an older local project", asyn
   try {
     const model = await server.ssrLoadModule("/src/model.ts");
     const oldProject = model.createCleanProject();
-    oldProject.catalogVersion = 3;
+    oldProject.catalogVersion = 4;
+    oldProject.atomics = [{ id: "legacy.atomic.level", key: "level", name: { en: "Level" }, categoryId: "wsg.category.custom", dataType: "integer", storageMode: "input", locked: false, previousIds: [] }];
+    oldProject.references = [{ id: "legacy.ref.parameter.name", key: "name", kind: "parameter", name: { en: "Name" }, description: { en: "" }, categoryId: "wsg.category.custom", locked: false, previousIds: [], propertyType: "localized_short" }];
     oldProject.templates = [{ id: "legacy.temp.item", type: "item", name: { en: "Legacy item" }, fields: [], previousIds: [] }];
     oldProject.entities = [{ id: "legacy.item.arrow", key: "arrow", type: "item", templateId: "legacy.temp.item", name: { en: "Arrow" }, values: {}, previousIds: [] }];
     const upgraded = model.upgradeProjectCatalog(oldProject);
-    assert.equal(upgraded.catalogVersion, 4);
+    assert.equal(upgraded.catalogVersion, 5);
+    assert.equal(upgraded.atomics.length, 0);
+    assert.equal(upgraded.references.length, 0);
     assert.equal(upgraded.templates.length, 0);
     assert.equal(upgraded.entities.length, 0);
     assert.deepEqual(model.validateProject(upgraded).filter((issue) => issue.severity === "error"), []);
