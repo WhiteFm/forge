@@ -1,4 +1,4 @@
-import type { EntityTemplate, EntityType, LocalText, PropertyType, ReferenceRecord, TableColumn, TableDefinition, TemplateField } from "./model";
+import type { EntityType, LocalText, PropertyType, ReferenceRecord, TableColumn, TableDefinition } from "./model";
 
 type FieldSeed = {
   key: string;
@@ -390,27 +390,9 @@ function buildEffects(namespace: string): ReferenceRecord[] {
   }));
 }
 
-function buildTemplates(namespace: string, parameters: ReferenceRecord[]): EntityTemplate[] {
-  const parameterByKey = new Map(parameters.map((parameter) => [parameter.key, parameter]));
-  return (Object.keys(seeds) as EntityType[]).map((type) => ({
-    id: `${namespace}.temp.${type}`,
-    type,
-    name: text(`${type[0].toUpperCase()}${type.slice(1)} template`, `${type === "multiclass" ? "Мультиклассовый профиль" : type === "subclass" ? "Подкласс" : type === "species" ? "Вид" : type === "background" ? "Предыстория" : type === "feat" ? "Черта" : type === "feature" ? "Умение" : type === "item" ? "Предмет" : type === "spell" ? "Заклинание" : "Класс"}: шаблон`, `${type[0].toUpperCase()}${type.slice(1)}mall`),
-    fields: seeds[type].map((seed, order): TemplateField => ({
-      id: `${namespace}.temp.${type}.field.${seed.key}`,
-      referenceId: parameterByKey.get(seed.key)!.id,
-      required: seed.required ?? false,
-      multiple: seed.multiple ?? false,
-      order,
-    })),
-    previousIds: [],
-  }));
-}
-
 export function buildDndTemplateCatalog(namespace: string) {
   const parameters = buildParameters(namespace);
   const values = buildValues(namespace);
   const effects = buildEffects(namespace);
-  const templates = buildTemplates(namespace, parameters);
-  return { references: [...parameters, ...values, ...effects], templates };
+  return { references: [...parameters, ...values, ...effects] };
 }

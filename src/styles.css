@@ -41,6 +41,7 @@ h1, h2, h3, p { margin-top: 0; }
 .brand img { width: 58px; height: 58px; object-fit: contain; }
 .brand span { min-width: 0; display: flex; flex-direction: column; }
 .brand strong { font-family: "Cormorant Garamond", serif; font-size: 28px; line-height: 1; }
+.brand strong span { display: block; }
 .brand small { margin-top: 5px; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .project-card { margin: 18px 16px 10px; padding: 14px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--surface); }
 .project-card > span { display: block; color: var(--red-soft); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
@@ -103,6 +104,10 @@ main { min-height: 100vh; margin-left: var(--sidebar); }
 .panel-head h2 { margin: 4px 0 0; font: 700 25px/1.05 "Cormorant Garamond", serif; overflow-wrap: anywhere; }
 .panel-body { padding: 18px; }
 .collection-toolbar { display: flex; align-items: center; gap: 10px; min-height: 58px; margin-bottom: 12px; padding: 9px; border: 1px solid var(--line-soft); border-radius: 9px; background: var(--surface); }
+.toolbar-title { min-width: 0; flex: 1; padding: 0 8px; overflow: hidden; color: var(--ink); font: 600 17px "Cormorant Garamond", serif; text-overflow: ellipsis; white-space: nowrap; }
+.toolbar-select { min-width: 190px; height: 40px; display: grid; grid-template-columns: auto minmax(120px, 1fr); align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-2); }
+.toolbar-select span { color: var(--faint); font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.toolbar-select select { min-width: 0; height: 30px; padding: 0 24px 0 8px; border: 0; background-color: transparent; }
 .search { min-width: 160px; flex: 1; height: 40px; padding: 0 13px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: var(--black); }
 .collection-layout { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 14px; align-items: start; }
 .record-list { max-height: calc(100vh - 190px); overflow: auto; border: 1px solid var(--line-soft); border-radius: 9px; background: var(--surface); }

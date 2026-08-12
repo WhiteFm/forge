@@ -1,5 +1,4 @@
 import { buildDndTemplateCatalog } from "./template-catalog";
-import { buildSrdItemEntities } from "./srd-items";
 
 export type Locale = "en" | "ru" | "sv";
 export type LocalText = { en: string; ru?: string; sv?: string };
@@ -126,12 +125,12 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 3;
+  catalogVersion: 4;
   namespace: string;
   version: string;
   defaultLocale: "en";
   reference: { id: string; key: string; name: LocalText; version: string };
-  pack: { id: string; key: string; name: LocalText; version: string; requiredRefs: Array<{ id: string; minimumVersion: string; compatibleMajor: number }> };
+  pack: { id: string; key: string; name: LocalText; subtitle: LocalText; description: LocalText; version: string; requiredRefs: Array<{ id: string; minimumVersion: string; compatibleMajor: number }> };
   categories: Category[];
   atomics: AtomicRecord[];
   references: ReferenceRecord[];
@@ -306,38 +305,37 @@ export function createCleanProject(): ForgeProject {
   const packKey = "characters";
   const catalog = buildDndTemplateCatalog(namespace);
   const project: ForgeProject = {
-    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 3, namespace, version: "1.0.0", defaultLocale: "en",
+    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 4, namespace, version: "1.0.0", defaultLocale: "en",
     reference: { id: `${namespace}.ref.${refKey}`, key: refKey, name: { en: "Core Reference", ru: "Основной справочник", sv: "Grundreferens" }, version: "1.0.0" },
-    pack: { id: `${namespace}.pack.${packKey}`, key: packKey, name: { en: "New Content Pack", ru: "Новый пак контента", sv: "Nytt innehållspaket" }, version: "1.0.0", requiredRefs: [{ id: `${namespace}.ref.${refKey}`, minimumVersion: "1.0.0", compatibleMajor: 1 }] },
+    pack: { id: `${namespace}.pack.${packKey}`, key: packKey, name: { en: "New Content Pack", ru: "Новый пак контента", sv: "Nytt innehållspaket" }, subtitle: { en: "" }, description: { en: "" }, version: "1.0.0", requiredRefs: [{ id: `${namespace}.ref.${refKey}`, minimumVersion: "1.0.0", compatibleMajor: 1 }] },
     categories: structuredClone(STANDARD_CATEGORIES),
     atomics: structuredClone(STANDARD_ATOMICS).map((item) => ({ ...item, locked: false, packId: "wsg" })),
     references: catalog.references,
     influences: [],
-    templates: catalog.templates,
-    entities: buildSrdItemEntities(namespace, catalog.references), dependencies: [], createdAt: now, updatedAt: now,
+    templates: [],
+    entities: [], dependencies: [], createdAt: now, updatedAt: now,
   };
   return recalculateProjectIds(project);
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 3) return project;
+  if (project.catalogVersion === 4) return project;
   const next = structuredClone(project);
   const catalog = buildDndTemplateCatalog(next.namespace);
+  next.pack.subtitle ??= { en: "" };
+  next.pack.description ??= { en: "" };
   next.atomics = next.atomics.map((item) => ({ ...item, locked: false, packId: item.id.startsWith("wsg.") ? "wsg" : item.packId ?? next.namespace }));
   const signature = (item: ReferenceRecord) => `${item.kind}:${item.optionGroup ?? ""}:${item.name.en.trim().toLowerCase()}`;
   const existingByKey = new Map(next.references.map((item) => [`${item.kind}:${item.key}`, item]));
   const existingBySignature = new Map(next.references.map((item) => [signature(item), item]));
-  const catalogReferenceIds = new Map<string, string>();
   for (const reference of catalog.references) {
     const existing = existingByKey.get(`${reference.kind}:${reference.key}`) ?? existingBySignature.get(signature(reference));
     if (!existing) {
       next.references.push(reference);
       existingByKey.set(`${reference.kind}:${reference.key}`, reference);
       existingBySignature.set(signature(reference), reference);
-      catalogReferenceIds.set(reference.id, reference.id);
       continue;
     }
-    catalogReferenceIds.set(reference.id, existing.id);
     Object.assign(existing, { ...reference, id: existing.id, previousIds: [...new Set([...existing.previousIds, ...reference.previousIds])] });
   }
   const catalogByKindAndKey = new Map(next.references.map((item) => [`${item.kind}:${item.key}`, item.id]));
@@ -354,20 +352,9 @@ export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
     ...next.influences.flatMap((influence) => influence.effectIds),
   ]);
   next.references = next.references.filter((item) => !item.id.startsWith("wsg.ref.") || usedReferenceIds.has(item.id));
-  for (const catalogTemplate of catalog.templates) {
-    const normalizedTemplate = { ...catalogTemplate, fields: catalogTemplate.fields.map((field) => ({ ...field, referenceId: catalogReferenceIds.get(field.referenceId) ?? field.referenceId })) };
-    const existing = next.templates.find((template) => template.type === catalogTemplate.type);
-    if (!existing) { next.templates.push(normalizedTemplate); continue; }
-    const existingReferences = new Set(existing.fields.map((field) => field.referenceId));
-    for (const field of normalizedTemplate.fields) if (!existingReferences.has(field.referenceId)) existing.fields.push({ ...field, order: existing.fields.length });
-    if (!existing.name.ru) existing.name.ru = catalogTemplate.name.ru;
-    if (!existing.name.sv) existing.name.sv = catalogTemplate.name.sv;
-  }
-  const existingEntityKeys = new Set(next.entities.map((entity) => `${entity.type}:${entity.key}`));
-  for (const entity of buildSrdItemEntities(next.namespace, next.references)) {
-    if (!existingEntityKeys.has(`${entity.type}:${entity.key}`)) next.entities.push(entity);
-  }
-  next.catalogVersion = 3;
+  next.templates = [];
+  next.entities = [];
+  next.catalogVersion = 4;
   next.updatedAt = new Date().toISOString();
   return recalculateProjectIds(next);
 }
@@ -393,8 +380,11 @@ export function recalculateProjectIds(project: ForgeProject): ForgeProject {
     mapping.set(item.id, id); if (item.id !== id) item.previousIds = [...new Set([...item.previousIds, item.id])]; item.id = id; item.key = slugify(item.name.en);
   }
   for (const item of next.templates) {
-    const id = `${next.namespace}.temp.${item.type}`;
-    mapping.set(item.id, id); item.id = id;
+    const id = `${next.namespace}.temp.${slugify(item.name.en) || `${item.type}_template`}`;
+    mapping.set(item.id, id);
+    if (item.id !== id) item.previousIds = [...new Set([...item.previousIds, item.id])];
+    item.id = id;
+    item.fields.forEach((field, index) => { field.id = `${id}.field_${index + 1}`; });
   }
   for (const item of next.entities) {
     const id = `${next.namespace}.${item.type}.${slugify(item.name.en) || item.key}`;
@@ -427,7 +417,10 @@ export function validateProject(project: ForgeProject): ValidationIssue[] {
   const referenceIds = new Set(project.references.map((item) => item.id));
   const atomicIds = new Set(project.atomics.map((item) => item.id));
   const effectIds = new Set(project.references.filter((item) => item.kind === "effect").map((item) => item.id));
-  for (const template of project.templates) for (const field of template.fields) if (!referenceIds.has(field.referenceId)) issues.push({ severity: "error", code: "missing_reference", message: `${template.id} uses missing ${field.referenceId}`, targetId: template.id });
+  for (const template of project.templates) {
+    if (!template.name.en.trim()) issues.push({ severity: "error", code: "english_required", message: `${template.id}: English template name is required.`, targetId: template.id });
+    for (const field of template.fields) if (!referenceIds.has(field.referenceId)) issues.push({ severity: "error", code: "missing_reference", message: `${template.id} uses missing ${field.referenceId}`, targetId: template.id });
+  }
   for (const reference of project.references) for (const operation of reference.operations ?? []) if (operation.targetAtomicId && !atomicIds.has(operation.targetAtomicId)) issues.push({ severity: "error", code: "missing_atomic", message: `${reference.id} uses missing ${operation.targetAtomicId}`, targetId: reference.id });
   for (const influence of project.influences) for (const effectId of influence.effectIds) if (!effectIds.has(effectId)) issues.push({ severity: "error", code: "missing_effect", message: `${influence.id} uses missing ${effectId}`, targetId: influence.id });
   for (const entity of project.entities) {
