@@ -105,11 +105,13 @@ export interface TemplateField {
   required: boolean;
   multiple: boolean;
   order: number;
+  defaultValue?: unknown;
 }
 
 export interface EntityTemplate {
   id: string;
   type: EntityType;
+  categoryId: string;
   name: LocalText;
   fields: TemplateField[];
   previousIds: string[];
@@ -146,7 +148,7 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 6;
+  catalogVersion: 7;
   namespace: string;
   version: string;
   defaultLocale: "en";
@@ -220,6 +222,32 @@ const categoryRows: Array<[string, string, string, string]> = [
   ["auras_zones", "Auras and Zones", "Ауры и зоны", "Auror och zoner"],
   ["reactions_interrupts", "Reactions and Interrupts", "Реакции и прерывания", "Reaktioner och avbrott"],
   ["immunities_exceptions", "Immunities and Rule Exceptions", "Иммунитеты и исключения", "Immuniteter och regelundantag"],
+  ["template_classes", "Class Templates", "Шаблоны классов", "Klassmallar"],
+  ["template_multiclasses", "Multiclass Templates", "Шаблоны мультиклассов", "Multiklassmallar"],
+  ["template_subclasses", "Subclass Templates", "Шаблоны подклассов", "Underklassmallar"],
+  ["template_species", "Species Templates", "Шаблоны видов", "Artmallar"],
+  ["template_backgrounds", "Background Templates", "Шаблоны предысторий", "Bakgrundsmallar"],
+  ["template_feats", "Feat Templates", "Шаблоны черт", "Talangmallar"],
+  ["template_features", "Feature Templates", "Шаблоны умений", "Förmågemallar"],
+  ["template_item_weapons", "Weapons", "Оружие", "Vapen"],
+  ["template_item_ammunition", "Ammunition", "Боеприпасы", "Ammunition"],
+  ["template_item_armor", "Armor", "Доспехи", "Rustningar"],
+  ["template_item_shields", "Shields", "Щиты", "Sköldar"],
+  ["template_item_boots", "Boots", "Сапоги", "Stövlar"],
+  ["template_item_bracers", "Bracers", "Наручи", "Armskydd"],
+  ["template_item_belts", "Belts", "Пояса", "Bälten"],
+  ["template_item_cloaks", "Cloaks", "Плащи", "Mantlar"],
+  ["template_item_headwear", "Helmets and Hats", "Шлемы и шляпы", "Hjälmar och hattar"],
+  ["template_item_rings", "Rings", "Кольца", "Ringar"],
+  ["template_item_tools", "Tools", "Инструменты", "Verktyg"],
+  ["template_item_consumables", "Consumables", "Расходуемые предметы", "Förbrukningsföremål"],
+  ["template_item_containers", "Containers", "Контейнеры", "Behållare"],
+  ["template_item_gear", "Adventuring Gear", "Снаряжение", "Äventyrsutrustning"],
+  ["template_item_focuses", "Spellcasting Focuses", "Магические фокусировки", "Besvärjelsefokus"],
+  ["template_item_materials", "Material Components", "Материальные компоненты", "Materiella komponenter"],
+  ["template_item_vehicles", "Mounts and Vehicles", "Ездовые животные и транспорт", "Riddjur och fordon"],
+  ["template_item_treasure", "Treasure and Currency", "Сокровища и валюта", "Skatter och valuta"],
+  ["template_spells", "Spell Templates", "Шаблоны заклинаний", "Besvärjelsemallar"],
   ["custom", "Custom", "Пользовательское", "Anpassat"],
 ];
 
@@ -326,32 +354,35 @@ export function createCleanProject(): ForgeProject {
   const packKey = "characters";
   const catalog = buildCoreRulesCatalog();
   const project: ForgeProject = {
-    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 6, namespace, version: "1.0.0", defaultLocale: "en",
+    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 7, namespace, version: "1.0.0", defaultLocale: "en",
     reference: { id: `${namespace}.ref.${refKey}`, key: refKey, name: { en: "Core Reference", ru: "Основной справочник", sv: "Grundreferens" }, version: "1.0.0" },
     pack: { id: `${namespace}.pack.${packKey}`, key: packKey, name: { en: "New Content Pack", ru: "Новый пак контента", sv: "Nytt innehållspaket" }, subtitle: { en: "" }, description: { en: "" }, version: "1.0.0", requiredRefs: [{ id: `${namespace}.ref.${refKey}`, minimumVersion: "1.0.0", compatibleMajor: 1 }] },
     categories: structuredClone(STANDARD_CATEGORIES),
     atomics: catalog.atomics,
     references: catalog.references,
     influences: [],
-    templates: [],
+    templates: catalog.templates,
     entities: [], dependencies: [], createdAt: now, updatedAt: now,
   };
   return recalculateProjectIds(project);
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 6) return project;
+  if (project.catalogVersion === 7) return project;
   const next = structuredClone(project);
   const catalog = buildCoreRulesCatalog();
   next.pack.subtitle ??= { en: "" };
   next.pack.description ??= { en: "" };
-  next.atomics = catalog.atomics;
-  next.references = catalog.references;
+  const systemAtomicKeys = new Set(catalog.atomics.map((atomic) => atomic.key));
+  next.atomics = [...catalog.atomics, ...next.atomics.filter((atomic) => !systemAtomicKeys.has(atomic.key))];
+  const systemReferenceKeys = new Set(catalog.references.map((reference) => `${reference.kind}:${reference.optionGroup ?? ""}:${reference.name.en.toLowerCase()}`));
+  next.references = [...catalog.references, ...next.references.filter((reference) => !systemReferenceKeys.has(`${reference.kind}:${reference.optionGroup ?? ""}:${reference.name.en.toLowerCase()}`))];
   next.influences = [];
-  next.templates = [];
-  next.entities = [];
-  next.dependencies = [];
-  next.catalogVersion = 6;
+  const existingTemplateKeys = new Set(next.templates.map((template) => `${template.type}:${template.name.en.toLowerCase()}`));
+  next.templates = [...catalog.templates.filter((template) => !existingTemplateKeys.has(`${template.type}:${template.name.en.toLowerCase()}`)), ...next.templates.map((template) => ({ ...template, categoryId: template.categoryId ?? "wsg.category.custom" }))];
+  for (const category of STANDARD_CATEGORIES) if (!next.categories.some((existing) => existing.id === category.id)) next.categories.push(category);
+  next.dependencies ??= [];
+  next.catalogVersion = 7;
   next.updatedAt = new Date().toISOString();
   return recalculateProjectIds(next);
 }
@@ -382,7 +413,10 @@ export function recalculateProjectIds(project: ForgeProject): ForgeProject {
     mapping.set(item.id, id);
     if (item.id !== id) item.previousIds = [...new Set([...item.previousIds, item.id])];
     item.id = id;
-    item.fields.forEach((field, index) => { field.id = `${id}.field_${index + 1}`; });
+    item.fields.forEach((field, index) => {
+      field.id = `${id}.field_${index + 1}`;
+      if (typeof field.defaultValue === "string") field.defaultValue = mapping.get(field.defaultValue) ?? field.defaultValue;
+    });
   }
   for (const item of next.entities) {
     const id = `${next.namespace}.${item.type}.${slugify(item.name.en) || item.key}`;
@@ -428,7 +462,11 @@ export function validateProject(project: ForgeProject): ValidationIssue[] {
   }
   for (const template of project.templates) {
     if (!template.name.en.trim()) issues.push({ severity: "error", code: "english_required", message: `${template.id}: English template name is required.`, targetId: template.id });
-    for (const field of template.fields) if (!referenceIds.has(field.referenceId)) issues.push({ severity: "error", code: "missing_reference", message: `${template.id} uses missing ${field.referenceId}`, targetId: template.id });
+    if (!project.categories.some((category) => category.id === template.categoryId)) issues.push({ severity: "error", code: "missing_category", message: `${template.id} uses missing ${template.categoryId}`, targetId: template.id });
+    for (const field of template.fields) {
+      if (!referenceIds.has(field.referenceId)) issues.push({ severity: "error", code: "missing_reference", message: `${template.id} uses missing ${field.referenceId}`, targetId: template.id });
+      if (typeof field.defaultValue === "string" && field.defaultValue.startsWith("wsg.ref.") && !referenceIds.has(field.defaultValue)) issues.push({ severity: "error", code: "missing_default_reference", message: `${template.id} uses missing default ${field.defaultValue}`, targetId: template.id });
+    }
   }
   for (const reference of project.references) for (const operation of reference.operations ?? []) if (operation.targetAtomicId && !atomicIds.has(operation.targetAtomicId)) issues.push({ severity: "error", code: "missing_atomic", message: `${reference.id} uses missing ${operation.targetAtomicId}`, targetId: reference.id });
   for (const influence of project.influences) for (const effectId of influence.effectIds) if (!effectIds.has(effectId)) issues.push({ severity: "error", code: "missing_effect", message: `${influence.id} uses missing ${effectId}`, targetId: influence.id });

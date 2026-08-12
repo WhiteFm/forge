@@ -3,10 +3,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-test("ships schema-v3 Forge architecture with catalog v6", async () => {
+test("ships schema-v3 Forge architecture with catalog v7", async () => {
   const model = await readFile(new URL("../src/model.ts", import.meta.url), "utf8");
   assert.match(model, /schemaVersion:\s*3/);
-  assert.match(model, /catalogVersion:\s*6/);
+  assert.match(model, /catalogVersion:\s*7/);
   assert.match(model, /buildCoreRulesCatalog/);
   assert.doesNotMatch(model, /buildDndTemplateCatalog/);
   assert.doesNotMatch(model, /buildSrdItemEntities/);
@@ -14,18 +14,18 @@ test("ships schema-v3 Forge architecture with catalog v6", async () => {
   assert.doesNotMatch(model, /srd52\.class\.wizard|srd52\.spell\./);
 });
 
-test("starts with the complete core rules catalog and no templates or entities", async () => {
+test("starts with the complete rules catalog and categorized templates but no entities", async () => {
   const { createServer } = await import("vite");
   const server = await createServer({ root: fileURLToPath(new URL("..", import.meta.url)), server: { middlewareMode: true }, appType: "custom" });
   try {
     const model = await server.ssrLoadModule("/src/model.ts");
     const project = model.recalculateProjectIds(model.createCleanProject());
-    assert.equal(project.templates.length, 0);
+    assert.equal(project.templates.length, 36);
     assert.equal(project.entities.length, 0);
     assert.equal(project.atomics.length, 54);
-    assert.equal(project.references.length, 324);
-    assert.equal(project.references.filter((entry) => entry.kind === "parameter").length, 91);
-    assert.equal(project.references.filter((entry) => entry.kind === "value").length, 196);
+    assert.equal(project.references.length, 402);
+    assert.equal(project.references.filter((entry) => entry.kind === "parameter").length, 108);
+    assert.equal(project.references.filter((entry) => entry.kind === "value").length, 257);
     assert.equal(project.references.filter((entry) => entry.kind === "effect").length, 37);
     assert.equal(project.influences.length, 0);
     assert.equal(project.atomics.find((entry) => entry.key === "level")?.storageMode, "derived");
@@ -33,6 +33,11 @@ test("starts with the complete core rules catalog and no templates or entities",
     assert.equal(project.atomics.find((entry) => entry.key === "currency")?.fields?.length, 6);
     assert.equal(project.atomics.find((entry) => entry.key === "position")?.fields?.length, 3);
     assert.equal(project.atomics.filter((entry) => entry.dataType === "die").length, 9);
+    assert.deepEqual(Object.fromEntries(["class", "multiclass", "subclass", "species", "background", "feat", "feature", "item", "spell"].map((type) => [type, project.templates.filter((template) => template.type === type).length])), { class: 1, multiclass: 1, subclass: 1, species: 1, background: 1, feat: 4, feature: 3, item: 18, spell: 6 });
+    const armor = project.templates.find((template) => template.name.en === "Armor");
+    assert.equal(armor?.categoryId, "wsg.category.template_item_armor");
+    assert.ok(armor?.fields.some((field) => field.defaultValue === "wsg.ref.value.item_type.armor"));
+    assert.ok(armor?.fields.some((field) => project.references.find((reference) => reference.id === field.referenceId)?.name.en === "Magical"));
     const advancement = project.references.find((entry) => entry.name.en === "Character Advancement");
     assert.equal(advancement?.table?.rows.length, 20);
     assert.deepEqual(advancement?.table?.rows[19].values, { level: 20, xp: 355000, pb: 6 });
@@ -49,8 +54,8 @@ test("supports multiple templates of one entity type with distinct generated IDs
     const model = await server.ssrLoadModule("/src/model.ts");
     const project = model.createCleanProject();
     project.templates = [
-      { id: "draft.weapon", type: "item", name: { en: "Weapon" }, fields: [], previousIds: [] },
-      { id: "draft.armor", type: "item", name: { en: "Armor" }, fields: [], previousIds: [] },
+      { id: "draft.weapon", type: "item", categoryId: "wsg.category.custom", name: { en: "Weapon" }, fields: [], previousIds: [] },
+      { id: "draft.armor", type: "item", categoryId: "wsg.category.custom", name: { en: "Armor" }, fields: [], previousIds: [] },
     ];
     const recalculated = model.recalculateProjectIds(project);
     assert.deepEqual(recalculated.templates.map((template) => template.id), ["mygame.temp.weapon", "mygame.temp.armor"]);
@@ -60,7 +65,7 @@ test("supports multiple templates of one entity type with distinct generated IDs
   }
 });
 
-test("replaces an older empty catalog while keeping templates and entities empty", async () => {
+test("upgrades an older catalog and preserves user content", async () => {
   const { createServer } = await import("vite");
   const server = await createServer({ root: fileURLToPath(new URL("..", import.meta.url)), server: { middlewareMode: true }, appType: "custom" });
   try {
@@ -69,14 +74,14 @@ test("replaces an older empty catalog while keeping templates and entities empty
     oldProject.catalogVersion = 4;
     oldProject.atomics = [{ id: "legacy.atomic.level", key: "level", name: { en: "Level" }, categoryId: "wsg.category.custom", dataType: "integer", storageMode: "input", locked: false, previousIds: [] }];
     oldProject.references = [{ id: "legacy.ref.parameter.name", key: "name", kind: "parameter", name: { en: "Name" }, description: { en: "" }, categoryId: "wsg.category.custom", locked: false, previousIds: [], propertyType: "localized_short" }];
-    oldProject.templates = [{ id: "legacy.temp.item", type: "item", name: { en: "Legacy item" }, fields: [], previousIds: [] }];
+    oldProject.templates = [{ id: "legacy.temp.item", type: "item", categoryId: "wsg.category.custom", name: { en: "Legacy item" }, fields: [], previousIds: [] }];
     oldProject.entities = [{ id: "legacy.item.arrow", key: "arrow", type: "item", templateId: "legacy.temp.item", name: { en: "Arrow" }, values: {}, previousIds: [] }];
     const upgraded = model.upgradeProjectCatalog(oldProject);
-    assert.equal(upgraded.catalogVersion, 6);
+    assert.equal(upgraded.catalogVersion, 7);
     assert.equal(upgraded.atomics.length, 54);
-    assert.equal(upgraded.references.length, 324);
-    assert.equal(upgraded.templates.length, 0);
-    assert.equal(upgraded.entities.length, 0);
+    assert.ok(upgraded.references.length >= 402);
+    assert.equal(upgraded.templates.length, 37);
+    assert.equal(upgraded.entities.length, 1);
     assert.deepEqual(model.validateProject(upgraded).filter((issue) => issue.severity === "error"), []);
   } finally {
     await server.close();

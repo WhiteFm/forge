@@ -1,4 +1,4 @@
-import type { AtomicDataType, AtomicField, AtomicRecord, EffectOperation, EntityType, LocalText, PropertyType, ReferenceRecord, StorageMode, TableDefinition } from "./model";
+import type { AtomicDataType, AtomicField, AtomicRecord, EffectOperation, EntityTemplate, EntityType, LocalText, PropertyType, ReferenceRecord, StorageMode, TableDefinition } from "./model";
 
 const text = (en: string, ru = en, sv = en): LocalText => ({ en, ru, sv });
 const atomicId = (key: string) => `wsg.atomic.${key}`;
@@ -165,6 +165,23 @@ const templateParameters = [
   property("item_consumable", "Consumable", "Расходуемый", "items_inventory", "boolean", { allowedEntityTypes:["item"] }),
   property("item_contents", "Contents", "Содержимое", "items_inventory", "list", { allowedEntityTypes:["item"] }),
   property("item_material_component", "Spell Material Component", "Материальный компонент", "components_casting", "boolean", { allowedEntityTypes:["item"] }),
+  property("item_base_item", "Base Item", "Базовый предмет", "items_inventory", "entity", { allowedEntityTypes:["item"] }),
+  property("item_magical", "Magical", "Магический", "magic_spells", "boolean", { allowedEntityTypes:["item"] }),
+  property("item_rarity", "Rarity", "Редкость", "magic_spells", "select", { optionGroup:"item_rarity", allowedEntityTypes:["item"] }),
+  property("item_magic_bonus", "Magic Bonus", "Магический бонус", "effects", "integer", { allowedEntityTypes:["item"] }),
+  property("item_cursed", "Cursed", "Проклятый", "afflictions", "boolean", { allowedEntityTypes:["item"] }),
+  property("item_attunement_prerequisites", "Attunement Prerequisites", "Требования настройки", "prerequisites", "condition", { allowedEntityTypes:["item"] }),
+  property("item_equipment_slot", "Equipment Slot", "Слот экипировки", "items_inventory", "select", { optionGroup:"equipment_slot", allowedEntityTypes:["item"] }),
+  property("item_stack_size", "Stack Size", "Размер стопки", "items_inventory", "integer", { allowedEntityTypes:["item"] }),
+  property("item_tool_type", "Tool Type", "Тип инструмента", "proficiencies", "select", { optionGroup:"tool_type", allowedEntityTypes:["item"] }),
+  property("item_container_capacity", "Container Capacity", "Вместимость контейнера", "items_inventory", "group", { allowedEntityTypes:["item"] }),
+  property("item_focus_type", "Focus Type", "Тип фокусировки", "components_casting", "select", { optionGroup:"focus_type", allowedEntityTypes:["item"] }),
+  property("item_material_consumed", "Consumed by Spell", "Расходуется заклинанием", "components_casting", "boolean", { allowedEntityTypes:["item"] }),
+  property("item_material_minimum_cost", "Required Component Cost", "Требуемая стоимость компонента", "components_casting", "group", { allowedEntityTypes:["item"] }),
+  property("item_vehicle_type", "Mount or Vehicle Type", "Тип ездового животного или транспорта", "mounts_vehicles", "select", { optionGroup:"vehicle_type", allowedEntityTypes:["item"] }),
+  property("item_capacity", "Creature or Cargo Capacity", "Вместимость существ или груза", "mounts_vehicles", "group", { allowedEntityTypes:["item"] }),
+  property("item_speed", "Item Speed", "Скорость предмета", "movement_position", "list", { allowedEntityTypes:["item"] }),
+  property("item_treasure_type", "Treasure Type", "Тип сокровища", "economy_currency", "select", { optionGroup:"treasure_type", allowedEntityTypes:["item"] }),
   property("spell_level", "Spell Level", "Уровень заклинания", "magic_spells", "integer", { allowedEntityTypes:["spell"] }),
   property("spell_school", "School", "Школа", "magic_spells", "select", { optionGroup:"spell_school", allowedEntityTypes:["spell"] }),
   property("spell_casting_time", "Casting Time", "Время накладывания", "actions_timing", "group", { allowedEntityTypes:["spell"] }),
@@ -209,7 +226,15 @@ const valueGroups: Array<[string,string,string,string,string?]> = [
   ...[["normal_vision","Normal Vision","Обычное зрение"],["darkvision","Darkvision","Темнозрение"],["blindsight","Blindsight","Слепое зрение"],["truesight","Truesight","Истинное зрение"],["tremorsense","Tremorsense","Чувство вибрации"]].map(([k,e,r])=>["sense_type",k,e,r,"senses_perception"] as [string,string,string,string,string]),
   ...[["cone","Cone","Конус"],["cube","Cube","Куб"],["cylinder","Cylinder","Цилиндр"],["emanation","Emanation","Эманация"],["line","Line","Линия"],["sphere","Sphere","Сфера"]].map(([k,e,r])=>["area_shape",k,e,r,"targets_areas"] as [string,string,string,string,string]),
   ...[["creature","Creature","Существо"],["object","Object","Предмет"],["space","Space","Клетка"],["point","Point","Точка"],["self","Self","На себя"]].map(([k,e,r])=>["target_type",k,e,r,"targets_areas"] as [string,string,string,string,string]),
-  ...[["weapon","Weapon","Оружие"],["armor","Armor","Доспех"],["shield","Shield","Щит"],["ammunition","Ammunition","Боеприпасы"],["tool","Tool","Инструмент"],["adventuring_gear","Adventuring Gear","Снаряжение"],["consumable","Consumable","Расходуемый предмет"],["container","Container","Контейнер"],["spellcasting_focus","Spellcasting Focus","Фокусировка"],["mount_vehicle","Mount or Vehicle","Ездовое животное или транспорт"],["material_component","Material Component","Материальный компонент"],["currency","Currency","Монета"]].map(([k,e,r])=>["item_type",k,e,r,"items_inventory"] as [string,string,string,string,string]),
+  ...[["weapon","Weapon","Оружие"],["armor","Armor","Доспех"],["shield","Shield","Щит"],["boots","Boots","Сапоги"],["bracers","Bracers","Наручи"],["belt","Belt","Пояс"],["cloak","Cloak","Плащ"],["headwear","Helmet or Hat","Шлем или шляпа"],["ring","Ring","Кольцо"],["ammunition","Ammunition","Боеприпасы"],["tool","Tool","Инструмент"],["adventuring_gear","Adventuring Gear","Снаряжение"],["consumable","Consumable","Расходуемый предмет"],["container","Container","Контейнер"],["spellcasting_focus","Spellcasting Focus","Фокусировка"],["mount_vehicle","Mount or Vehicle","Ездовое животное или транспорт"],["material_component","Material Component","Материальный компонент"],["treasure","Treasure","Сокровище"],["currency","Currency","Монета"]].map(([k,e,r])=>["item_type",k,e,r,"items_inventory"] as [string,string,string,string,string]),
+  ...[["mundane","Mundane","Немагический"],["common","Common","Обычный"],["uncommon","Uncommon","Необычный"],["rare","Rare","Редкий"],["very_rare","Very Rare","Очень редкий"],["legendary","Legendary","Легендарный"],["artifact","Artifact","Артефакт"]].map(([k,e,r])=>["item_rarity",k,e,r,"magic_spells"] as [string,string,string,string,string]),
+  ...[["held","Held","В руках"],["armor","Armor","Доспех"],["shield","Shield","Щит"],["boots","Boots","Сапоги"],["bracers","Bracers","Наручи"],["belt","Belt","Пояс"],["cloak","Cloak","Плащ"],["head","Head","Голова"],["ring","Ring","Кольцо"],["neck","Neck","Шея"],["body","Body","Тело"],["none","No Slot","Без слота"]].map(([k,e,r])=>["equipment_slot",k,e,r,"items_inventory"] as [string,string,string,string,string]),
+  ...[["artisan","Artisan's Tool","Ремесленный инструмент"],["gaming","Gaming Set","Игровой набор"],["musical","Musical Instrument","Музыкальный инструмент"],["other","Other Tool","Другой инструмент"]].map(([k,e,r])=>["tool_type",k,e,r,"proficiencies"] as [string,string,string,string,string]),
+  ...[["arcane","Arcane Focus","Магическая фокусировка"],["druidic","Druidic Focus","Друидическая фокусировка"],["holy_symbol","Holy Symbol","Священный символ"],["other","Other Focus","Другая фокусировка"]].map(([k,e,r])=>["focus_type",k,e,r,"components_casting"] as [string,string,string,string,string]),
+  ...[["mount","Mount","Ездовое животное"],["land_vehicle","Land Vehicle","Наземный транспорт"],["water_vehicle","Water Vehicle","Водный транспорт"],["air_vehicle","Air Vehicle","Воздушный транспорт"],["object","Object","Объект"]].map(([k,e,r])=>["vehicle_type",k,e,r,"mounts_vehicles"] as [string,string,string,string,string]),
+  ...[["gemstone","Gemstone","Драгоценный камень"],["art_object","Art Object","Предмет искусства"],["trade_good","Trade Good","Товар"],["currency","Currency","Валюта"],["other","Other Treasure","Другое сокровище"]].map(([k,e,r])=>["treasure_type",k,e,r,"economy_currency"] as [string,string,string,string,string]),
+  ...[["ammunition","Ammunition","Боеприпас"],["finesse","Finesse","Фехтовальное"],["heavy","Heavy","Тяжёлое"],["light","Light","Лёгкое"],["loading","Loading","Перезарядка"],["reach","Reach","Досягаемость"],["thrown","Thrown","Метательное"],["two_handed","Two-Handed","Двуручное"],["versatile","Versatile","Универсальное"]].map(([k,e,r])=>["weapon_property",k,e,r,"weapons_mastery"] as [string,string,string,string,string]),
+  ...[["cleave","Cleave","Рассечение"],["graze","Graze","Скользящий удар"],["nick","Nick","Быстрый удар"],["push","Push","Толчок"],["sap","Sap","Ошеломление"],["slow","Slow","Замедление"],["topple","Topple","Опрокидывание"],["vex","Vex","Досаждение"]].map(([k,e,r])=>["weapon_mastery",k,e,r,"weapons_mastery"] as [string,string,string,string,string]),
   ...[["short_rest","Short Rest","Короткий отдых"],["long_rest","Long Rest","Долгий отдых"]].map(([k,e,r])=>["rest_type",k,e,r,"rest_recovery"] as [string,string,string,string,string]),
   ...[["manual","Manual","Вручную"],["start_of_turn","Start of Turn","Начало хода"],["end_of_turn","End of Turn","Конец хода"],["start_of_round","Start of Round","Начало раунда"],["end_of_round","End of Round","Конец раунда"],["short_rest","Short Rest","Короткий отдых"],["long_rest","Long Rest","Долгий отдых"],["successful_save","Successful Save","Успешный спасбросок"]].map(([k,e,r])=>["expiration_event",k,e,r,"duration"] as [string,string,string,string,string]),
   ...[["never","Never","Никогда"],["short_rest","Short Rest","Короткий отдых"],["long_rest","Long Rest","Долгий отдых"],["dawn","Dawn","Рассвет"],["start_of_turn","Start of Turn","Начало хода"],["end_of_turn","End of Turn","Конец хода"]].map(([k,e,r])=>["recovery_event",k,e,r,"rest_recovery"] as [string,string,string,string,string]),
@@ -245,6 +270,71 @@ const effects = [
   effect("grant_heroic_inspiration","Grant Heroic Inspiration","Выдать героическое вдохновение","heroic_inspiration","set"), effect("spend_heroic_inspiration","Spend Heroic Inspiration","Потратить героическое вдохновение","heroic_inspiration","remove"), effect("start_concentration","Start Concentration","Начать концентрацию","concentration","grant"), effect("end_concentration","End Concentration","Завершить концентрацию","concentration","remove"),
 ];
 
+interface TemplateFieldSpec { name: string; required?: boolean; multiple?: boolean; defaultValue?: unknown }
+interface TemplateSpec { key: string; type: EntityType; category: string; en: string; ru: string; fields: Array<string | TemplateFieldSpec> }
+
+const itemCore: Array<string | TemplateFieldSpec> = [
+  "Description", "Image", "Cost", "Weight", "Quantity", "Stack Size", "Base Item", "Magical", "Rarity", "Magic Bonus",
+  "Requires Attunement", "Attunement Prerequisites", "Cursed", "Charges", "Resources", "Prerequisites", "Granted Features", "Influences", "Choices", "Effects",
+];
+const spellCore = ["Description", "Image", "Spell Level", "School", "Casting Time", "Range", "Components", "Material Items", "Spell Duration", "Concentration", "Ritual", "Spell Lists", "Prerequisites", "Choices", "Effects"];
+
+const templateSpecs: TemplateSpec[] = [
+  { key:"class", type:"class", category:"template_classes", en:"Class", ru:"Класс", fields:["Description","Image","Primary Abilities","Hit Die","Saving Throw Proficiencies","Skill Choices","Weapon Proficiencies","Armor Training","Tool Proficiencies","Starting Equipment","Class Progression","Subclass Level","Spellcasting Ability","Spell Progression","Granted Features","Choices","Influences"] },
+  { key:"multiclass", type:"multiclass", category:"template_multiclasses", en:"Multiclass Profile", ru:"Профиль мультикласса", fields:["Description","Image","Base Class","Multiclass Prerequisites","Weapon Proficiencies","Armor Training","Tool Proficiencies","Multiclass Grants","Granted Features","Choices","Influences"] },
+  { key:"subclass", type:"subclass", category:"template_subclasses", en:"Subclass", ru:"Подкласс", fields:["Description","Image","Parent Class","Subclass Progression","Granted Features","Choices","Influences"] },
+  { key:"species", type:"species", category:"template_species", en:"Species", ru:"Вид", fields:["Description","Image","Creature Type","Size Options","Speeds","Senses","Languages","Damage Traits","Condition Immunities","Granted Features","Choices","Influences"] },
+  { key:"background", type:"background", category:"template_backgrounds", en:"Background", ru:"Предыстория", fields:["Description","Image","Ability Score Options","Origin Feats","Skill Proficiencies","Tool Proficiencies","Languages","Equipment Options","Starting Currency","Granted Features","Choices","Influences"] },
+  { key:"feat_origin", type:"feat", category:"template_feats", en:"Origin Feat", ru:"Стартовая черта", fields:["Description","Image",{name:"Feat Category",defaultValue:"wsg.ref.value.feat_category.origin"},"Repeatable","Prerequisites","Ability Score Increases","Granted Features","Choices","Influences","Effects"] },
+  { key:"feat_general", type:"feat", category:"template_feats", en:"General Feat", ru:"Общая черта", fields:["Description","Image",{name:"Feat Category",defaultValue:"wsg.ref.value.feat_category.general"},"Repeatable","Prerequisites","Ability Score Increases","Granted Features","Choices","Influences","Effects"] },
+  { key:"feat_fighting_style", type:"feat", category:"template_feats", en:"Fighting Style Feat", ru:"Черта боевого стиля", fields:["Description","Image",{name:"Feat Category",defaultValue:"wsg.ref.value.feat_category.fighting_style"},"Repeatable","Prerequisites","Ability Score Increases","Granted Features","Choices","Influences","Effects"] },
+  { key:"feat_epic_boon", type:"feat", category:"template_feats", en:"Epic Boon Feat", ru:"Черта эпического дара", fields:["Description","Image",{name:"Feat Category",defaultValue:"wsg.ref.value.feat_category.epic_boon"},"Repeatable","Prerequisites","Ability Score Increases","Granted Features","Choices","Influences","Effects"] },
+  { key:"feature_one_time", type:"feature", category:"template_features", en:"One-Time Feature", ru:"Единоразовое умение", fields:["Description","Image",{name:"Feature Behavior",defaultValue:"wsg.ref.value.feature_behavior.one_time"},"Granted at Level","Prerequisites","Damage Components","Healing","Conditions","Choices","Influences","Effects"] },
+  { key:"feature_passive", type:"feature", category:"template_features", en:"Passive Feature", ru:"Пассивное умение", fields:["Description","Image",{name:"Feature Behavior",defaultValue:"wsg.ref.value.feature_behavior.passive"},"Granted at Level","Prerequisites","Activation","Trigger","Duration","Targets","Area","Damage Components","Healing","Conditions","Choices","Influences","Effects"] },
+  { key:"feature_active", type:"feature", category:"template_features", en:"Active Feature", ru:"Активное умение", fields:["Description","Image",{name:"Feature Behavior",defaultValue:"wsg.ref.value.feature_behavior.active"},"Granted at Level","Prerequisites","Activation","Trigger","Uses","Recovery","Resources","Duration","Targets","Area","Damage Components","Healing","Conditions","Choices","Influences","Effects"] },
+  { key:"weapon", type:"item", category:"template_item_weapons", en:"Weapon", ru:"Оружие", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.weapon"},"Equipment Slot","Weapon Category","Weapon Damage","Weapon Properties","Mastery Property","Range and Reach"] },
+  { key:"ammunition", type:"item", category:"template_item_ammunition", en:"Ammunition", ru:"Боеприпасы", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.ammunition"},"Weapon Properties","Range and Reach"] },
+  { key:"armor", type:"item", category:"template_item_armor", en:"Armor", ru:"Доспех", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.armor"},{name:"Equipment Slot",defaultValue:"wsg.ref.value.equipment_slot.armor"},"Armor Category","Base AC","Dexterity in AC","Strength Requirement","Stealth Disadvantage"] },
+  { key:"shield", type:"item", category:"template_item_shields", en:"Shield", ru:"Щит", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.shield"},{name:"Equipment Slot",defaultValue:"wsg.ref.value.equipment_slot.shield"},"Base AC"] },
+  { key:"boots", type:"item", category:"template_item_boots", en:"Boots", ru:"Сапоги", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.boots"},{name:"Equipment Slot",defaultValue:"wsg.ref.value.equipment_slot.boots"}] },
+  { key:"bracers", type:"item", category:"template_item_bracers", en:"Bracers", ru:"Наручи", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.bracers"},{name:"Equipment Slot",defaultValue:"wsg.ref.value.equipment_slot.bracers"}] },
+  { key:"belt", type:"item", category:"template_item_belts", en:"Belt", ru:"Пояс", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.belt"},{name:"Equipment Slot",defaultValue:"wsg.ref.value.equipment_slot.belt"}] },
+  { key:"cloak", type:"item", category:"template_item_cloaks", en:"Cloak", ru:"Плащ", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.cloak"},{name:"Equipment Slot",defaultValue:"wsg.ref.value.equipment_slot.cloak"}] },
+  { key:"headwear", type:"item", category:"template_item_headwear", en:"Helmet or Hat", ru:"Шлем или шляпа", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.headwear"},{name:"Equipment Slot",defaultValue:"wsg.ref.value.equipment_slot.head"}] },
+  { key:"ring", type:"item", category:"template_item_rings", en:"Ring", ru:"Кольцо", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.ring"},{name:"Equipment Slot",defaultValue:"wsg.ref.value.equipment_slot.ring"}] },
+  { key:"tool", type:"item", category:"template_item_tools", en:"Tool", ru:"Инструмент", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.tool"},"Tool Type"] },
+  { key:"consumable", type:"item", category:"template_item_consumables", en:"Consumable", ru:"Расходуемый предмет", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.consumable"},"Consumable"] },
+  { key:"container", type:"item", category:"template_item_containers", en:"Container", ru:"Контейнер", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.container"},"Container Capacity","Contents"] },
+  { key:"adventuring_gear", type:"item", category:"template_item_gear", en:"Adventuring Gear", ru:"Снаряжение", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.adventuring_gear"},"Contents"] },
+  { key:"spellcasting_focus", type:"item", category:"template_item_focuses", en:"Spellcasting Focus", ru:"Магическая фокусировка", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.spellcasting_focus"},"Focus Type"] },
+  { key:"material_component", type:"item", category:"template_item_materials", en:"Material Component", ru:"Материальный компонент", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.material_component"},"Spell Material Component","Consumed by Spell","Required Component Cost"] },
+  { key:"mount_vehicle", type:"item", category:"template_item_vehicles", en:"Mount or Vehicle", ru:"Ездовое животное или транспорт", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.mount_vehicle"},"Mount or Vehicle Type","Creature or Cargo Capacity","Item Speed"] },
+  { key:"treasure", type:"item", category:"template_item_treasure", en:"Treasure", ru:"Сокровище", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.treasure"},"Treasure Type"] },
+  { key:"spell_attack", type:"spell", category:"template_spells", en:"Attack Spell", ru:"Атакующее заклинание", fields:[...spellCore,"Spell Attack","Damage","Applied Conditions","Higher-Level Scaling","Influences"] },
+  { key:"spell_save", type:"spell", category:"template_spells", en:"Saving Throw Spell", ru:"Заклинание со спасброском", fields:[...spellCore,"Saving Throw","Damage","Applied Conditions","Higher-Level Scaling","Influences"] },
+  { key:"spell_healing", type:"spell", category:"template_spells", en:"Healing Spell", ru:"Исцеляющее заклинание", fields:[...spellCore,"Healing","Higher-Level Scaling","Influences"] },
+  { key:"spell_area", type:"spell", category:"template_spells", en:"Area Spell", ru:"Заклинание по области", fields:[...spellCore,"Area","Saving Throw","Damage","Applied Conditions","Higher-Level Scaling","Influences"] },
+  { key:"spell_periodic", type:"spell", category:"template_spells", en:"Periodic Area Spell", ru:"Периодическое заклинание по области", fields:[...spellCore,"Area","Saving Throw","Periodic Damage","Applied Conditions","Higher-Level Scaling","Resources","Influences"] },
+  { key:"spell_utility", type:"spell", category:"template_spells", en:"Utility Spell", ru:"Вспомогательное заклинание", fields:[...spellCore,"Targets","Area","Granted Features","Resources","Influences"] },
+];
+
+function buildTemplates(references: ReferenceRecord[]): EntityTemplate[] {
+  const parameters = references.filter((reference) => reference.kind === "parameter");
+  return templateSpecs.map((spec) => ({
+    id: `wsg.temp.${spec.key}`,
+    type: spec.type,
+    categoryId: categoryId(spec.category),
+    name: text(spec.en, spec.ru),
+    previousIds: [],
+    fields: spec.fields.map((entry, order) => {
+      const fieldSpec = typeof entry === "string" ? { name: entry } : entry;
+      const parameter = parameters.find((candidate) => candidate.name.en === fieldSpec.name);
+      if (!parameter) throw new Error(`Missing template parameter: ${fieldSpec.name}`);
+      return { id: `wsg.temp.${spec.key}.field_${order + 1}`, referenceId: parameter.id, required: fieldSpec.required ?? Boolean(parameter.required), multiple: fieldSpec.multiple ?? Boolean(parameter.multiple), order, defaultValue: fieldSpec.defaultValue };
+    }),
+  }));
+}
+
 export function buildCoreRulesCatalog() {
   const values = valueGroups.map(([group,key,en,ru,category])=>option(group,key,en,ru,category));
   const source = [advancement, carrying, pointBuy, ...commonParameters, ...templateParameters, ...values, ...skillRows, ...effects];
@@ -263,7 +353,7 @@ export function buildCoreRulesCatalog() {
     existing.required ||= reference.required;
   }
   const references = [...merged.values()];
-  return { atomics: structuredClone(coreAtomics), references: structuredClone(references) };
+  return { atomics: structuredClone(coreAtomics), references: structuredClone(references), templates: structuredClone(buildTemplates(references)) };
 }
 
 export const CORE_ENTITY_TYPES = entityTypes;
