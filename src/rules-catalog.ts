@@ -178,6 +178,7 @@ const templateParameters = [
   property("item_focus_type", "Focus Type", "Тип фокусировки", "components_casting", "select", { optionGroup:"focus_type", allowedEntityTypes:["item"] }),
   property("item_material_consumed", "Consumed by Spell", "Расходуется заклинанием", "components_casting", "boolean", { allowedEntityTypes:["item"] }),
   property("item_material_minimum_cost", "Required Component Cost", "Требуемая стоимость компонента", "components_casting", "group", { allowedEntityTypes:["item"] }),
+  property("item_used_by_spells", "Used by Spells", "Используется заклинаниями", "components_casting", "entities", { allowedEntityTypes:["spell"], multiple:true }),
   property("item_vehicle_type", "Mount or Vehicle Type", "Тип ездового животного или транспорта", "mounts_vehicles", "select", { optionGroup:"vehicle_type", allowedEntityTypes:["item"] }),
   property("item_capacity", "Creature or Cargo Capacity", "Вместимость существ или груза", "mounts_vehicles", "group", { allowedEntityTypes:["item"] }),
   property("item_speed", "Item Speed", "Скорость предмета", "movement_position", "list", { allowedEntityTypes:["item"] }),
@@ -188,6 +189,7 @@ const templateParameters = [
   property("spell_range", "Range", "Дальность", "targets_areas", "group", { allowedEntityTypes:["spell"] }),
   property("spell_components", "Components", "Компоненты", "components_casting", "references", { optionGroup:"spell_component", allowedEntityTypes:["spell"] }),
   property("spell_material_items", "Material Items", "Материальные предметы", "components_casting", "entities", { allowedEntityTypes:["item"] }),
+  property("spell_material_requirements", "Material Requirements", "Требования к материалам", "components_casting", "list", { allowedEntityTypes:["spell"], multiple:true }),
   property("spell_duration", "Spell Duration", "Длительность заклинания", "duration", "group", { allowedEntityTypes:["spell"] }),
   property("spell_concentration", "Concentration", "Концентрация", "magic_spells", "boolean", { allowedEntityTypes:["spell"] }),
   property("spell_ritual", "Ritual", "Ритуал", "magic_spells", "boolean", { allowedEntityTypes:["spell"] }),
@@ -195,10 +197,14 @@ const templateParameters = [
   property("spell_save", "Saving Throw", "Спасбросок", "saving_throws", "group", { allowedEntityTypes:["spell"] }),
   property("spell_damage", "Damage", "Урон", "damage_defense", "list", { allowedEntityTypes:["spell"] }),
   property("spell_periodic_damage", "Periodic Damage", "Периодический урон", "damage_defense", "list", { allowedEntityTypes:["spell"] }),
-  property("spell_healing", "Healing", "Исцеление", "hit_points_healing", "dice", { allowedEntityTypes:["spell"] }),
+  property("spell_healing", "Healing", "Исцеление", "hit_points_healing", "list", { allowedEntityTypes:["spell"], multiple:true }),
   property("spell_conditions", "Applied Conditions", "Накладываемые состояния", "conditions", "references", { optionGroup:"condition", allowedEntityTypes:["spell"] }),
   property("spell_scaling", "Higher-Level Scaling", "Усиление на высоких уровнях", "magic_spells", "table", { allowedEntityTypes:["spell"] }),
   property("spell_classes", "Spell Lists", "Списки классов", "magic_spells", "entities", { allowedEntityTypes:["class"] }),
+  property("spell_categories", "Spell Categories", "Категории заклинания", "magic_spells", "references", { optionGroup:"spell_category", allowedEntityTypes:["spell"], multiple:true }),
+  property("spell_areas", "Spell Areas", "Области заклинания", "targets_areas", "list", { allowedEntityTypes:["spell"], multiple:true }),
+  property("spell_source_profiles", "Workbook Profiles", "Профили таблицы", "magic_spells", "list", { allowedEntityTypes:["spell"], multiple:true }),
+  property("spell_higher_level", "Has Higher-Level Scaling", "Есть усиление на высоких уровнях", "magic_spells", "boolean", { allowedEntityTypes:["spell"] }),
 ];
 
 const advancement = property("character_advancement", "Character Advancement", "Развитие персонажа", "level_progression", "table", { table: table(
@@ -254,6 +260,7 @@ const valueGroups: Array<[string,string,string,string,string?]> = [
   ...[["aberration","Aberration","Аберрация"],["beast","Beast","Зверь"],["celestial","Celestial","Небожитель"],["construct","Construct","Конструкт"],["dragon","Dragon","Дракон"],["elemental","Elemental","Элементаль"],["fey","Fey","Фея"],["fiend","Fiend","Исчадие"],["giant","Giant","Великан"],["humanoid","Humanoid","Гуманоид"],["monstrosity","Monstrosity","Монстр"],["ooze","Ooze","Слизь"],["plant","Plant","Растение"],["undead","Undead","Нежить"]].map(([k,e,r])=>["creature_type",k,e,r,"creature_body"] as [string,string,string,string,string]),
   ...[["abjuration","Abjuration","Ограждение"],["conjuration","Conjuration","Вызов"],["divination","Divination","Прорицание"],["enchantment","Enchantment","Очарование"],["evocation","Evocation","Воплощение"],["illusion","Illusion","Иллюзия"],["necromancy","Necromancy","Некромантия"],["transmutation","Transmutation","Преобразование"]].map(([k,e,r])=>["spell_school",k,e,r,"magic_spells"] as [string,string,string,string,string]),
   ...[["verbal","Verbal","Вербальный"],["somatic","Somatic","Соматический"],["material","Material","Материальный"]].map(([k,e,r])=>["spell_component",k,e,r,"components_casting"] as [string,string,string,string,string]),
+  ...[["damage","Damage","Урон"],["healing","Healing","Исцеление"],["neutral","Neutral","Нейтральное"]].map(([k,e,r])=>["spell_category",k,e,r,"magic_spells"] as [string,string,string,string,string]),
 ];
 
 const skillRows = [["acrobatics","Acrobatics","Акробатика"],["animal_handling","Animal Handling","Уход за животными"],["arcana","Arcana","Магия"],["athletics","Athletics","Атлетика"],["deception","Deception","Обман"],["history","History","История"],["insight","Insight","Проницательность"],["intimidation","Intimidation","Запугивание"],["investigation","Investigation","Анализ"],["medicine","Medicine","Медицина"],["nature","Nature","Природа"],["perception","Perception","Восприятие"],["performance","Performance","Выступление"],["persuasion","Persuasion","Убеждение"],["religion","Religion","Религия"],["sleight_of_hand","Sleight of Hand","Ловкость рук"],["stealth","Stealth","Скрытность"],["survival","Survival","Выживание"]].map(([k,e,r])=>option("skill",k,e,r,"skills_checks"));
@@ -277,7 +284,7 @@ const itemCore: Array<string | TemplateFieldSpec> = [
   "Description", "Image", "Cost", "Weight", "Quantity", "Stack Size", "Base Item", "Magical", "Rarity", "Magic Bonus",
   "Requires Attunement", "Attunement Prerequisites", "Cursed", "Charges", "Resources", "Prerequisites", "Granted Features", "Influences", "Choices", "Effects",
 ];
-const spellCore = ["Description", "Image", "Spell Level", "School", "Casting Time", "Range", "Components", "Material Items", "Spell Duration", "Concentration", "Ritual", "Spell Lists", "Prerequisites", "Choices", "Effects"];
+const spellCore = ["Description", "Image", "Spell Level", "School", "Spell Categories", "Casting Time", "Range", "Components", "Material Items", "Material Requirements", "Spell Duration", "Concentration", "Ritual", "Spell Lists", "Spell Areas", "Workbook Profiles", "Has Higher-Level Scaling", "Prerequisites", "Choices", "Effects"];
 
 const templateSpecs: TemplateSpec[] = [
   { key:"class", type:"class", category:"template_classes", en:"Class", ru:"Класс", fields:["Description","Image","Primary Abilities","Hit Die","Saving Throw Proficiencies","Skill Choices","Weapon Proficiencies","Armor Training","Tool Proficiencies","Starting Equipment","Class Progression","Subclass Level","Spellcasting Ability","Spell Progression","Granted Features","Choices","Influences"] },
@@ -307,7 +314,7 @@ const templateSpecs: TemplateSpec[] = [
   { key:"container", type:"item", category:"template_item_containers", en:"Container", ru:"Контейнер", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.container"},"Container Capacity","Contents"] },
   { key:"adventuring_gear", type:"item", category:"template_item_gear", en:"Adventuring Gear", ru:"Снаряжение", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.adventuring_gear"},"Contents"] },
   { key:"spellcasting_focus", type:"item", category:"template_item_focuses", en:"Spellcasting Focus", ru:"Магическая фокусировка", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.spellcasting_focus"},"Focus Type"] },
-  { key:"material_component", type:"item", category:"template_item_materials", en:"Material Component", ru:"Материальный компонент", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.material_component"},"Spell Material Component","Consumed by Spell","Required Component Cost"] },
+  { key:"material_component", type:"item", category:"template_item_materials", en:"Material Component", ru:"Материальный компонент", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.material_component"},"Spell Material Component","Consumed by Spell","Required Component Cost","Used by Spells"] },
   { key:"mount_vehicle", type:"item", category:"template_item_vehicles", en:"Mount or Vehicle", ru:"Ездовое животное или транспорт", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.mount_vehicle"},"Mount or Vehicle Type","Creature or Cargo Capacity","Item Speed"] },
   { key:"treasure", type:"item", category:"template_item_treasure", en:"Treasure", ru:"Сокровище", fields:[...itemCore,{name:"Item Type",defaultValue:"wsg.ref.value.item_type.treasure"},"Treasure Type"] },
   { key:"spell_attack", type:"spell", category:"template_spells", en:"Attack Spell", ru:"Атакующее заклинание", fields:[...spellCore,"Spell Attack","Damage","Applied Conditions","Higher-Level Scaling","Influences"] },
