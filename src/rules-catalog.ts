@@ -2122,6 +2122,14 @@ const templateParameters = [
     { allowedEntityTypes: ["item"] },
   ),
   property(
+    "item_versatile_damage",
+    "Versatile Damage",
+    "Урон универсального оружия",
+    "damage_defense",
+    "damage",
+    { allowedEntityTypes: ["item"] },
+  ),
+  property(
     "item_weapon_properties",
     "Weapon Properties",
     "Свойства оружия",
@@ -2286,6 +2294,46 @@ const templateParameters = [
     "proficiencies",
     "select",
     { optionGroup: "tool_type", allowedEntityTypes: ["item"] },
+  ),
+  property(
+    "item_tool_ability",
+    "Tool Ability",
+    "Характеристика инструмента",
+    "proficiencies",
+    "select",
+    { optionGroup: "ability", allowedEntityTypes: ["item"] },
+  ),
+  property(
+    "item_poison_type",
+    "Poison Type",
+    "Вид яда",
+    "damage_defense",
+    "select",
+    { optionGroup: "poison_type", allowedEntityTypes: ["item"] },
+  ),
+  property(
+    "item_substance_type",
+    "Substance Type",
+    "Тип вещества",
+    "items_inventory",
+    "select",
+    { optionGroup: "substance_type", allowedEntityTypes: ["item"] },
+  ),
+  property(
+    "item_ammunition_container",
+    "Ammunition Container",
+    "Контейнер боеприпасов",
+    "items_inventory",
+    "localized_short",
+    { allowedEntityTypes: ["item"] },
+  ),
+  property(
+    "item_original_pack_quantity",
+    "Original Pack Quantity",
+    "Количество в исходной упаковке",
+    "items_inventory",
+    "integer",
+    { allowedEntityTypes: ["item"] },
   ),
   property(
     "item_container_capacity",
@@ -2991,10 +3039,15 @@ const valueGroups: Array<[string, string, string, string, string?]> = [
     ["cloak", "Cloak", "Плащ"],
     ["headwear", "Helmet or Hat", "Шлем или шляпа"],
     ["ring", "Ring", "Кольцо"],
+    ["amulet", "Amulet", "Амулет"],
     ["ammunition", "Ammunition", "Боеприпасы"],
     ["tool", "Tool", "Инструмент"],
     ["adventuring_gear", "Adventuring Gear", "Снаряжение"],
     ["consumable", "Consumable", "Расходуемый предмет"],
+    ["potion", "Potion", "Зелье"],
+    ["poison", "Poison", "Яд"],
+    ["substance", "Substance", "Вещество"],
+    ["equipment_kit", "Equipment Kit", "Комплект снаряжения"],
     ["container", "Container", "Контейнер"],
     ["spellcasting_focus", "Spellcasting Focus", "Фокусировка"],
     ["mount_vehicle", "Mount or Vehicle", "Ездовое животное или транспорт"],
@@ -3060,6 +3113,35 @@ const valueGroups: Array<[string, string, string, string, string?]> = [
   ].map(
     ([k, e, r]) =>
       ["tool_type", k, e, r, "proficiencies"] as [
+        string,
+        string,
+        string,
+        string,
+        string,
+      ],
+  ),
+  ...[
+    ["ingested", "Ingested", "Поглощаемый"],
+    ["inhaled", "Inhaled", "Вдыхаемый"],
+    ["contact", "Contact", "Контактный"],
+    ["injury", "Injury", "Оружейный"],
+    ["ingested_or_injury", "Ingested or Injury", "Поглощаемый или оружейный"],
+  ].map(
+    ([k, e, r]) =>
+      ["poison_type", k, e, r, "damage_defense"] as [
+        string,
+        string,
+        string,
+        string,
+        string,
+      ],
+  ),
+  ...[
+    ["substance", "Substance", "Вещество"],
+    ["drug", "Drug", "Наркотик"],
+  ].map(
+    ([k, e, r]) =>
+      ["substance_type", k, e, r, "items_inventory"] as [
         string,
         string,
         string,
@@ -4053,6 +4135,7 @@ const templateSpecs: TemplateSpec[] = [
       "Equipment Slot",
       "Weapon Category",
       "Weapon Damage",
+      "Versatile Damage",
       "Weapon Properties",
       "Mastery Property",
       "Range and Reach",
@@ -4069,6 +4152,8 @@ const templateSpecs: TemplateSpec[] = [
       { name: "Item Type", defaultValue: "wsg.ref.value.item_type.ammunition" },
       "Weapon Properties",
       "Range and Reach",
+      "Ammunition Container",
+      "Original Pack Quantity",
     ],
   },
   {
@@ -4198,6 +4283,21 @@ const templateSpecs: TemplateSpec[] = [
     ],
   },
   {
+    key: "amulet",
+    type: "item",
+    category: "template_item_treasure",
+    en: "Amulet",
+    ru: "Амулет",
+    fields: [
+      ...itemCore,
+      { name: "Item Type", defaultValue: "wsg.ref.value.item_type.amulet" },
+      {
+        name: "Equipment Slot",
+        defaultValue: "wsg.ref.value.equipment_slot.neck",
+      },
+    ],
+  },
+  {
     key: "tool",
     type: "item",
     category: "template_item_tools",
@@ -4207,6 +4307,60 @@ const templateSpecs: TemplateSpec[] = [
       ...itemCore,
       { name: "Item Type", defaultValue: "wsg.ref.value.item_type.tool" },
       "Tool Type",
+      "Tool Ability",
+    ],
+  },
+  {
+    key: "potion",
+    type: "item",
+    category: "template_item_consumables",
+    en: "Potion",
+    ru: "Зелье",
+    fields: [
+      ...itemCore,
+      { name: "Item Type", defaultValue: "wsg.ref.value.item_type.potion" },
+      { name: "Consumable", defaultValue: true },
+    ],
+  },
+  {
+    key: "poison",
+    type: "item",
+    category: "template_item_consumables",
+    en: "Poison",
+    ru: "Яд",
+    fields: [
+      ...itemCore,
+      { name: "Item Type", defaultValue: "wsg.ref.value.item_type.poison" },
+      { name: "Consumable", defaultValue: true },
+      "Poison Type",
+    ],
+  },
+  {
+    key: "substance",
+    type: "item",
+    category: "template_item_consumables",
+    en: "Substance",
+    ru: "Вещество",
+    fields: [
+      ...itemCore,
+      { name: "Item Type", defaultValue: "wsg.ref.value.item_type.substance" },
+      { name: "Consumable", defaultValue: true },
+      "Substance Type",
+    ],
+  },
+  {
+    key: "equipment_kit",
+    type: "item",
+    category: "template_item_gear",
+    en: "Equipment Kit",
+    ru: "Комплект снаряжения",
+    fields: [
+      ...itemCore,
+      {
+        name: "Item Type",
+        defaultValue: "wsg.ref.value.item_type.equipment_kit",
+      },
+      "Contents",
     ],
   },
   {

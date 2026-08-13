@@ -1,4 +1,5 @@
 import { buildCoreRulesCatalog } from "./rules-catalog";
+import { PH24_EQUIPMENT } from "./equipment-catalog";
 import {
   DEFAULT_RULE_ENGINE,
   type RuleEngineDefinition,
@@ -232,7 +233,7 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 11;
+  catalogVersion: 12;
   namespace: string;
   version: string;
   defaultLocale: "en";
@@ -1251,7 +1252,7 @@ export function createCleanProject(): ForgeProject {
   const project: ForgeProject = {
     format: "wsg-forge-project",
     schemaVersion: 3,
-    catalogVersion: 11,
+    catalogVersion: 12,
     namespace,
     version: "1.0.0",
     defaultLocale: "en",
@@ -1289,7 +1290,7 @@ export function createCleanProject(): ForgeProject {
     atomics: catalog.atomics,
     references: catalog.references,
     templates: catalog.templates,
-    entities: [],
+    entities: structuredClone(PH24_EQUIPMENT),
     dependencies: [],
     createdAt: now,
     updatedAt: now,
@@ -1298,8 +1299,8 @@ export function createCleanProject(): ForgeProject {
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 11 && project.ruleEngine) return project;
-  // Schema 11 deliberately starts from the new no-code rules model. Older
+  if (project.catalogVersion === 12 && project.ruleEngine) return project;
+  // Schema 12 starts from the no-code rules model and the PH24 item catalog. Older
   // projects contained executable strings and incompatible field structures,
   // so silently carrying them over would produce incorrect game math.
   return createCleanProject();
@@ -1328,7 +1329,7 @@ export function recalculateProjectIds(project: ForgeProject): ForgeProject {
     if (item.id !== id)
       item.previousIds = [...new Set([...item.previousIds, item.id])];
     item.id = id;
-    item.key = slugify(item.name.en);
+    item.key = slugify(item.name.en) || item.key;
   }
   for (const item of next.references.filter((entry) => !entry.locked)) {
     const owner = item.packId === "wsg" ? "wsg" : next.namespace;
@@ -1358,12 +1359,15 @@ export function recalculateProjectIds(project: ForgeProject): ForgeProject {
   }
   for (const item of next.entities) {
     const owner = item.packId === "srd52" ? "srd52" : next.namespace;
-    const id = `${owner}.${item.type}.${slugify(item.name.en) || item.key}`;
+    const generatedKey = /[А-Яа-яЁё]/.test(item.name.en)
+      ? item.key
+      : slugify(item.name.en) || item.key;
+    const id = `${owner}.${item.type}.${generatedKey}`;
     mapping.set(item.id, id);
     if (item.id !== id)
       item.previousIds = [...new Set([...item.previousIds, item.id])];
     item.id = id;
-    item.key = slugify(item.name.en);
+    item.key = generatedKey;
   }
   for (const atomic of next.atomics) {
     atomic.dependencyIds = atomic.dependencyIds?.map(

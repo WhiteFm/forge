@@ -17,14 +17,14 @@ async function withModel(run) {
   }
 }
 
-test("starts with schema 11, a locked D&D rules engine, templates, and no concrete content", async () => {
+test("starts with schema 12, a locked D&D rules engine, templates, and the PH24 item catalog", async () => {
   await withModel(async (model) => {
     const project = model.createCleanProject();
-    assert.equal(project.catalogVersion, 11);
+    assert.equal(project.catalogVersion, 12);
     assert.equal(project.ruleEngine.roundSeconds, 6);
     assert.equal(project.ruleEngine.gridUnitFeet, 2.5);
-    assert.equal(project.entities.length, 0);
-    assert.equal(project.templates.length, 36);
+    assert.equal(project.entities.length, 352);
+    assert.equal(project.templates.length, 41);
     assert.equal(project.atomics.length, 54);
     assert.ok(project.references.length >= 370);
     assert.ok(project.atomics.every((entry) => entry.locked));
@@ -67,7 +67,7 @@ test("starts with schema 11, a locked D&D rules engine, templates, and no concre
         background: 1,
         feat: 4,
         feature: 3,
-        item: 18,
+        item: 23,
         spell: 6,
       },
     );
@@ -116,6 +116,50 @@ test("all templates use guided no-code fields and include automation", async () 
     );
     assert.ok(
       !project.references.some((entry) => entry.key === "influences"),
+    );
+  });
+});
+
+test("imports every unique PH24 item with structured equipment data", async () => {
+  await withModel(async (model) => {
+    const project = model.createCleanProject();
+    assert.equal(new Set(project.entities.map((item) => item.id)).size, 352);
+    assert.ok(project.entities.every((item) => item.type === "item"));
+    assert.ok(
+      project.entities.every((item) =>
+        project.templates.some((template) => template.id === item.templateId),
+      ),
+    );
+
+    const dagger = project.entities.find((item) => item.id === "mygame.item.dagger");
+    assert.equal(dagger.templateId, "mygame.temp.weapon");
+    assert.equal(
+      dagger.values["wsg.ref.parameter.item_damage"][0].damageTypeId,
+      "wsg.ref.value.damage_type.piercing",
+    );
+    assert.equal(
+      dagger.values["wsg.ref.parameter.item_damage"][0].dice.dieId,
+      "wsg.atomic.d4",
+    );
+
+    const arrows = project.entities.find((item) => item.id === "mygame.item.arrows");
+    assert.deepEqual(arrows.values["wsg.ref.parameter.item_cost"], {
+      amount: 5,
+      currency: "wsg.ref.value.currency.cp",
+    });
+    assert.equal(arrows.values["wsg.ref.parameter.item_weight"], 0.05);
+    assert.equal(arrows.values["wsg.ref.parameter.item_quantity"], 1);
+    assert.equal(arrows.values["wsg.ref.parameter.item_original_pack_quantity"], 20);
+
+    const plate = project.entities.find(
+      (item) => item.id === "mygame.item.plate_armor",
+    );
+    assert.equal(plate.values["wsg.ref.parameter.item_base_ac"], 18);
+    assert.equal(plate.values["wsg.ref.parameter.item_strength_requirement"], 15);
+    assert.equal(plate.values["wsg.ref.parameter.item_stealth_disadvantage"], true);
+    assert.deepEqual(
+      model.validateProject(project).filter((issue) => issue.severity === "error"),
+      [],
     );
   });
 });
@@ -218,8 +262,8 @@ test("upgrading an old executable-string project starts a clean safe project", a
       },
     ];
     const upgraded = model.upgradeProjectCatalog(oldProject);
-    assert.equal(upgraded.catalogVersion, 11);
-    assert.equal(upgraded.entities.length, 0);
+    assert.equal(upgraded.catalogVersion, 12);
+    assert.equal(upgraded.entities.length, 352);
     assert.equal(upgraded.ruleEngine.roundSeconds, 6);
   });
 });
@@ -280,7 +324,7 @@ test("supports English, Russian and Swedish with English as default", async () =
   assert.match(app, /\["en", "ru", "sv"\]/);
 });
 
-test("exports rule engine separately from an empty content pack", async () => {
+test("exports rule engine separately from the content pack", async () => {
   const codec = await readFile(
     new URL("../src/codec.ts", import.meta.url),
     "utf8",
