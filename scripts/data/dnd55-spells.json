@@ -1900,7 +1900,7 @@
         "material": true,
         "materialText": "specially marked sticks, bones, cards, or other divinatory tokens worth 25+ GP",
         "materialCostCp": 2500,
-        "materialConsumed": true,
+        "materialConsumed": false,
         "raw": "V, S, M (specially marked sticks, bones, cards, or other divinatory tokens worth 25+ GP)"
       },
       "materialGroups": [
@@ -1910,7 +1910,7 @@
           "sourceText": "specially marked sticks, bones, cards, or other divinatory tokens worth 25+ GP",
           "minimumTotalCostCp": 2500,
           "sourceCurrency": "GP",
-          "consumed": true,
+          "consumed": false,
           "selectionMode": "any",
           "perTarget": false,
           "entries": [
@@ -1918,25 +1918,25 @@
               "itemId": "srd52.item.specially_marked_sticks",
               "quantity": 1,
               "minimumCostCp": 2500,
-              "consumed": true
+              "consumed": false
             },
             {
               "itemId": "srd52.item.bones",
               "quantity": 1,
               "minimumCostCp": 2500,
-              "consumed": true
+              "consumed": false
             },
             {
               "itemId": "srd52.item.cards",
               "quantity": 1,
               "minimumCostCp": 2500,
-              "consumed": true
+              "consumed": false
             },
             {
               "itemId": "srd52.item.other_divinatory_tokens",
               "quantity": 1,
               "minimumCostCp": 2500,
-              "consumed": true
+              "consumed": false
             }
           ]
         }
@@ -6529,10 +6529,10 @@
           "sourceCurrency": "GP",
           "consumed": false,
           "selectionMode": "all",
-          "perTarget": false,
+          "perTarget": true,
           "entries": [
             {
-              "itemId": "srd52.item.black_onyx_stone_for_each_corpse",
+              "itemId": "srd52.item.black_onyx_stone",
               "quantity": 1,
               "minimumCostCp": 15000,
               "consumed": false
@@ -9227,7 +9227,7 @@
         "material": true,
         "materialText": "a fractured rock",
         "materialCostCp": 0,
-        "materialConsumed": true,
+        "materialConsumed": false,
         "raw": "V, S, M (a fractured rock)"
       },
       "materialGroups": [
@@ -9237,7 +9237,7 @@
           "sourceText": "a fractured rock",
           "minimumTotalCostCp": 0,
           "sourceCurrency": "None",
-          "consumed": true,
+          "consumed": false,
           "selectionMode": "all",
           "perTarget": false,
           "entries": [
@@ -9245,7 +9245,7 @@
               "itemId": "srd52.item.fractured_rock",
               "quantity": 1,
               "minimumCostCp": 0,
-              "consumed": true
+              "consumed": false
             }
           ]
         }
@@ -12318,7 +12318,7 @@
         "material": true,
         "materialText": "ruby dust worth 1,000+ GP",
         "materialCostCp": 100000,
-        "materialConsumed": true,
+        "materialConsumed": false,
         "raw": "V, S, M (ruby dust worth 1,000+ GP)"
       },
       "materialGroups": [
@@ -12328,7 +12328,7 @@
           "sourceText": "ruby dust worth 1,000+ GP",
           "minimumTotalCostCp": 100000,
           "sourceCurrency": "GP",
-          "consumed": true,
+          "consumed": false,
           "selectionMode": "all",
           "perTarget": false,
           "entries": [
@@ -12336,7 +12336,7 @@
               "itemId": "srd52.item.ruby_dust",
               "quantity": 1,
               "minimumCostCp": 100000,
-              "consumed": true
+              "consumed": false
             }
           ]
         }
@@ -12920,7 +12920,7 @@
         "material": true,
         "materialText": "a diamond worth 5,000+ GP",
         "materialCostCp": 500000,
-        "materialConsumed": true,
+        "materialConsumed": false,
         "raw": "V, S, M (a diamond worth 5,000+ GP)"
       },
       "materialGroups": [
@@ -12930,7 +12930,7 @@
           "sourceText": "a diamond worth 5,000+ GP",
           "minimumTotalCostCp": 500000,
           "sourceCurrency": "GP",
-          "consumed": true,
+          "consumed": false,
           "selectionMode": "all",
           "perTarget": false,
           "entries": [
@@ -12938,7 +12938,7 @@
               "itemId": "srd52.item.diamond",
               "quantity": 1,
               "minimumCostCp": 500000,
-              "consumed": true
+              "consumed": false
             }
           ]
         }
@@ -16367,7 +16367,7 @@
         "material": true,
         "materialText": "a statuette of the target worth 5,000+ GP",
         "materialCostCp": 500000,
-        "materialConsumed": true,
+        "materialConsumed": false,
         "raw": "V, S, M (a statuette of the target worth 5,000+ GP)"
       },
       "materialGroups": [
@@ -16377,7 +16377,7 @@
           "sourceText": "a statuette of the target worth 5,000+ GP",
           "minimumTotalCostCp": 500000,
           "sourceCurrency": "GP",
-          "consumed": true,
+          "consumed": false,
           "selectionMode": "all",
           "perTarget": false,
           "entries": [
@@ -16385,7 +16385,7 @@
               "itemId": "srd52.item.statuette_of_the_target",
               "quantity": 1,
               "minimumCostCp": 500000,
-              "consumed": true
+              "consumed": false
             }
           ]
         }
@@ -21382,7 +21382,7 @@
         "material": true,
         "materialText": "a forked, metal rod worth 250+ GP and attuned to a plane of existence",
         "materialCostCp": 25000,
-        "materialConsumed": true,
+        "materialConsumed": false,
         "raw": "V, S, M (a forked, metal rod worth 250+ GP and attuned to a plane of existence)"
       },
       "materialGroups": [
@@ -21392,7 +21392,7 @@
           "sourceText": "a forked, metal rod worth 250+ GP and attuned to a plane of existence",
           "minimumTotalCostCp": 25000,
           "sourceCurrency": "GP",
-          "consumed": true,
+          "consumed": false,
           "selectionMode": "all",
           "perTarget": false,
           "entries": [
@@ -21400,7 +21400,7 @@
               "itemId": "srd52.item.forked_metal_rod",
               "quantity": 1,
               "minimumCostCp": 25000,
-              "consumed": true
+              "consumed": false
             }
           ]
         }
@@ -22576,7 +22576,7 @@
         "material": true,
         "materialText": "jade dust worth 25+ GP",
         "materialCostCp": 2500,
-        "materialConsumed": true,
+        "materialConsumed": false,
         "raw": "V, S, M (jade dust worth 25+ GP)"
       },
       "materialGroups": [
@@ -22586,7 +22586,7 @@
           "sourceText": "jade dust worth 25+ GP",
           "minimumTotalCostCp": 2500,
           "sourceCurrency": "GP",
-          "consumed": true,
+          "consumed": false,
           "selectionMode": "all",
           "perTarget": false,
           "entries": [
@@ -22594,7 +22594,7 @@
               "itemId": "srd52.item.jade_dust",
               "quantity": 1,
               "minimumCostCp": 2500,
-              "consumed": true
+              "consumed": false
             }
           ]
         }
@@ -22673,7 +22673,7 @@
         "material": true,
         "materialText": "a statuette of yourself worth 5+ GP",
         "materialCostCp": 500,
-        "materialConsumed": true,
+        "materialConsumed": false,
         "raw": "V, S, M (a statuette of yourself worth 5+ GP)"
       },
       "materialGroups": [
@@ -22683,7 +22683,7 @@
           "sourceText": "a statuette of yourself worth 5+ GP",
           "minimumTotalCostCp": 500,
           "sourceCurrency": "GP",
-          "consumed": true,
+          "consumed": false,
           "selectionMode": "all",
           "perTarget": false,
           "entries": [
@@ -22691,7 +22691,7 @@
               "itemId": "srd52.item.statuette_of_yourself",
               "quantity": 1,
               "minimumCostCp": 500,
-              "consumed": true
+              "consumed": false
             }
           ]
         }
@@ -24430,7 +24430,7 @@
         "material": true,
         "materialText": "a focus worth 1,000+ GP, such as a crystal ball, mirror, or water-filled font",
         "materialCostCp": 100000,
-        "materialConsumed": true,
+        "materialConsumed": false,
         "raw": "V, S, M (a focus worth 1,000+ GP, such as a crystal ball, mirror, or water-filled font)"
       },
       "materialGroups": [
@@ -24440,7 +24440,7 @@
           "sourceText": "a focus worth 1,000+ GP, such as a crystal ball, mirror, or water-filled font",
           "minimumTotalCostCp": 100000,
           "sourceCurrency": "GP",
-          "consumed": true,
+          "consumed": false,
           "selectionMode": "all",
           "perTarget": false,
           "entries": [
@@ -24448,7 +24448,7 @@
               "itemId": "srd52.item.focus",
               "quantity": 1,
               "minimumCostCp": 100000,
-              "consumed": true
+              "consumed": false
             }
           ]
         }
@@ -24610,7 +24610,7 @@
         "material": true,
         "materialText": "a chest, 3 feet by 2 feet by 2 feet, constructed from rare materials worth 5,000+ GP, and a Tiny replica of the chest made from the same materials worth 50+ GP",
         "materialCostCp": 500000,
-        "materialConsumed": true,
+        "materialConsumed": false,
         "raw": "V, S, M (a chest, 3 feet by 2 feet by 2 feet, constructed from rare materials worth 5,000+ GP, and a Tiny replica of the chest made from the same materi - als worth 50+ GP)"
       },
       "materialGroups": [
@@ -24620,7 +24620,7 @@
           "sourceText": "a chest, 3 feet by 2 feet by 2 feet, constructed from rare materials worth 5,000+ GP, and a Tiny replica of the chest made from the same materials worth 50+ GP",
           "minimumTotalCostCp": 505000,
           "sourceCurrency": "GP",
-          "consumed": true,
+          "consumed": false,
           "selectionMode": "all",
           "perTarget": false,
           "entries": [
@@ -24628,13 +24628,13 @@
               "itemId": "srd52.item.chest_3_feet_by_2_feet_by_2_feet_constructed_from_rare_materials",
               "quantity": 1,
               "minimumCostCp": 500000,
-              "consumed": true
+              "consumed": false
             },
             {
               "itemId": "srd52.item.tiny_replica_of_the_chest_made_from_the_same_materials",
               "quantity": 1,
               "minimumCostCp": 5000,
-              "consumed": true
+              "consumed": false
             }
           ]
         }
@@ -25084,7 +25084,7 @@
         "material": true,
         "materialText": "a jade circlet worth 1,500+ GP",
         "materialCostCp": 150000,
-        "materialConsumed": true,
+        "materialConsumed": false,
         "raw": "V, S, M (a jade circlet worth 1,500+ GP)"
       },
       "materialGroups": [
@@ -25094,7 +25094,7 @@
           "sourceText": "a jade circlet worth 1,500+ GP",
           "minimumTotalCostCp": 150000,
           "sourceCurrency": "GP",
-          "consumed": true,
+          "consumed": false,
           "selectionMode": "all",
           "perTarget": false,
           "entries": [
@@ -25102,7 +25102,7 @@
               "itemId": "srd52.item.jade_circlet",
               "quantity": 1,
               "minimumCostCp": 150000,
-              "consumed": true
+              "consumed": false
             }
           ]
         }
@@ -31657,8 +31657,8 @@
       "knownCostsCp": []
     },
     {
-      "id": "srd52.item.black_onyx_stone_for_each_corpse",
-      "name": "black onyx stone for each corpse",
+      "id": "srd52.item.black_onyx_stone",
+      "name": "black onyx stone",
       "usedBy": [
         "srd52.spell.create_undead"
       ],
@@ -31674,7 +31674,7 @@
       "usedBy": [
         "srd52.spell.augury"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 2500,
       "knownCostsCp": [
         2500
@@ -31720,7 +31720,7 @@
       "usedBy": [
         "srd52.spell.augury"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 2500,
       "knownCostsCp": [
         2500
@@ -31742,7 +31742,7 @@
       "usedBy": [
         "srd52.spell.secret_chest"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 500000,
       "knownCostsCp": [
         500000
@@ -32072,7 +32072,7 @@
         "srd52.spell.clairvoyance",
         "srd52.spell.scrying"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 10000,
       "knownCostsCp": [
         10000,
@@ -32095,7 +32095,7 @@
       "usedBy": [
         "srd52.spell.plane_shift"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 25000,
       "knownCostsCp": [
         25000
@@ -32107,7 +32107,7 @@
       "usedBy": [
         "srd52.spell.earthquake"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 0,
       "knownCostsCp": []
     },
@@ -32394,7 +32394,7 @@
       "usedBy": [
         "srd52.spell.shapechange"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 150000,
       "knownCostsCp": [
         150000
@@ -32682,7 +32682,7 @@
       "usedBy": [
         "srd52.spell.augury"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 2500,
       "knownCostsCp": [
         2500
@@ -33327,7 +33327,7 @@
       "usedBy": [
         "srd52.spell.augury"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 2500,
       "knownCostsCp": [
         2500
@@ -33359,7 +33359,7 @@
       "usedBy": [
         "srd52.spell.imprisonment"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 500000,
       "knownCostsCp": [
         500000
@@ -33371,7 +33371,7 @@
       "usedBy": [
         "srd52.spell.project_image"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 500,
       "knownCostsCp": [
         500
@@ -33465,7 +33465,7 @@
       "usedBy": [
         "srd52.spell.secret_chest"
       ],
-      "consumed": true,
+      "consumed": false,
       "costCp": 5000,
       "knownCostsCp": [
         5000

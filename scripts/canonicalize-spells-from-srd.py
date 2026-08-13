@@ -80,7 +80,7 @@ def parse_materials(value: str) -> tuple[list[dict[str, object]], str, bool]:
     if not raw or raw.lower() == "none":
         return [], "all", False
     raw = re.sub(r"(?<=\d),(?=\d)", "", raw)
-    per_target = bool(re.match(r"for each of the spell[’']s targets,?\s*", raw, re.I))
+    per_target = bool(re.match(r"for each of the spell[’']s targets,?\s*", raw, re.I) or re.search(r"\s+for each (?:corpse|target)\s*$", raw, re.I))
     raw = re.sub(r"^for each of the spell[’']s targets,?\s*", "", raw, flags=re.I)
     raw = re.sub(r",?\s*(?:all of )?which the spell consumes\b", "", raw, flags=re.I)
     raw = re.sub(r",?\s*which you and the target must wear for the duration\b", "", raw, flags=re.I)
@@ -123,6 +123,7 @@ def parse_materials(value: str) -> tuple[list[dict[str, object]], str, bool]:
         part = re.sub(r"\s+worth(?: at least)?\s+[\d]+\+?\s*(?:CP|SP|EP|GP|PP)(?:\s+each)?\b.*$", "", part, flags=re.I)
         part = re.sub(r"\s+valued at\s+[\d]+\+?\s*(?:CP|SP|EP|GP|PP)\b.*$", "", part, flags=re.I)
         part = re.sub(r"\s+and that is\s*$", "", part, flags=re.I)
+        part = re.sub(r"\s+for each (?:corpse|target)\s*$", "", part, flags=re.I)
         part = clean_inline(part.strip(" ,—-"))
         if not part or part.lower() in {"none", "or", "all of"}:
             continue
@@ -358,7 +359,7 @@ def main() -> None:
         if currency not in CURRENCY_TO_CP:
             currency = "None"
         minimum_total_cost_cp = as_number(primary.get("Minimal Cost")) * CURRENCY_TO_CP[currency]
-        consumed = as_bool(primary.get("Consumed")) or bool(re.search(r"spell consumes", material_text, re.I))
+        consumed = bool(re.search(r"spell consumes", material_text, re.I))
         material_group = None
         if materials:
             entries = []

@@ -1,4 +1,5 @@
 import { buildCoreRulesCatalog } from "./rules-catalog";
+import { buildSrd52Content } from "./srd52-content";
 
 export type Locale = "en" | "ru" | "sv";
 export type LocalText = { en: string; ru?: string; sv?: string };
@@ -125,6 +126,7 @@ export interface ForgeEntity {
   name: LocalText;
   values: Record<string, unknown>;
   previousIds: string[];
+  packId?: string;
 }
 
 export interface Influence {
@@ -148,7 +150,7 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 7;
+  catalogVersion: 8;
   namespace: string;
   version: string;
   defaultLocale: "en";
@@ -354,7 +356,7 @@ export function createCleanProject(): ForgeProject {
   const packKey = "characters";
   const catalog = buildCoreRulesCatalog();
   const project: ForgeProject = {
-    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 7, namespace, version: "1.0.0", defaultLocale: "en",
+    format: "wsg-forge-project", schemaVersion: 3, catalogVersion: 8, namespace, version: "1.0.0", defaultLocale: "en",
     reference: { id: `${namespace}.ref.${refKey}`, key: refKey, name: { en: "Core Reference", ru: "Основной справочник", sv: "Grundreferens" }, version: "1.0.0" },
     pack: { id: `${namespace}.pack.${packKey}`, key: packKey, name: { en: "New Content Pack", ru: "Новый пак контента", sv: "Nytt innehållspaket" }, subtitle: { en: "" }, description: { en: "" }, version: "1.0.0", requiredRefs: [{ id: `${namespace}.ref.${refKey}`, minimumVersion: "1.0.0", compatibleMajor: 1 }] },
     categories: structuredClone(STANDARD_CATEGORIES),
@@ -362,13 +364,13 @@ export function createCleanProject(): ForgeProject {
     references: catalog.references,
     influences: [],
     templates: catalog.templates,
-    entities: [], dependencies: [], createdAt: now, updatedAt: now,
+    entities: buildSrd52Content(catalog.references, catalog.templates), dependencies: [], createdAt: now, updatedAt: now,
   };
   return recalculateProjectIds(project);
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 7) return project;
+  if (project.catalogVersion === 8) return project;
   const next = structuredClone(project);
   const catalog = buildCoreRulesCatalog();
   next.pack.subtitle ??= { en: "" };
@@ -380,9 +382,12 @@ export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
   next.influences = [];
   const existingTemplateKeys = new Set(next.templates.map((template) => `${template.type}:${template.name.en.toLowerCase()}`));
   next.templates = [...catalog.templates.filter((template) => !existingTemplateKeys.has(`${template.type}:${template.name.en.toLowerCase()}`)), ...next.templates.map((template) => ({ ...template, categoryId: template.categoryId ?? "wsg.category.custom" }))];
+  const officialContent = buildSrd52Content(next.references, next.templates);
+  const officialIds = new Set(officialContent.map((entity) => entity.id));
+  next.entities = [...officialContent, ...next.entities.filter((entity) => entity.packId !== "srd52" && !officialIds.has(entity.id))];
   for (const category of STANDARD_CATEGORIES) if (!next.categories.some((existing) => existing.id === category.id)) next.categories.push(category);
   next.dependencies ??= [];
-  next.catalogVersion = 7;
+  next.catalogVersion = 8;
   next.updatedAt = new Date().toISOString();
   return recalculateProjectIds(next);
 }
@@ -419,7 +424,8 @@ export function recalculateProjectIds(project: ForgeProject): ForgeProject {
     });
   }
   for (const item of next.entities) {
-    const id = `${next.namespace}.${item.type}.${slugify(item.name.en) || item.key}`;
+    const owner = item.packId === "srd52" ? "srd52" : next.namespace;
+    const id = `${owner}.${item.type}.${slugify(item.name.en) || item.key}`;
     mapping.set(item.id, id); if (item.id !== id) item.previousIds = [...new Set([...item.previousIds, item.id])]; item.id = id; item.key = slugify(item.name.en);
   }
   for (const item of next.influences) {
@@ -436,10 +442,17 @@ export function recalculateProjectIds(project: ForgeProject): ForgeProject {
   for (const template of next.templates) template.fields.forEach((field) => { field.referenceId = mapping.get(field.referenceId) ?? field.referenceId; });
   for (const entity of next.entities) {
     entity.templateId = mapping.get(entity.templateId) ?? entity.templateId;
-    entity.values = Object.fromEntries(Object.entries(entity.values).map(([key, value]) => [mapping.get(key) ?? key, value]));
+    entity.values = remapIdsDeep(Object.fromEntries(Object.entries(entity.values).map(([key, value]) => [mapping.get(key) ?? key, value])), mapping);
   }
   next.updatedAt = new Date().toISOString();
   return next;
+}
+
+function remapIdsDeep(value: unknown, mapping: Map<string, string>): any {
+  if (typeof value === "string") return mapping.get(value) ?? value;
+  if (Array.isArray(value)) return value.map((entry) => remapIdsDeep(entry, mapping));
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, remapIdsDeep(entry, mapping)]));
+  return value;
 }
 
 export interface ValidationIssue { severity: "error" | "warning"; code: string; message: string; targetId?: string }

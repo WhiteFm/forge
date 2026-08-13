@@ -166,7 +166,7 @@ function buildSpell(spell: SourceSpell, templates: EntityTemplate[]): ForgeEntit
     [parameterId("effects")]: [],
   };
   if (spell.damageRolls.length) values[parameterId("spell_damage")] = spell.damageRolls.map((roll) => ({ ...roll, dieId: `wsg.atomic.d${roll.sides}`, damageTypeId: valueId("damage_type", roll.damageType ?? "") }));
-  if (spell.healingRolls.length) values[parameterId("spell_healing")] = spell.healingRolls.map((roll) => ({ ...roll, dieId: `wsg.atomic.d${roll.sides}` }));
+  if (spell.healingRolls.length) values[parameterId("feature_healing")] = spell.healingRolls.map((roll) => ({ ...roll, dieId: `wsg.atomic.d${roll.sides}` }));
   if (/spell attack/i.test(spell.description)) values[parameterId("spell_attack")] = attack(spell.description);
   if (/saving throw/i.test(spell.description)) values[parameterId("spell_save")] = savingThrow(spell.description);
   const conditions = appliedConditions(spell.description);

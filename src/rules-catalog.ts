@@ -282,9 +282,9 @@ interface TemplateSpec { key: string; type: EntityType; category: string; en: st
 
 const itemCore: Array<string | TemplateFieldSpec> = [
   "Description", "Image", "Cost", "Weight", "Quantity", "Stack Size", "Base Item", "Magical", "Rarity", "Magic Bonus",
-  "Requires Attunement", "Attunement Prerequisites", "Cursed", "Charges", "Resources", "Prerequisites", "Granted Features", "Influences", "Choices", "Effects",
+  "Requires Attunement", "Attunement Prerequisites", "Cursed", "Charges", "Consumable", "Resources", "Prerequisites", "Granted Features", "Influences", "Choices", "Effects",
 ];
-const spellCore = ["Description", "Image", "Spell Level", "School", "Spell Categories", "Casting Time", "Range", "Components", "Material Items", "Material Requirements", "Spell Duration", "Concentration", "Ritual", "Spell Lists", "Spell Areas", "Workbook Profiles", "Has Higher-Level Scaling", "Prerequisites", "Choices", "Effects"];
+const spellCore = ["Description", "Image", "Spell Level", "School", "Spell Categories", "Casting Time", "Range", "Components", "Material Items", "Material Requirements", "Spell Duration", "Concentration", "Ritual", "Spell Lists", "Spell Areas", "Workbook Profiles", "Has Higher-Level Scaling", "Targets", "Area", "Spell Attack", "Saving Throw", "Damage", "Periodic Damage", "Healing", "Applied Conditions", "Higher-Level Scaling", "Granted Features", "Resources", "Prerequisites", "Choices", "Influences", "Effects"];
 
 const templateSpecs: TemplateSpec[] = [
   { key:"class", type:"class", category:"template_classes", en:"Class", ru:"Класс", fields:["Description","Image","Primary Abilities","Hit Die","Saving Throw Proficiencies","Skill Choices","Weapon Proficiencies","Armor Training","Tool Proficiencies","Starting Equipment","Class Progression","Subclass Level","Spellcasting Ability","Spell Progression","Granted Features","Choices","Influences"] },
@@ -333,7 +333,10 @@ function buildTemplates(references: ReferenceRecord[]): EntityTemplate[] {
     categoryId: categoryId(spec.category),
     name: text(spec.en, spec.ru),
     previousIds: [],
-    fields: spec.fields.map((entry, order) => {
+    fields: spec.fields.filter((entry, index, all) => {
+      const name = typeof entry === "string" ? entry : entry.name;
+      return all.findIndex((candidate) => (typeof candidate === "string" ? candidate : candidate.name) === name) === index;
+    }).map((entry, order) => {
       const fieldSpec = typeof entry === "string" ? { name: entry } : entry;
       const parameter = parameters.find((candidate) => candidate.name.en === fieldSpec.name);
       if (!parameter) throw new Error(`Missing template parameter: ${fieldSpec.name}`);

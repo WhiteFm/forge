@@ -563,7 +563,7 @@ function DynamicField({ parameter, value, locale, project, required, multiple, o
   }
   if (parameter.propertyType === "dice") return <DiceField label={label} value={(value as DiceValue | undefined) ?? { count: 1, dieId: "wsg.atomic.d20", modifier: 0 }} project={project} locale={locale} onChange={onChange} />;
   if (parameter.propertyType === "formula" || parameter.propertyType === "condition") return <RuleValueField label={label} condition={parameter.propertyType === "condition"} value={(value as RuleValue | undefined) ?? { left: "wsg.atomic.level", operator: parameter.propertyType === "condition" ? "equals" : "add", rightSource: "number", right: 0 }} project={project} locale={locale} onChange={onChange} />;
-  if (parameter.propertyType === "list" || parameter.propertyType === "group") return <RepeatField label={label} value={Array.isArray(value) ? value.map(String) : []} onChange={onChange} />;
+  if (parameter.propertyType === "list" || parameter.propertyType === "group") return <StructuredValueField label={label} value={value ?? (parameter.propertyType === "list" ? [] : {})} list={parameter.propertyType === "list"} onChange={onChange} />;
   if (parameter.propertyType === "table" && parameter.table) return <EntityTableField label={label} definition={parameter.table} value={Array.isArray(value) ? value as TableDefinition["rows"] : structuredClone(parameter.table.rows)} onChange={onChange} />;
   return <TextField label={`${label}${multiple ? " · []" : ""}`} value={String(value ?? "")} multiline={parameter.propertyType === "string" && String(value ?? "").length > 80} onChange={(next) => onChange(["integer", "decimal"].includes(parameter.propertyType ?? "") ? Number(next) : next)} />;
 }
@@ -586,6 +586,28 @@ function RuleValueField({ label, condition, value, project, locale, onChange }: 
 
 function RepeatField({ label, value, onChange }: { label: string; value: string[]; onChange: (value: string[]) => void }) {
   return <div className="dynamic-card"><span className="dynamic-label">{label}</span><div className="repeat-list">{value.map((entry, index) => <div key={index}><input value={entry} onChange={(event) => onChange(value.map((item, current) => current === index ? event.target.value : item))} /><button className="icon-button danger" onClick={() => onChange(value.filter((_, current) => current !== index))}>×</button></div>)}</div><button className="button ghost compact" onClick={() => onChange([...value, ""])}>+ Add row</button></div>;
+}
+
+function fieldCaption(key: string) {
+  return key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function StructuredValueField({ label, value, list, onChange }: { label: string; value: unknown; list: boolean; onChange: (value: unknown) => void }) {
+  const entries = list ? (Array.isArray(value) ? value : []) : [value && typeof value === "object" && !Array.isArray(value) ? value : {}];
+  const setEntry = (index: number, next: unknown) => onChange(list ? entries.map((entry, current) => current === index ? next : entry) : next);
+  const removeEntry = (index: number) => onChange(entries.filter((_, current) => current !== index));
+  return <div className="dynamic-card structured-field"><span className="dynamic-label">{label}</span><div className="structured-list">{entries.map((entry, index) => <article className="structured-entry" key={index}>{list && <header><strong>{index + 1}</strong><button className="icon-button danger" onClick={() => removeEntry(index)}>×</button></header>}<StructuredNode value={entry} onChange={(next) => setEntry(index, next)} /></article>)}</div>{list && <button className="button ghost compact" onClick={() => onChange([...entries, {}])}>+ Add row</button>}</div>;
+}
+
+function StructuredNode({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) {
+  if (Array.isArray(value)) return <div className="structured-array">{value.map((entry, index) => <div className="structured-array-row" key={index}><StructuredNode value={entry} onChange={(next) => onChange(value.map((item, current) => current === index ? next : item))} /><button className="icon-button danger" onClick={() => onChange(value.filter((_, current) => current !== index))}>×</button></div>)}<button className="button ghost compact" onClick={() => onChange([...value, ""])}>+ Add</button></div>;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return <div className="structured-grid">{Object.entries(record).map(([key, entry]) => <label className={entry && typeof entry === "object" ? "structured-wide" : ""} key={key}><span>{fieldCaption(key)}</span><StructuredNode value={entry} onChange={(next) => onChange({ ...record, [key]: next })} /></label>)}</div>;
+  }
+  if (typeof value === "boolean") return <button type="button" className={`compact-toggle ${value ? "active" : ""}`} onClick={() => onChange(!value)}>{value ? "Yes" : "No"}</button>;
+  if (typeof value === "number") return <input type="number" value={value} onChange={(event) => onChange(Number(event.target.value))} />;
+  return <input value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} />;
 }
 
 function EntityTableField({ label, definition, value, onChange }: { label: string; definition: TableDefinition; value: TableDefinition["rows"]; onChange: (value: TableDefinition["rows"]) => void }) {

@@ -3,29 +3,31 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-test("ships schema-v3 Forge architecture with catalog v7", async () => {
+test("ships schema-v3 Forge architecture with catalog v8", async () => {
   const model = await readFile(new URL("../src/model.ts", import.meta.url), "utf8");
   assert.match(model, /schemaVersion:\s*3/);
-  assert.match(model, /catalogVersion:\s*7/);
+  assert.match(model, /catalogVersion:\s*8/);
   assert.match(model, /buildCoreRulesCatalog/);
   assert.doesNotMatch(model, /buildDndTemplateCatalog/);
   assert.doesNotMatch(model, /buildSrdItemEntities/);
   assert.match(model, /"multiclass"/);
-  assert.doesNotMatch(model, /srd52\.class\.wizard|srd52\.spell\./);
+  assert.match(model, /buildSrd52Content/);
 });
 
-test("starts with the complete rules catalog and categorized templates but no entities", async () => {
+test("starts with the complete rules catalog, templates, SRD spells and material items", async () => {
   const { createServer } = await import("vite");
   const server = await createServer({ root: fileURLToPath(new URL("..", import.meta.url)), server: { middlewareMode: true }, appType: "custom" });
   try {
     const model = await server.ssrLoadModule("/src/model.ts");
     const project = model.recalculateProjectIds(model.createCleanProject());
     assert.equal(project.templates.length, 36);
-    assert.equal(project.entities.length, 0);
+    assert.equal(project.entities.length, 522);
+    assert.equal(project.entities.filter((entry) => entry.type === "spell").length, 334);
+    assert.equal(project.entities.filter((entry) => entry.type === "item").length, 188);
     assert.equal(project.atomics.length, 54);
-    assert.equal(project.references.length, 402);
-    assert.equal(project.references.filter((entry) => entry.kind === "parameter").length, 108);
-    assert.equal(project.references.filter((entry) => entry.kind === "value").length, 257);
+    assert.equal(project.references.length, 411);
+    assert.equal(project.references.filter((entry) => entry.kind === "parameter").length, 114);
+    assert.equal(project.references.filter((entry) => entry.kind === "value").length, 260);
     assert.equal(project.references.filter((entry) => entry.kind === "effect").length, 37);
     assert.equal(project.influences.length, 0);
     assert.equal(project.atomics.find((entry) => entry.key === "level")?.storageMode, "derived");
@@ -57,6 +59,7 @@ test("supports multiple templates of one entity type with distinct generated IDs
       { id: "draft.weapon", type: "item", categoryId: "wsg.category.custom", name: { en: "Weapon" }, fields: [], previousIds: [] },
       { id: "draft.armor", type: "item", categoryId: "wsg.category.custom", name: { en: "Armor" }, fields: [], previousIds: [] },
     ];
+    project.entities = [];
     const recalculated = model.recalculateProjectIds(project);
     assert.deepEqual(recalculated.templates.map((template) => template.id), ["mygame.temp.weapon", "mygame.temp.armor"]);
     assert.deepEqual(model.validateProject(recalculated).filter((issue) => issue.severity === "error"), []);
@@ -77,11 +80,11 @@ test("upgrades an older catalog and preserves user content", async () => {
     oldProject.templates = [{ id: "legacy.temp.item", type: "item", categoryId: "wsg.category.custom", name: { en: "Legacy item" }, fields: [], previousIds: [] }];
     oldProject.entities = [{ id: "legacy.item.arrow", key: "arrow", type: "item", templateId: "legacy.temp.item", name: { en: "Arrow" }, values: {}, previousIds: [] }];
     const upgraded = model.upgradeProjectCatalog(oldProject);
-    assert.equal(upgraded.catalogVersion, 7);
+    assert.equal(upgraded.catalogVersion, 8);
     assert.equal(upgraded.atomics.length, 54);
-    assert.ok(upgraded.references.length >= 402);
+    assert.ok(upgraded.references.length >= 411);
     assert.equal(upgraded.templates.length, 37);
-    assert.equal(upgraded.entities.length, 1);
+    assert.equal(upgraded.entities.length, 523);
     assert.deepEqual(model.validateProject(upgraded).filter((issue) => issue.severity === "error"), []);
   } finally {
     await server.close();
