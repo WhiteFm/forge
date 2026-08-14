@@ -45,6 +45,7 @@ import {
   type AtomicDataType,
   type AtomicField,
   type AtomicRecord,
+  type Category,
   type EntityTemplate,
   type EntityType,
   type ForgeEntity,
@@ -59,6 +60,9 @@ import {
 } from "./model";
 
 type Page =
+  | "create"
+  | "works"
+  | "projectSettings"
   | "overview"
   | "atomics"
   | "references"
@@ -69,9 +73,13 @@ type Dialog = "settings" | "debug" | "export" | null;
 
 const STORAGE_KEY = "wsguild.forge.project.v3";
 const LOCALE_KEY = "wsguild.forge.locale.v3";
+const DEVELOPER_MODE_KEY = "wsguild.forge.developer-mode.v1";
 
 const labels = {
   en: {
+    create: "Create",
+    works: "My works",
+    projectSettings: "Project settings",
     overview: "Overview",
     atomics: "Atomics",
     references: "References",
@@ -177,8 +185,21 @@ const labels = {
       "Create a new clean project? Current local changes will be replaced.",
     removeBlocked:
       "This record is still used. Removing it will create missing links and block export.",
+    developerMode: "Developer mode",
+    simpleMode: "Simple mode",
+    developerTools: "System data",
+    chooseWhat: "What do you want to create?",
+    chooseBase: "Choose a ready-made base. Only relevant fields will be shown.",
+    edit: "Edit",
+    back: "Back",
+    next: "Next",
+    finish: "Finish",
+    savedAutomatically: "Changes are saved automatically in this browser.",
   },
   ru: {
+    create: "Создать",
+    works: "Мои работы",
+    projectSettings: "Настройки проекта",
     overview: "Обзор",
     atomics: "Атомарные",
     references: "Справочники",
@@ -284,8 +305,21 @@ const labels = {
       "Создать новый чистый проект? Текущие локальные изменения будут заменены.",
     removeBlocked:
       "Запись всё ещё используется. Удаление создаст отсутствующие ссылки и заблокирует экспорт.",
+    developerMode: "Режим разработчика",
+    simpleMode: "Простой режим",
+    developerTools: "Системные данные",
+    chooseWhat: "Что вы хотите создать?",
+    chooseBase: "Выберите готовую основу. Кузница покажет только относящиеся к ней поля.",
+    edit: "Редактировать",
+    back: "Назад",
+    next: "Далее",
+    finish: "Завершить",
+    savedAutomatically: "Изменения автоматически сохраняются в этом браузере.",
   },
   sv: {
+    create: "Skapa",
+    works: "Mina verk",
+    projectSettings: "Projektinställningar",
     overview: "Översikt",
     atomics: "Atomära",
     references: "Referenser",
@@ -389,6 +423,16 @@ const labels = {
     confirmReset: "Skapa ett nytt rent projekt? Lokala ändringar ersätts.",
     removeBlocked:
       "Posten används fortfarande. Borttagning skapar saknade länkar och blockerar export.",
+    developerMode: "Utvecklarläge",
+    simpleMode: "Enkelt läge",
+    developerTools: "Systemdata",
+    chooseWhat: "Vad vill du skapa?",
+    chooseBase: "Välj en färdig grund. Forge visar bara relevanta fält.",
+    edit: "Redigera",
+    back: "Tillbaka",
+    next: "Nästa",
+    finish: "Slutför",
+    savedAutomatically: "Ändringar sparas automatiskt i den här webbläsaren.",
   },
 } as const;
 
@@ -788,7 +832,10 @@ function App() {
     () => (localStorage.getItem(LOCALE_KEY) as Locale) || "en",
   );
   const [project, setProject] = useState<ForgeProject>(loadProject);
-  const [page, setPage] = useState<Page>("overview");
+  const [page, setPage] = useState<Page>("create");
+  const [developerMode, setDeveloperMode] = useState(
+    () => localStorage.getItem(DEVELOPER_MODE_KEY) === "true",
+  );
   const [dialog, setDialog] = useState<Dialog>(null);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string>("");
@@ -810,6 +857,9 @@ function App() {
     localStorage.setItem(LOCALE_KEY, locale);
     document.documentElement.lang = locale;
   }, [locale]);
+  useEffect(() => {
+    localStorage.setItem(DEVELOPER_MODE_KEY, String(developerMode));
+  }, [developerMode]);
   useEffect(() => {
     if (!selectedId) return;
     const all = [
@@ -841,7 +891,7 @@ function App() {
     if (!window.confirm(t("confirmReset"))) return;
     setProject(createCleanProject());
     setSelectedId("");
-    setPage("overview");
+    setPage("create");
     setNotice(t("clean"));
   };
 
@@ -890,7 +940,7 @@ function App() {
           if (existing) Object.assign(existing, dependency);
           else draft.dependencies.push(dependency);
         });
-        setPage("dependencies");
+        setPage(developerMode ? "dependencies" : "projectSettings");
       } else {
         const payload = envelope.payload as {
           pack: ForgeProject["pack"];
@@ -921,7 +971,7 @@ function App() {
             draft.pack = payload.pack;
             draft.entities = payload.entities;
           });
-          setPage("entities");
+          setPage("works");
         }
       }
     } catch (error) {
@@ -950,19 +1000,22 @@ function App() {
     setDialog(null);
   }
 
-  const nav: Array<[Page, string, number]> = [
-    ["overview", t("overview"), 0],
+  const simpleNav: Array<[Page, string, number]> = [
+    ["create", t("create"), 0],
+    ["works", t("works"), project.entities.length],
+    ["projectSettings", t("projectSettings"), 0],
+  ];
+  const developerNav: Array<[Page, string, number]> = [
     ["atomics", t("atomics"), project.atomics.length],
     ["references", t("references"), project.references.length],
     ["templates", t("templates"), project.templates.length],
     ["entities", t("entities"), project.entities.length],
     ["dependencies", t("dependencies"), project.dependencies.length],
   ];
-
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <button className="brand" onClick={() => changePage("overview")}>
+        <button className="brand" onClick={() => changePage("create")}>
           <img src="/forge-logo.svg" alt="WSGuild Forge" />
           <span>
             <strong>
@@ -974,10 +1027,10 @@ function App() {
         <div className="project-card">
           <span>{t("project")}</span>
           <strong>{localized(project.pack.name, locale)}</strong>
-          <code>{project.pack.id}</code>
+          {developerMode && <code>{project.pack.id}</code>}
         </div>
         <nav>
-          {nav.map(([id, name, count], index) => (
+          {simpleNav.map(([id, name, count], index) => (
             <button
               key={id}
               className={page === id ? "active" : ""}
@@ -990,10 +1043,34 @@ function App() {
               {count > 0 && <em>{count}</em>}
             </button>
           ))}
+          {developerMode && (
+            <>
+              <span className="nav-group-label">{t("developerTools")}</span>
+              {developerNav.map(([id, name, count], index) => (
+                <button
+                  key={id}
+                  className={page === id ? "active" : ""}
+                  onClick={() => changePage(id)}
+                >
+                  <span className="nav-index">
+                    {String(index + simpleNav.length + 1).padStart(2, "0")}
+                  </span>
+                  <span>{name}</span>
+                  {count > 0 && <em>{count}</em>}
+                </button>
+              ))}
+            </>
+          )}
         </nav>
         <div className="sidebar-foot">
-          <button className="quiet" onClick={() => setDialog("settings")}>
-            {t("settings")}
+          <button
+            className={`quiet developer-toggle${developerMode ? " active" : ""}`}
+            onClick={() => {
+              setDeveloperMode((current) => !current);
+              changePage("create");
+            }}
+          >
+            {developerMode ? t("simpleMode") : t("developerMode")}
           </button>
           <div className="locale-switch">
             {(["en", "ru", "sv"] as Locale[]).map((id) => (
@@ -1018,7 +1095,7 @@ function App() {
             <h1>{t(page)}</h1>
           </div>
           <div className="top-actions">
-            <button className="button ghost" onClick={() => setDialog("debug")}>
+            {developerMode && <button className="button ghost" onClick={() => setDialog("debug")}>
               <span
                 className={
                   issues.some((item) => item.severity === "error")
@@ -1028,7 +1105,7 @@ function App() {
               />
               {t("debug")}
               <b>{issues.length}</b>
-            </button>
+            </button>}
             <button
               className="button ghost"
               onClick={() => importRef.current?.click()}
@@ -1057,6 +1134,45 @@ function App() {
           </button>
         )}
         <div className="workspace">
+          {page === "create" && (
+            <SimpleCreatePage
+              project={project}
+              locale={locale}
+              t={t}
+              selectedId={selectedId}
+              setSelectedId={setSelectedId}
+              updateProject={updateProject}
+              onFinish={() => changePage("works")}
+            />
+          )}
+          {page === "works" && (
+            <MyWorksPage
+              project={project}
+              locale={locale}
+              t={t}
+              search={search}
+              setSearch={setSearch}
+              updateProject={updateProject}
+              onCreate={() => changePage("create")}
+              onEdit={(id) => {
+                setSelectedId(id);
+                setPage("create");
+                setSearch("");
+              }}
+            />
+          )}
+          {page === "projectSettings" && (
+            <SimpleProjectSettings
+              project={project}
+              locale={locale}
+              t={t}
+              developerMode={developerMode}
+              setDeveloperMode={setDeveloperMode}
+              updateProject={updateProject}
+              onAdvanced={() => setDialog("settings")}
+              onClean={resetProject}
+            />
+          )}
           {page === "overview" && (
             <Overview
               project={project}
@@ -1167,6 +1283,582 @@ function App() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+const wizardText = (locale: Locale, en: string, ru: string, sv: string) =>
+  locale === "ru" ? ru : locale === "sv" ? sv : en;
+
+const simpleCategoryName = (category: Category, locale: Locale) => {
+  const name = localized(category.name, locale).replace(
+    /^(Templates|Шаблоны|Mallar):\s*/i,
+    "",
+  );
+  return name ? `${name[0].toLocaleUpperCase(locale)}${name.slice(1)}` : name;
+};
+
+const BASIC_FIELD_KEYS = new Set([
+  "description",
+  "item_tags",
+  "stack_units",
+  "unit_cost",
+  "unit_weight",
+]);
+const USE_FIELD_KEYS = new Set([
+  "activation",
+  "charges",
+  "requires_wearing",
+  "requires_attunement",
+  "requires_identification",
+  "attunement_requirements",
+  "weapon_range",
+  "extended_reach",
+  "ammunition_rules",
+  "attack_targets",
+  "attack_area",
+  "critical_rules",
+  "returning_thrown",
+  "extra_damage_limit",
+  "required_container",
+  "application_method",
+  "doses_spent",
+  "application_rounds",
+  "delay_rounds",
+  "substance_target",
+  "inhaled_area",
+  "coating_hits",
+  "coating_affects_ammunition",
+]);
+
+function wizardStepFor(parameter: ReferenceRecord) {
+  if (BASIC_FIELD_KEYS.has(parameter.key)) return 0;
+  if (
+    parameter.key === "effects" ||
+    parameter.key.includes("damage") ||
+    parameter.key.includes("effect") ||
+    parameter.key.includes("curse") ||
+    parameter.key === "exhaustion_every_second"
+  )
+    return 3;
+  if (USE_FIELD_KEYS.has(parameter.key)) return 2;
+  return 1;
+}
+
+function valueIsEmpty(value: unknown) {
+  return (
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    (Array.isArray(value) && value.length === 0)
+  );
+}
+
+function initialEntityValues(
+  template: EntityTemplate,
+  project: ForgeProject,
+) {
+  return Object.fromEntries(
+    template.fields.flatMap((field) => {
+      if (field.defaultValue !== undefined)
+        return [[field.referenceId, structuredClone(field.defaultValue)]];
+      const parameter = project.references.find(
+        (item) => item.id === field.referenceId,
+      );
+      if (parameter?.defaultValue !== undefined)
+        return [[field.referenceId, structuredClone(parameter.defaultValue)]];
+      if (field.required && parameter?.propertyType === "guided") {
+        const prepared = Object.fromEntries(
+          (parameter.uiFields ?? []).map((item) => [
+            item.key,
+            item.defaultValue ??
+              (item.type === "number"
+                ? 0
+                : item.type === "boolean"
+                  ? false
+                  : ""),
+          ]),
+        );
+        return [[field.referenceId, prepared]];
+      }
+      return [];
+    }),
+  );
+}
+
+function SimpleCreatePage({
+  project,
+  locale,
+  t,
+  selectedId,
+  setSelectedId,
+  updateProject,
+  onFinish,
+}: {
+  project: ForgeProject;
+  locale: Locale;
+  t: (key: LabelKey) => string;
+  selectedId: string;
+  setSelectedId: (id: string) => void;
+  updateProject: (recipe: (draft: ForgeProject) => void) => void;
+  onFinish: () => void;
+}) {
+  const [categoryId, setCategoryId] = useState("all");
+  const selected = project.entities.find(
+    (item) => item.id === selectedId || item.previousIds.includes(selectedId),
+  );
+  const template = selected
+    ? project.templates.find((item) => item.id === selected.templateId)
+    : undefined;
+  const createFromTemplate = (source: EntityTemplate) => {
+    const index =
+      project.entities.filter((item) => item.type === source.type).length + 1;
+    const id = `${project.namespace}.${source.type}.${source.type}_${index}`;
+    updateProject((draft) => {
+      draft.entities.push({
+        id,
+        key: `${source.type}_${index}`,
+        type: source.type,
+        templateId: source.id,
+        name: {
+          en: `${localized(source.name, "en")} ${index}`,
+        },
+        values: initialEntityValues(source, draft),
+        previousIds: [],
+      });
+    });
+    setSelectedId(id);
+  };
+  if (selected && template)
+    return (
+      <SimpleEntityWizard
+        key={selected.id}
+        entity={selected}
+        template={template}
+        project={project}
+        locale={locale}
+        t={t}
+        updateProject={updateProject}
+        onBack={() => setSelectedId("")}
+        onFinish={onFinish}
+      />
+    );
+
+  const groups = project.categories.filter((category) =>
+    project.templates.some((item) => item.categoryId === category.id),
+  );
+  const visibleTemplates = project.templates.filter(
+    (item) => categoryId === "all" || item.categoryId === categoryId,
+  );
+  return (
+    <div className="simple-create">
+      <section className="simple-intro">
+        <span className="kicker">WSGUILD FORGE</span>
+        <h2>{t("chooseWhat")}</h2>
+        <p>{t("chooseBase")}</p>
+      </section>
+      <div className="template-choice-groups">
+        <nav className="template-category-tabs">
+          <button
+            className={categoryId === "all" ? "active" : ""}
+            onClick={() => setCategoryId("all")}
+          >
+            {wizardText(locale, "All", "Все", "Alla")}
+            <em>{project.templates.length}</em>
+          </button>
+          {groups.map((category) => (
+            <button
+              key={category.id}
+              className={categoryId === category.id ? "active" : ""}
+              onClick={() => setCategoryId(category.id)}
+            >
+              {simpleCategoryName(category, locale)}
+              <em>
+                {
+                  project.templates.filter(
+                    (item) => item.categoryId === category.id,
+                  ).length
+                }
+              </em>
+            </button>
+          ))}
+        </nav>
+        <div className="simple-template-grid simple-template-catalog">
+          {visibleTemplates.map((item) => (
+            <button
+              className="simple-template-card"
+              key={item.id}
+              onClick={() => createFromTemplate(item)}
+            >
+              <span className="template-card-icon">＋</span>
+              <strong>{localized(item.name, locale)}</strong>
+              <small>
+                {wizardText(
+                  locale,
+                  "Ready base",
+                  "Готовая основа",
+                  "Färdig grund",
+                )}
+              </small>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SimpleEntityWizard({
+  entity,
+  template,
+  project,
+  locale,
+  t,
+  updateProject,
+  onBack,
+  onFinish,
+}: {
+  entity: ForgeEntity;
+  template: EntityTemplate;
+  project: ForgeProject;
+  locale: Locale;
+  t: (key: LabelKey) => string;
+  updateProject: (recipe: (draft: ForgeProject) => void) => void;
+  onBack: () => void;
+  onFinish: () => void;
+}) {
+  const [step, setStep] = useState(0);
+  const steps = [
+    wizardText(locale, "Basics", "Основное", "Grundläggande"),
+    wizardText(locale, "Properties", "Свойства", "Egenskaper"),
+    wizardText(locale, "Use", "Использование", "Användning"),
+    wizardText(locale, "Effects", "Эффекты", "Effekter"),
+    wizardText(locale, "Review", "Проверка", "Granskning"),
+  ];
+  const resolvedFields = template.fields.flatMap((field) => {
+    const parameter = project.references.find(
+      (item) => item.id === field.referenceId,
+    );
+    return parameter ? [{ field, parameter }] : [];
+  });
+  const currentFields = resolvedFields.filter(
+    ({ parameter }) => wizardStepFor(parameter) === step,
+  );
+  const missing = resolvedFields.filter(
+    ({ field }) => field.required && valueIsEmpty(entity.values[field.referenceId]),
+  );
+  const setValue = (referenceId: string, value: unknown) =>
+    updateProject((draft) => {
+      draft.entities.find((item) => item.id === entity.id)!.values[
+        referenceId
+      ] = value;
+    });
+  const remove = () => {
+    if (
+      !window.confirm(
+        `${t("delete")}: ${localized(entity.name, locale)}?`,
+      )
+    )
+      return;
+    updateProject((draft) => {
+      draft.entities = draft.entities.filter((item) => item.id !== entity.id);
+    });
+    onBack();
+  };
+  return (
+    <div className="simple-wizard">
+      <header className="wizard-head">
+        <button className="button ghost compact" onClick={onBack}>
+          ← {t("back")}
+        </button>
+        <div>
+          <span className="kicker">{localized(template.name, locale)}</span>
+          <h2>{localized(entity.name, locale)}</h2>
+          <p>{t("savedAutomatically")}</p>
+        </div>
+        <button className="icon-button danger" onClick={remove}>
+          ×
+        </button>
+      </header>
+      <nav className="wizard-steps" aria-label={t("create")}>
+        {steps.map((name, index) => (
+          <button
+            key={name}
+            className={step === index ? "active" : ""}
+            onClick={() => setStep(index)}
+          >
+            <span>{index + 1}</span>
+            <strong>{name}</strong>
+          </button>
+        ))}
+      </nav>
+      <section className="wizard-body">
+        {step === 0 && (
+          <LocalizedFields
+            value={entity.name}
+            t={t}
+            onChange={(name) =>
+              updateProject((draft) => {
+                draft.entities.find((item) => item.id === entity.id)!.name =
+                  name;
+              })
+            }
+          />
+        )}
+        {step < 4 && (
+          <div className="dynamic-form wizard-fields">
+            {currentFields.map(({ field, parameter }) => (
+              <DynamicField
+                key={field.id}
+                parameter={parameter}
+                value={entity.values[field.referenceId]}
+                locale={locale}
+                project={project}
+                required={field.required}
+                multiple={field.multiple}
+                simple
+                onChange={(next) => setValue(field.referenceId, next)}
+              />
+            ))}
+            {currentFields.length === 0 && (
+              <div className="empty wizard-empty">
+                {wizardText(
+                  locale,
+                  "Nothing needs to be configured here for this base.",
+                  "Для этой основы здесь ничего настраивать не нужно.",
+                  "Inget behöver ställas in här för denna grund.",
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {step === 4 && (
+          <div className="review-grid">
+            <article className="review-card ready">
+              <span>{wizardText(locale, "Created as", "Создаётся как", "Skapas som")}</span>
+              <strong>{localized(template.name, locale)}</strong>
+              <p>{localized(entity.name, locale)}</p>
+            </article>
+            <article className={`review-card${missing.length ? " warning" : " ready"}`}>
+              <span>{wizardText(locale, "Required fields", "Обязательные поля", "Obligatoriska fält")}</span>
+              <strong>
+                {missing.length
+                  ? wizardText(locale, `${missing.length} remaining`, `Осталось: ${missing.length}`, `${missing.length} återstår`)
+                  : wizardText(locale, "Everything is ready", "Всё готово", "Allt är klart")}
+              </strong>
+              {missing.map(({ parameter }) => (
+                <button
+                  key={parameter.id}
+                  onClick={() => setStep(wizardStepFor(parameter))}
+                >
+                  {localized(parameter.name, locale)} →
+                </button>
+              ))}
+            </article>
+          </div>
+        )}
+      </section>
+      <footer className="wizard-footer">
+        <button
+          className="button ghost"
+          disabled={step === 0}
+          onClick={() => setStep((current) => Math.max(0, current - 1))}
+        >
+          ← {t("back")}
+        </button>
+        <span>
+          {step + 1} / {steps.length}
+        </span>
+        {step < steps.length - 1 ? (
+          <button
+            className="button primary"
+            onClick={() => setStep((current) => current + 1)}
+          >
+            {t("next")} →
+          </button>
+        ) : (
+          <button
+            className="button primary"
+            disabled={missing.length > 0}
+            onClick={onFinish}
+          >
+            {missing.length
+              ? wizardText(
+                  locale,
+                  "Fill required fields",
+                  "Заполните обязательные поля",
+                  "Fyll i obligatoriska fält",
+                )
+              : t("finish")}
+          </button>
+        )}
+      </footer>
+    </div>
+  );
+}
+
+function MyWorksPage({
+  project,
+  locale,
+  t,
+  search,
+  setSearch,
+  updateProject,
+  onCreate,
+  onEdit,
+}: {
+  project: ForgeProject;
+  locale: Locale;
+  t: (key: LabelKey) => string;
+  search: string;
+  setSearch: (value: string) => void;
+  updateProject: (recipe: (draft: ForgeProject) => void) => void;
+  onCreate: () => void;
+  onEdit: (id: string) => void;
+}) {
+  const items = project.entities.filter((item) =>
+    localized(item.name, locale).toLowerCase().includes(search.toLowerCase()),
+  );
+  const remove = (entity: ForgeEntity) => {
+    if (!window.confirm(`${t("delete")}: ${localized(entity.name, locale)}?`))
+      return;
+    updateProject((draft) => {
+      draft.entities = draft.entities.filter((item) => item.id !== entity.id);
+    });
+  };
+  return (
+    <div className="simple-works">
+      <header className="simple-page-head">
+        <div>
+          <span className="kicker">{project.entities.length}</span>
+          <h2>{t("works")}</h2>
+        </div>
+        <button className="button primary" onClick={onCreate}>
+          + {t("create")}
+        </button>
+      </header>
+      <input
+        className="search works-search"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder={t("search")}
+      />
+      {items.length ? (
+        <div className="work-card-grid">
+          {items.map((item) => {
+            const template = project.templates.find(
+              (entry) => entry.id === item.templateId,
+            );
+            return (
+              <article className="work-card" key={item.id}>
+                <span>{localized(entityNames[item.type], locale)}</span>
+                <h3>{localized(item.name, locale)}</h3>
+                <p>{template ? localized(template.name, locale) : "—"}</p>
+                <div>
+                  <button
+                    className="button primary compact"
+                    onClick={() => onEdit(item.id)}
+                  >
+                    {t("edit")}
+                  </button>
+                  <button
+                    className="icon-button danger"
+                    onClick={() => remove(item)}
+                  >
+                    ×
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="empty simple-empty">
+          <p>{t("noItems")}</p>
+          <button className="button primary" onClick={onCreate}>
+            {t("chooseWhat")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SimpleProjectSettings({
+  project,
+  locale,
+  t,
+  developerMode,
+  setDeveloperMode,
+  updateProject,
+  onAdvanced,
+  onClean,
+}: {
+  project: ForgeProject;
+  locale: Locale;
+  t: (key: LabelKey) => string;
+  developerMode: boolean;
+  setDeveloperMode: (value: boolean) => void;
+  updateProject: (recipe: (draft: ForgeProject) => void) => void;
+  onAdvanced: () => void;
+  onClean: () => void;
+}) {
+  return (
+    <div className="simple-settings editor-stack">
+      <section className="simple-settings-card">
+        <span className="kicker">{t("packName")}</span>
+        <LocalizedFields
+          value={project.pack.name}
+          t={t}
+          onChange={(name) =>
+            updateProject((draft) => {
+              draft.pack.name = name;
+            })
+          }
+        />
+      </section>
+      <section className="simple-settings-card">
+        <span className="kicker">{t("packDescription")}</span>
+        <LocalizedFields
+          value={project.pack.description}
+          t={t}
+          multiline
+          onChange={(description) =>
+            updateProject((draft) => {
+              draft.pack.description = description;
+            })
+          }
+        />
+      </section>
+      <section className="simple-settings-card mode-card">
+        <div>
+          <h3>{t("developerMode")}</h3>
+          <p>
+            {wizardText(
+              locale,
+              "Shows atomics, references, templates, dependencies, IDs and Debug. Ordinary content creation does not require this mode.",
+              "Показывает атомарные, справочники, шаблоны, зависимости, ID и Debug. Для обычного создания контента этот режим не нужен.",
+              "Visar atomära värden, referenser, mallar, beroenden, ID och Debug. Vanligt innehållsskapande kräver inte detta läge.",
+            )}
+          </p>
+        </div>
+        <button
+          className={`mode-switch${developerMode ? " active" : ""}`}
+          onClick={() => setDeveloperMode(!developerMode)}
+        >
+          <span />
+          {developerMode ? t("simpleMode") : t("developerMode")}
+        </button>
+      </section>
+      <div className="settings-actions">
+        <button className="button ghost" onClick={onAdvanced}>
+          {wizardText(locale, "Advanced project settings", "Расширенные настройки проекта", "Avancerade projektinställningar")}
+        </button>
+        <button className="button ghost danger-text" onClick={onClean}>
+          {t("clean")}
+        </button>
+      </div>
+      <p className="hint">{t("localStorage")}</p>
     </div>
   );
 }
@@ -3076,14 +3768,7 @@ function EntitiesPage({
         type,
         templateId: chosenTemplate.id,
         name: { en: `${type[0].toUpperCase()}${type.slice(1)} ${index}` },
-        values: Object.fromEntries(
-          chosenTemplate.fields
-            .filter((field) => field.defaultValue !== undefined)
-            .map((field) => [
-              field.referenceId,
-              structuredClone(field.defaultValue),
-            ]),
-        ),
+        values: initialEntityValues(chosenTemplate, draft),
         previousIds: [],
       };
       draft.entities.push(entity);
@@ -3245,14 +3930,7 @@ function EntityEditor({
         ),
       );
       target.values = {
-        ...Object.fromEntries(
-          nextTemplate.fields
-            .filter((field) => field.defaultValue !== undefined)
-            .map((field) => [
-              field.referenceId,
-              structuredClone(field.defaultValue),
-            ]),
-        ),
+        ...initialEntityValues(nextTemplate, draft),
         ...preserved,
       };
     });
@@ -3321,6 +3999,7 @@ function DynamicField({
   project,
   required,
   multiple,
+  simple = false,
   onChange,
 }: {
   parameter: ReferenceRecord;
@@ -3329,6 +4008,7 @@ function DynamicField({
   project: ForgeProject;
   required: boolean;
   multiple: boolean;
+  simple?: boolean;
   onChange: (value: unknown) => void;
 }) {
   const label = `${localized(parameter.name, locale)}${required ? " *" : ""}`;
@@ -3342,6 +4022,7 @@ function DynamicField({
         value={value as RuleSet | undefined}
         project={project}
         locale={locale}
+        simple={simple}
         onChange={onChange}
       />
     );

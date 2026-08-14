@@ -302,3 +302,24 @@ test("keeps Forge branding and GitHub Pages deployment", async () => {
   assert.match(html, /forge-logo-elipse\.svg/);
   assert.match(workflow, /actions\/deploy-pages@v4/);
 });
+
+test("uses a beginner-first creation wizard and keeps system tools optional", async () => {
+  const app = await readFile(
+    new URL("../src/App.tsx", import.meta.url),
+    "utf8",
+  );
+  const editors = await readFile(
+    new URL("../src/RuleEditors.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(app, /useState<Page>\("create"\)/);
+  assert.match(app, /"create", t\("create"\)/);
+  assert.match(app, /"works", t\("works"\)/);
+  assert.match(app, /"projectSettings", t\("projectSettings"\)/);
+  assert.match(app, /developerMode &&/);
+  assert.match(app, /function SimpleEntityWizard/);
+  assert.match(app, /"Basics", "Основное"/);
+  assert.match(app, /"Review", "Проверка"/);
+  assert.match(editors, /simple-rule-set/);
+  assert.match(editors, /!simple && \(/);
+});

@@ -1018,12 +1018,14 @@ function ActionEditor({
   action,
   project,
   locale,
+  simple = false,
   onChange,
   remove,
 }: {
   action: RuleAction;
   project: ForgeProject;
   locale: Locale;
+  simple?: boolean;
   onChange: (value: RuleAction) => void;
   remove: () => void;
 }) {
@@ -1081,7 +1083,7 @@ function ActionEditor({
           )}
         </div>
       )}
-      <Field label={text(locale, "Action", "Действие", "Åtgärd")}>
+      {!simple && <Field label={text(locale, "Action", "Действие", "Åtgärd")}>
         <Select
           value={action.type}
           onChange={(nextType) => {
@@ -1123,7 +1125,7 @@ function ActionEditor({
             </option>
           ))}
         </Select>
-      </Field>
+      </Field>}
       <Field label={text(locale, "Target", "Цель", "Mål")}>
         <Select
           value={action.target}
@@ -1498,8 +1500,9 @@ export function RuleSetEditor({
   value,
   project,
   locale,
+  simple = false,
   onChange,
-}: Props<RuleSet>) {
+}: Props<RuleSet> & { simple?: boolean }) {
   const set = value ?? emptyRuleSet();
   const updateRule = (index: number, rule: AutomationRule) =>
     onChange({
@@ -1509,7 +1512,7 @@ export function RuleSetEditor({
       ),
     });
   return (
-    <section className="dynamic-card rule-set">
+    <section className={`dynamic-card rule-set${simple ? " simple-rule-set" : ""}`}>
       <div className="rule-set-heading">
         <div>
           <span className="dynamic-label">{label}</span>
@@ -1562,17 +1565,19 @@ export function RuleSetEditor({
               ))}
             </Select>
           </Field>
-          <button
-            className="button ghost compact"
-            onClick={() =>
-              onChange({
-                ...set,
-                rules: [...set.rules, emptyRule(set.rules.length + 1)],
-              })
-            }
-          >
-            + {text(locale, "Empty rule", "Пустое правило", "Tom regel")}
-          </button>
+          {!simple && (
+            <button
+              className="button ghost compact"
+              onClick={() =>
+                onChange({
+                  ...set,
+                  rules: [...set.rules, emptyRule(set.rules.length + 1)],
+                })
+              }
+            >
+              + {text(locale, "Empty rule", "Пустое правило", "Tom regel")}
+            </button>
+          )}
         </div>
       </div>
       {set.rules.length === 0 && (
@@ -1624,6 +1629,38 @@ export function RuleSetEditor({
                   "Заполните выделенные настройки. Незавершённое правило нельзя экспортировать.",
                   "Fyll i de markerade inställningarna. En ofullständig regel kan inte exporteras.",
                 )}
+              </div>
+            )}
+            {simple && (
+              <div className="simple-rule-summary">
+                <strong>
+                  {optionText(
+                    RULE_EVENTS.find((item) => item.id === rule.event)?.name ?? {
+                      en: rule.event,
+                    },
+                    locale,
+                  )}
+                </strong>
+                <span>→</span>
+                <strong>
+                  {rule.actions
+                    .map((action) =>
+                      optionText(
+                        RULE_ACTIONS.find((item) => item.id === action.type)
+                          ?.name ?? { en: action.type },
+                        locale,
+                      ),
+                    )
+                    .join(", ")}
+                </strong>
+                <small>
+                  {text(
+                    locale,
+                    "Timing and technical conditions are already filled by the selected scenario. They remain available in Developer mode.",
+                    "Момент срабатывания и технические условия уже заполнены выбранным сценарием. Их можно изменить в режиме разработчика.",
+                    "Tidpunkt och tekniska villkor fylls redan i av det valda scenariot. De kan ändras i utvecklarläget.",
+                  )}
+                </small>
               </div>
             )}
             <div className="locale-grid">
@@ -1761,7 +1798,7 @@ export function RuleSetEditor({
                 <h3>
                   {text(locale, "Then do", "Затем выполнить", "Gör sedan")}
                 </h3>
-                <button
+                {!simple && <button
                   className="button ghost compact"
                   onClick={() =>
                     updateRule(index, {
@@ -1779,7 +1816,7 @@ export function RuleSetEditor({
                   }
                 >
                   + {text(locale, "Action", "Действие", "Åtgärd")}
-                </button>
+                </button>}
               </div>
               {rule.actions.map((action, actionIndex) => (
                 <ActionEditor
@@ -1787,6 +1824,7 @@ export function RuleSetEditor({
                   action={action}
                   project={project}
                   locale={locale}
+                  simple={simple}
                   onChange={(next) =>
                     updateRule(index, {
                       ...rule,
