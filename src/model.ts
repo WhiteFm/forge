@@ -1,5 +1,3 @@
-import { buildCoreRulesCatalog } from "./rules-catalog";
-import { PH24_EQUIPMENT } from "./equipment-catalog";
 import {
   DEFAULT_RULE_ENGINE,
   type RuleEngineDefinition,
@@ -233,7 +231,7 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 12;
+  catalogVersion: 13;
   namespace: string;
   version: string;
   defaultLocale: "en";
@@ -1248,11 +1246,10 @@ export function createCleanProject(): ForgeProject {
   const namespace = "mygame";
   const refKey = "core";
   const packKey = "characters";
-  const catalog = buildCoreRulesCatalog();
   const project: ForgeProject = {
     format: "wsg-forge-project",
     schemaVersion: 3,
-    catalogVersion: 12,
+    catalogVersion: 13,
     namespace,
     version: "1.0.0",
     defaultLocale: "en",
@@ -1286,11 +1283,11 @@ export function createCleanProject(): ForgeProject {
         },
       ],
     },
-    categories: structuredClone(STANDARD_CATEGORIES),
-    atomics: catalog.atomics,
-    references: catalog.references,
-    templates: catalog.templates,
-    entities: structuredClone(PH24_EQUIPMENT),
+    categories: [],
+    atomics: [],
+    references: [],
+    templates: [],
+    entities: [],
     dependencies: [],
     createdAt: now,
     updatedAt: now,
@@ -1299,10 +1296,9 @@ export function createCleanProject(): ForgeProject {
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 12 && project.ruleEngine) return project;
-  // Schema 12 starts from the no-code rules model and the PH24 item catalog. Older
-  // projects contained executable strings and incompatible field structures,
-  // so silently carrying them over would produce incorrect game math.
+  if (project.catalogVersion === 13 && project.ruleEngine) return project;
+  // Schema 13 deliberately starts with an empty editable catalog. Older projects
+  // are incompatible with the new template design and must not leak stale data.
   return createCleanProject();
 }
 
