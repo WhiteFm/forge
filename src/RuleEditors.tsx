@@ -2073,6 +2073,8 @@ export function ResourceEditor({
                 ["round_start", "Round start", "Начало раунда"],
                 ["initiative", "Roll initiative", "Бросок инициативы"],
                 ["dawn", "Dawn", "Рассвет"],
+                ["sunset", "Sunset", "Закат"],
+                ["combat_start", "Combat start", "Начало боя"],
                 ["manual", "Manual", "Вручную"],
               ].map(([id, en, ru]) => (
                 <option key={id} value={id}>

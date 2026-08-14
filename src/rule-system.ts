@@ -265,6 +265,8 @@ export interface ResourceDefinition {
       | "round_start"
       | "initiative"
       | "dawn"
+      | "sunset"
+      | "combat_start"
       | "manual";
     amount: "all" | ValueExpression;
   }>;

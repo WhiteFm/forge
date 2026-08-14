@@ -17,18 +17,32 @@ async function withModel(run) {
   }
 }
 
-test("starts with schema 13, an empty catalog, and the visual rules engine", async () => {
+test("starts with schema 15, the new equipment rules catalog, and no entities", async () => {
   await withModel(async (model) => {
     const project = model.createCleanProject();
-    assert.equal(project.catalogVersion, 13);
+    assert.equal(project.catalogVersion, 15);
     assert.equal(project.ruleEngine.roundSeconds, 6);
     assert.equal(project.ruleEngine.gridUnitFeet, 2.5);
-    assert.deepEqual(project.categories, []);
-    assert.deepEqual(project.atomics, []);
-    assert.deepEqual(project.references, []);
-    assert.deepEqual(project.templates, []);
+    assert.ok(project.categories.length > 20);
+    assert.ok(project.atomics.length > 30);
+    assert.ok(project.references.length > 100);
+    assert.equal(project.templates.length, 17);
     assert.deepEqual(project.entities, []);
     assert.deepEqual(project.dependencies, []);
+    assert.ok(
+      project.atomics.every(
+        (item) =>
+          item.description.en && item.description.ru && item.description.sv,
+      ),
+    );
+    assert.equal(
+      project.references.some((item) => item.key === "base_item"),
+      false,
+    );
+    assert.equal(
+      project.references.some((item) => item.key === "quantity"),
+      false,
+    );
     assert.deepEqual(
       model
         .validateProject(project)
@@ -155,7 +169,7 @@ test("upgrading an old executable-string project starts a clean safe project", a
       },
     ];
     const upgraded = model.upgradeProjectCatalog(oldProject);
-    assert.equal(upgraded.catalogVersion, 13);
+    assert.equal(upgraded.catalogVersion, 15);
     assert.equal(upgraded.entities.length, 0);
     assert.equal(upgraded.ruleEngine.roundSeconds, 6);
   });

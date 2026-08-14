@@ -4,6 +4,7 @@ import {
   type RuleSet,
   type ValueExpression,
 } from "./rule-system";
+import { buildEquipmentRulesCatalog } from "./equipment-rules-catalog";
 
 export type Locale = "en" | "ru" | "sv";
 export type LocalText = { en: string; ru?: string; sv?: string };
@@ -179,6 +180,8 @@ export interface ReferenceRecord {
   multiple?: boolean;
   minimum?: number;
   maximum?: number;
+  /** Default used when a template field does not provide a more specific value. */
+  defaultValue?: unknown;
   allowedReferenceKinds?: ReferenceKind[];
   optionGroup?: string;
   allowedEntityTypes?: EntityType[];
@@ -231,7 +234,7 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 13;
+  catalogVersion: 15;
   namespace: string;
   version: string;
   defaultLocale: "en";
@@ -1246,10 +1249,11 @@ export function createCleanProject(): ForgeProject {
   const namespace = "mygame";
   const refKey = "core";
   const packKey = "characters";
+  const catalog = buildEquipmentRulesCatalog();
   const project: ForgeProject = {
     format: "wsg-forge-project",
     schemaVersion: 3,
-    catalogVersion: 13,
+    catalogVersion: 15,
     namespace,
     version: "1.0.0",
     defaultLocale: "en",
@@ -1283,10 +1287,10 @@ export function createCleanProject(): ForgeProject {
         },
       ],
     },
-    categories: [],
-    atomics: [],
-    references: [],
-    templates: [],
+    categories: catalog.categories,
+    atomics: catalog.atomics,
+    references: catalog.references,
+    templates: catalog.templates,
     entities: [],
     dependencies: [],
     createdAt: now,
@@ -1296,9 +1300,9 @@ export function createCleanProject(): ForgeProject {
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 13 && project.ruleEngine) return project;
-  // Schema 13 deliberately starts with an empty editable catalog. Older projects
-  // are incompatible with the new template design and must not leak stale data.
+  if (project.catalogVersion === 15 && project.ruleEngine) return project;
+  // Schema 15 replaces every earlier catalog with the approved equipment-only
+  // atomics, references, and templates. Old records must not leak into the reset.
   return createCleanProject();
 }
 
