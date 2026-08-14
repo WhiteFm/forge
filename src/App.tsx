@@ -3488,7 +3488,9 @@ function DynamicField({
               item.kind === "value" &&
               (parameter.optionGroup
                 ? item.optionGroup === parameter.optionGroup
-                : item.categoryId === parameter.categoryId),
+                : item.categoryId === parameter.categoryId) &&
+              (!parameter.allowedValueCategoryIds?.length ||
+                parameter.allowedValueCategoryIds.includes(item.categoryId)),
           )
           .map((item) => (
             <option key={item.id} value={item.id}>
@@ -3506,7 +3508,9 @@ function DynamicField({
         : item.kind === "value" &&
           (parameter.optionGroup
             ? item.optionGroup === parameter.optionGroup
-            : item.categoryId === parameter.categoryId),
+            : item.categoryId === parameter.categoryId) &&
+          (!parameter.allowedValueCategoryIds?.length ||
+            parameter.allowedValueCategoryIds.includes(item.categoryId)),
     );
     if (multiple || parameter.propertyType === "references")
       return (

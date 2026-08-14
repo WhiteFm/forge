@@ -45,6 +45,12 @@ const CATEGORIES: Category[] = [
   category("item_kits", "Equipment: kits", "Снаряжение: наборы", "Utrustning: paket"),
   category("automation", "Effects and automation", "Эффекты и автоматизация", "Effekter och automatisering"),
   category("reference_values", "Prepared values", "Подготовленные значения", "Förberedda värden"),
+  category("tag_general", "Tags: general", "Теги: общие", "Taggar: allmänna"),
+  category("tag_objects", "Tags: items", "Теги: предметы", "Taggar: föremål"),
+  category("tag_tools", "Tags: tools", "Теги: инструменты", "Taggar: verktyg"),
+  category("tag_weapons", "Tags: weapons", "Теги: оружие", "Taggar: vapen"),
+  category("tag_wearables", "Tags: wearable gear", "Теги: экипировка", "Taggar: buren utrustning"),
+  category("tag_substances", "Tags: substances", "Теги: вещества", "Taggar: substanser"),
   category("template_objects", "Templates: items", "Шаблоны: предметы", "Mallar: föremål"),
   category("template_tools", "Templates: tools", "Шаблоны: инструменты", "Mallar: verktyg"),
   category("template_weapons", "Templates: weapons", "Шаблоны: оружие", "Mallar: vapen"),
@@ -691,7 +697,7 @@ const guided = (
 
 const COMMON_PARAMETERS: ReferenceRecord[] = [
   parameter("description", tr("Description", "Описание", "Beskrivning"), tr("Full localized item description.", "Полное локализованное описание предмета.", "Fullständig lokaliserad föremålsbeskrivning."), "item_common", "localized_long", { required: true }),
-  parameter("item_tags", tr("Tags", "Теги", "Taggar"), tr("System tags define equipment category and applicable rules.", "Системные теги определяют категорию снаряжения и применимые правила.", "Systemtaggar bestämmer utrustningskategori och tillämpliga regler."), "item_common", "references", { optionGroup: "item_tag", multiple: true, required: true }),
+  parameter("item_tags", tr("Tags", "Теги", "Taggar"), tr("General slice of the single equipment tag list. The same tag records are reused by every thematic tag field.", "Общий раздел единого списка тегов снаряжения. Эти же записи тегов используются всеми тематическими полями.", "Allmän del av den gemensamma tagglistan. Samma taggposter återanvänds av alla tematiska taggfält."), "item_common", "references", { optionGroup: "item_tag", allowedValueCategoryIds: [categoryId("tag_general")], multiple: true, required: true }),
   parameter("stack_units", tr("Units in Stack", "Количество в Стаке", "Enheter i stapel"), tr("Units represented by one stack definition; there is no separate quantity field.", "Единицы одной записи стака; отдельного поля количества нет.", "Enheter i en stapeldefinition; inget separat antal-fält finns."), "item_common", "integer", { required: true, minimum: 1, defaultValue: 1 }),
   parameter("unit_cost", tr("Unit Cost", "Стоимость Одного Предмета", "Styckkostnad"), tr("Recommended visible price for one unit.", "Рекомендуемая отображаемая цена одной единицы.", "Rekommenderat synligt pris för en enhet."), "item_common", "guided", {
     required: true,
@@ -717,7 +723,7 @@ const COMMON_PARAMETERS: ReferenceRecord[] = [
 ];
 
 const OBJECT_PARAMETERS: ReferenceRecord[] = [
-  parameter("object_tags", tr("Item Type Tags", "Теги Типа Предмета", "Föremålstyptaggar"), tr("One or more item functions such as resource, container, food, light source, scroll, or clothing.", "Одна или несколько функций предмета: ресурс, контейнер, еда, источник света, свиток, одежда и другие.", "En eller flera funktioner som resurs, behållare, mat, ljuskälla, skriftrulle eller kläder."), "item_objects", "references", { optionGroup: "object_tag", multiple: true }),
+  parameter("object_tags", tr("Item Type Tags", "Теги Типа Предмета", "Föremålstyptaggar"), tr("Item section of the single equipment tag list: resource, container, food, light source, scroll, clothing, and other functions.", "Раздел предметов единого списка тегов: ресурс, контейнер, еда, источник света, свиток, одежда и другие функции.", "Föremålsdelen av den gemensamma tagglistan: resurs, behållare, mat, ljuskälla, skriftrulle, kläder och andra funktioner."), "item_objects", "references", { optionGroup: "item_tag", allowedValueCategoryIds: [categoryId("tag_objects")], multiple: true }),
   parameter("container_allowed_items", tr("Allowed Item IDs", "Разрешённые ID Предметов", "Tillåtna föremåls-ID"), tr("Optional explicit item restrictions for a container.", "Необязательные ограничения контейнера по конкретным предметам.", "Valfria begränsningar för specifika föremål."), "item_objects", "entities", { allowedEntityTypes: ["item"], multiple: true }),
   parameter("container_allowed_tags", tr("Allowed Content Tags", "Разрешённые Теги Содержимого", "Tillåtna innehållstaggar"), tr("Optional tag restrictions for container contents.", "Необязательные ограничения содержимого контейнера по тегам.", "Valfria taggbegränsningar för innehållet."), "item_objects", "references", { optionGroup: "item_tag", multiple: true }),
   parameter("container_capacity", tr("Container Capacity", "Вместимость Контейнера", "Behållarkapacitet"), tr("Maximum number of units the container can hold.", "Максимальное количество единиц, помещающихся в контейнер.", "Maximalt antal enheter som behållaren rymmer."), "item_objects", "integer", { minimum: 0 }),
@@ -727,14 +733,14 @@ const OBJECT_PARAMETERS: ReferenceRecord[] = [
 ];
 
 const TOOL_PARAMETERS: ReferenceRecord[] = [
-  parameter("tool_tags", tr("Tool Type Tags", "Теги Типа Инструмента", "Verktygstyptaggar"), tr("Artisan, musical, magical, or other tool classifications.", "Классификации ремесленного, музыкального, магического или другого инструмента.", "Klassificering som hantverks-, musik-, magiskt eller annat verktyg."), "item_tools", "references", { optionGroup: "tool_tag", multiple: true }),
+  parameter("tool_tags", tr("Tool Type Tags", "Теги Типа Инструмента", "Verktygstyptaggar"), tr("Tool section of the single equipment tag list.", "Раздел инструментов единого списка тегов снаряжения.", "Verktygsdelen av den gemensamma tagglistan."), "item_tools", "references", { optionGroup: "item_tag", allowedValueCategoryIds: [categoryId("tag_tools")], multiple: true }),
   parameter("tool_ability", tr("Fixed Ability", "Закреплённая Характеристика", "Fast egenskap"), tr("The single ability fixed by the item creator for using this tool.", "Единственная характеристика, жёстко закреплённая создателем для этого инструмента.", "Den enda egenskap som skaparen har låst för verktyget."), "item_tools", "select", { optionGroup: "ability", required: true }),
   parameter("tool_use_mode", tr("Use Mode", "Режим Использования", "Användningsläge"), tr("Localized explanation of how the tool is used.", "Локализованное описание использования инструмента.", "Lokaliserad beskrivning av hur verktyget används."), "item_tools", "localized_long"),
   parameter("tool_crafting_mode", tr("Crafting Mode", "Режим Изготовления", "Tillverkningsläge"), tr("Localized explanation of how the tool participates in crafting.", "Локализованное описание участия инструмента в изготовлении.", "Lokaliserad beskrivning av verktygets roll i tillverkning."), "item_tools", "localized_long"),
 ];
 
 const WEAPON_PARAMETERS: ReferenceRecord[] = [
-  parameter("weapon_tags", tr("Weapon Tags", "Теги Оружия", "Vapentaggar"), tr("Simple, martial, melee, ranged, thrown, light, finesse, versatile, ammunition, heavy, reach, reload, magical, and other classifications.", "Классификации простого, воинского, рукопашного, дальнобойного, метательного, лёгкого, фехтовального, универсального, боеприпасного, тяжёлого, досягаемого, перезаряжаемого и магического оружия.", "Klassificeringar för enkla, krigiska, närstrids-, distans-, kast-, lätta, finess-, mångsidiga, ammunition-, tunga, räckvidds-, omladdnings- och magiska vapen."), "item_weapons", "references", { optionGroup: "weapon_tag", multiple: true, required: true }),
+  parameter("weapon_tags", tr("Weapon Tags", "Теги Оружия", "Vapentaggar"), tr("Weapon section of the single equipment tag list.", "Раздел оружия единого списка тегов снаряжения.", "Vapendelen av den gemensamma tagglistan."), "item_weapons", "references", { optionGroup: "item_tag", allowedValueCategoryIds: [categoryId("tag_weapons")], multiple: true, required: true }),
   parameter("weapon_mastery", tr("Mastery", "Искусность", "Vapenmästerskap"), tr("Mastery selected from project references; concrete masteries are added separately.", "Искусность из справочника проекта; конкретные искусности добавляются отдельно.", "Mästerskap från projektets referenser; konkreta mästerskap läggs till separat."), "item_weapons", "reference", { optionGroup: "weapon_mastery" }),
   parameter("attack_ability", tr("Attack Ability", "Характеристика Атаки", "Attackegenskap"), tr("Ability modifier used for attack and normal weapon damage.", "Модификатор характеристики для атаки и обычного урона оружия.", "Egenskapsmodifierare för attack och normal vapenskada."), "item_weapons", "select", { optionGroup: "ability", required: true }),
   parameter("attack_bonus", tr("Attack Bonus", "Бонус Атаки", "Attackbonus"), tr("Constant bonus applied to the weapon attack roll.", "Постоянный бонус к броску атаки оружием.", "Fast bonus på vapnets attackslag."), "item_weapons", "integer", { defaultValue: 0 }),
@@ -786,7 +792,7 @@ const AMMUNITION_PARAMETERS: ReferenceRecord[] = [
 ];
 
 const WEARABLE_PARAMETERS: ReferenceRecord[] = [
-  parameter("wearable_tags", tr("Armor Weight Tags", "Теги Весовой Категории", "Vikttaggar för rustning"), tr("Light, medium, or heavy classification when the wearable uses an armor weight category.", "Лёгкая, средняя или тяжёлая категория, если экипировка использует весовую категорию доспеха.", "Lätt, medeltung eller tung klassificering när utrustningen använder rustningsvikt."), "item_wearables", "references", { optionGroup: "wearable_tag", multiple: true }),
+  parameter("wearable_tags", tr("Armor Weight Tags", "Теги Весовой Категории", "Vikttaggar för rustning"), tr("Wearable-gear section of the single equipment tag list.", "Раздел экипировки единого списка тегов снаряжения.", "Delen för buren utrustning i den gemensamma tagglistan."), "item_wearables", "references", { optionGroup: "item_tag", allowedValueCategoryIds: [categoryId("tag_wearables")], multiple: true }),
   parameter("armor_class_rules", tr("Armor Class", "Класс Защиты", "Rustningsklass"), tr("Base AC, ability modifier, and maximum allowed modifier.", "Базовый КЗ, модификатор характеристики и его ограничение.", "Bas-RK, egenskapsmodifierare och dess gräns."), "item_wearables", "guided", {
     uiFields: [
       guided("base", "Base AC", "Базовый КЗ", "Bas-RK", "number", { minimum: 0 }),
@@ -816,7 +822,7 @@ const WEARABLE_PARAMETERS: ReferenceRecord[] = [
 ];
 
 const SUBSTANCE_PARAMETERS: ReferenceRecord[] = [
-  parameter("substance_tags", tr("Additional Substance Tags", "Дополнительные Теги Вещества", "Ytterligare substanstaggar"), tr("Optional Drug or Oil classification; Potion, Poison, Substance, Magical, and Consumable are common item tags.", "Необязательная классификация «Наркотик» или «Масло»; зелье, яд, вещество, магический и расходуемый задаются общими тегами.", "Valfri klassificering som Drog eller Olja; Dryck, Gift, Substans, Magisk och Förbrukningsbar är gemensamma taggar."), "item_substances", "references", { optionGroup: "substance_tag", multiple: true }),
+  parameter("substance_tags", tr("Additional Substance Tags", "Дополнительные Теги Вещества", "Ytterligare substanstaggar"), tr("Substance section of the single equipment tag list.", "Раздел веществ единого списка тегов снаряжения.", "Substansdelen av den gemensamma tagglistan."), "item_substances", "references", { optionGroup: "item_tag", allowedValueCategoryIds: [categoryId("tag_substances")], multiple: true }),
   parameter("application_method", tr("Application Method", "Способ Применения", "Appliceringssätt"), tr("Drink, inhale, touch, or apply to a weapon.", "Выпить, вдохнуть, коснуться или нанести на оружие.", "Dricka, andas in, beröra eller applicera på vapen."), "item_substances", "select", { optionGroup: "application_method", required: true }),
   parameter("doses_spent", tr("Charges per Use", "Заряды за Использование", "Laddningar per användning"), tr("Number of charge-based doses spent by one use.", "Количество доз-зарядов за одно использование.", "Antal laddningsbaserade doser som används."), "item_substances", "integer", { minimum: 1, defaultValue: 1 }),
   parameter("application_rounds", tr("Application Time, rounds", "Время Нанесения, раунды", "Appliceringstid, rundor"), tr("Whole rounds required to apply the substance.", "Целые раунды, необходимые для применения вещества.", "Hela rundor som krävs för applicering."), "item_substances", "duration_rounds", { minimum: 0 }),
@@ -898,31 +904,42 @@ const VALUES: ReferenceRecord[] = [
     ["potion", "Potion", "Зелье", "Dryck"], ["poison", "Poison", "Яд", "Gift"], ["substance", "Substance", "Вещество", "Substans"],
     ["tool", "Tool", "Инструмент", "Verktyg"], ["kit", "Kit", "Набор", "Paket"], ["magical", "Magical", "Магический", "Magisk"],
     ["consumable", "Consumable", "Расходуемый", "Förbrukningsbar"], ["requires_proficiency", "Requires proficiency", "Требует владения", "Kräver färdighet"],
-  ].map(([key, en, ru, sv]) => option("item_tag", key, tr(en, ru, sv))),
+  ].map(([key, en, ru, sv]) =>
+    option("item_tag", key, tr(en, ru, sv), "tag_general"),
+  ),
   ...[
     ["crafting_resource", "Crafting Resource", "Ресурс для изготовления", "Tillverkningsresurs"],
     ["spell_resource", "Spell Component", "Ресурс для заклинания", "Besvärjelsekomponent"],
     ["container", "Container", "Ёмкость или контейнер", "Behållare"], ["trap", "Trap Gear", "Ловушка", "Fällutrustning"],
     ["clothing", "Clothing", "Одежда", "Kläder"], ["food", "Food", "Еда", "Mat"], ["light_source", "Light Source", "Источник света", "Ljuskälla"],
     ["scroll", "Scroll", "Свиток", "Skriftrulle"], ["other", "Other", "Иное", "Annat"],
-  ].map(([key, en, ru, sv]) => option("object_tag", key, tr(en, ru, sv))),
+  ].map(([key, en, ru, sv]) =>
+    option("item_tag", key, tr(en, ru, sv), "tag_objects"),
+  ),
   ...[
     ["artisan", "Artisan Tool", "Ремесленный инструмент", "Hantverksverktyg"],
     ["musical", "Musical Instrument", "Музыкальный инструмент", "Musikinstrument"],
-    ["magical", "Magical Tool", "Магический инструмент", "Magiskt verktyg"],
-  ].map(([key, en, ru, sv]) => option("tool_tag", key, tr(en, ru, sv))),
+  ].map(([key, en, ru, sv]) =>
+    option("item_tag", key, tr(en, ru, sv), "tag_tools"),
+  ),
   ...[
     ["simple", "Simple", "Простое", "Enkelt"], ["martial", "Martial", "Воинское", "Krigiskt"], ["melee", "Melee", "Рукопашное", "Närstrid"],
-    ["ranged", "Ranged", "Дальнобойное", "Distans"], ["thrown", "Thrown", "Метательное", "Kast"], ["light", "Light", "Лёгкое", "Lätt"],
-    ["finesse", "Finesse", "Фехтовальное", "Finess"], ["versatile", "Versatile", "Универсальное", "Mångsidigt"], ["ammunition", "Ammunition", "Боеприпас", "Ammunition"],
-    ["heavy", "Heavy", "Тяжёлое", "Tungt"], ["reach", "Reach", "Досягаемость", "Räckvidd"], ["reload", "Reload", "Перезарядка", "Omladdning"],
-  ].map(([key, en, ru, sv]) => option("weapon_tag", key, tr(en, ru, sv))),
+    ["ranged", "Ranged", "Дальнобойное", "Distans"], ["thrown", "Thrown", "Метательное", "Kast"], ["weapon_light", "Light Weapon", "Лёгкое оружие", "Lätt vapen"],
+    ["finesse", "Finesse", "Фехтовальное", "Finess"], ["versatile", "Versatile", "Универсальное", "Mångsidigt"], ["uses_ammunition", "Uses Ammunition", "Использует боеприпасы", "Använder ammunition"],
+    ["weapon_heavy", "Heavy Weapon", "Тяжёлое оружие", "Tungt vapen"], ["reach", "Reach", "Досягаемость", "Räckvidd"], ["reload", "Reload", "Перезарядка", "Omladdning"],
+  ].map(([key, en, ru, sv]) =>
+    option("item_tag", key, tr(en, ru, sv), "tag_weapons"),
+  ),
   ...[
-    ["light", "Light", "Лёгкий", "Lätt"], ["medium", "Medium", "Средний", "Medeltung"], ["heavy", "Heavy", "Тяжёлый", "Tung"],
-  ].map(([key, en, ru, sv]) => option("wearable_tag", key, tr(en, ru, sv))),
+    ["armor_light", "Light Armor", "Лёгкий доспех", "Lätt rustning"], ["armor_medium", "Medium Armor", "Средний доспех", "Medeltung rustning"], ["armor_heavy", "Heavy Armor", "Тяжёлый доспех", "Tung rustning"],
+  ].map(([key, en, ru, sv]) =>
+    option("item_tag", key, tr(en, ru, sv), "tag_wearables"),
+  ),
   ...[
     ["drug", "Drug", "Наркотик", "Drog"], ["oil", "Oil", "Масло", "Olja"],
-  ].map(([key, en, ru, sv]) => option("substance_tag", key, tr(en, ru, sv))),
+  ].map(([key, en, ru, sv]) =>
+    option("item_tag", key, tr(en, ru, sv), "tag_substances"),
+  ),
   ...[
     ["drink", "Drink", "Выпить", "Dricka"], ["inhale", "Inhale", "Вдохнуть", "Andas in"], ["touch", "Touch", "Коснуться", "Beröra"], ["weapon", "Apply to Weapon", "Нанести на оружие", "Applicera på vapen"],
   ].map(([key, en, ru, sv]) => option("application_method", key, tr(en, ru, sv))),

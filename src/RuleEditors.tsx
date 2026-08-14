@@ -2312,7 +2312,8 @@ export function DamageEditor({
       {components.map((component, index) => (
         <article className="damage-component" key={component.id}>
           <span className="step">{index + 1}</span>
-          <ValueExpressionEditor
+          <div className="damage-fields">
+            <ValueExpressionEditor
             value={component.dice}
             project={project}
             locale={locale}
@@ -2323,8 +2324,8 @@ export function DamageEditor({
                 ),
               )
             }
-          />
-          <Field label={text(locale, "Damage type", "Тип урона", "Skadetyp")}>
+            />
+            <Field label={text(locale, "Damage type", "Тип урона", "Skadetyp")}>
             <Select
               value={component.damageTypeId}
               onChange={(damageTypeId) =>
@@ -2342,8 +2343,8 @@ export function DamageEditor({
                 </option>
               ))}
             </Select>
-          </Field>
-          <Field
+            </Field>
+            <Field
             label={text(
               locale,
               "On successful save",
@@ -2377,8 +2378,8 @@ export function DamageEditor({
                 {text(locale, "No damage", "Без урона")}
               </option>
             </Select>
-          </Field>
-          <Field label={text(locale, "Periodic", "Периодический", "Periodisk")}>
+            </Field>
+            <Field label={text(locale, "Periodic", "Периодический", "Periodisk")}>
             <Toggle
               checked={component.periodic}
               onChange={(periodic) =>
@@ -2391,8 +2392,8 @@ export function DamageEditor({
               yes={text(locale, "Yes", "Да")}
               no={text(locale, "No", "Нет")}
             />
-          </Field>
-          {component.periodic && (
+            </Field>
+            {component.periodic && (
             <>
               <Field
                 label={text(
@@ -2500,7 +2501,8 @@ export function DamageEditor({
                 </Select>
               </Field>
             </>
-          )}
+            )}
+          </div>
           <button
             className="icon-button danger"
             onClick={() =>

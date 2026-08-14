@@ -17,10 +17,10 @@ async function withModel(run) {
   }
 }
 
-test("starts with schema 15, the new equipment rules catalog, and no entities", async () => {
+test("starts with schema 16, the new equipment rules catalog, and no entities", async () => {
   await withModel(async (model) => {
     const project = model.createCleanProject();
-    assert.equal(project.catalogVersion, 15);
+    assert.equal(project.catalogVersion, 16);
     assert.equal(project.ruleEngine.roundSeconds, 6);
     assert.equal(project.ruleEngine.gridUnitFeet, 2.5);
     assert.ok(project.categories.length > 20);
@@ -42,6 +42,41 @@ test("starts with schema 15, the new equipment rules catalog, and no entities", 
     assert.equal(
       project.references.some((item) => item.key === "quantity"),
       false,
+    );
+    const tagFieldKeys = new Set([
+      "item_tags",
+      "object_tags",
+      "tool_tags",
+      "weapon_tags",
+      "wearable_tags",
+      "substance_tags",
+      "container_allowed_tags",
+    ]);
+    const tagFields = project.references.filter(
+      (item) => item.kind === "parameter" && tagFieldKeys.has(item.key),
+    );
+    assert.equal(tagFields.length, tagFieldKeys.size);
+    assert.ok(tagFields.every((item) => item.optionGroup === "item_tag"));
+    assert.equal(
+      project.references.some((item) =>
+        [
+          "object_tag",
+          "tool_tag",
+          "weapon_tag",
+          "wearable_tag",
+          "substance_tag",
+          "ammunition_tag",
+        ].includes(item.optionGroup),
+      ),
+      false,
+    );
+    const tagValues = project.references.filter(
+      (item) => item.kind === "value" && item.optionGroup === "item_tag",
+    );
+    assert.ok(tagValues.length > 40);
+    assert.equal(new Set(tagValues.map((item) => item.id)).size, tagValues.length);
+    assert.ok(
+      tagValues.every((item) => item.categoryId.startsWith("wsg.category.tag_")),
     );
     assert.deepEqual(
       model
@@ -169,7 +204,7 @@ test("upgrading an old executable-string project starts a clean safe project", a
       },
     ];
     const upgraded = model.upgradeProjectCatalog(oldProject);
-    assert.equal(upgraded.catalogVersion, 15);
+    assert.equal(upgraded.catalogVersion, 16);
     assert.equal(upgraded.entities.length, 0);
     assert.equal(upgraded.ruleEngine.roundSeconds, 6);
   });

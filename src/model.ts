@@ -79,6 +79,8 @@ export interface GuidedField {
     | "dice"
     | "calculation";
   optionGroup?: string;
+  /** Optional thematic slices of one shared value list shown by this field. */
+  allowedValueCategoryIds?: string[];
   allowedEntityTypes?: EntityType[];
   minimum?: number;
   maximum?: number;
@@ -184,6 +186,8 @@ export interface ReferenceRecord {
   defaultValue?: unknown;
   allowedReferenceKinds?: ReferenceKind[];
   optionGroup?: string;
+  /** Optional thematic slices of one shared value list shown by this field. */
+  allowedValueCategoryIds?: string[];
   allowedEntityTypes?: EntityType[];
   value?: unknown;
   table?: TableDefinition;
@@ -234,7 +238,7 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 15;
+  catalogVersion: 16;
   namespace: string;
   version: string;
   defaultLocale: "en";
@@ -1253,7 +1257,7 @@ export function createCleanProject(): ForgeProject {
   const project: ForgeProject = {
     format: "wsg-forge-project",
     schemaVersion: 3,
-    catalogVersion: 15,
+    catalogVersion: 16,
     namespace,
     version: "1.0.0",
     defaultLocale: "en",
@@ -1300,8 +1304,8 @@ export function createCleanProject(): ForgeProject {
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 15 && project.ruleEngine) return project;
-  // Schema 15 replaces every earlier catalog with the approved equipment-only
+  if (project.catalogVersion === 16 && project.ruleEngine) return project;
+  // Schema 16 replaces every earlier catalog with the approved equipment-only
   // atomics, references, and templates. Old records must not leak into the reset.
   return createCleanProject();
 }

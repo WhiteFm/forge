@@ -711,8 +711,10 @@ main {
   color: #d9b9bb;
   font-size: 10px;
   font-weight: 700;
+  line-height: 1.15;
   letter-spacing: 0.07em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 .field input,
 .field select,
@@ -857,10 +859,10 @@ main {
 
 .operation-row {
   display: grid;
-  grid-template-columns: 34px minmax(120px, 0.7fr) minmax(180px, 1.4fr) minmax(
-      120px,
+  grid-template-columns: 34px minmax(0, 0.7fr) minmax(0, 1.4fr) minmax(
+      0,
       0.8fr
-    ) minmax(110px, 1fr) 34px;
+    ) minmax(0, 1fr) 34px;
   gap: 8px;
   align-items: end;
   padding: 10px 0;
@@ -889,8 +891,8 @@ main {
 }
 .column-card {
   display: grid;
-  grid-template-columns: 32px minmax(320px, 2.2fr) minmax(130px, 0.7fr) minmax(
-      130px,
+  grid-template-columns: 32px minmax(0, 2.2fr) minmax(0, 0.7fr) minmax(
+      0,
       0.8fr
     ) 34px;
   gap: 8px;
@@ -1010,7 +1012,7 @@ main {
 }
 .template-field {
   display: grid;
-  grid-template-columns: 32px minmax(220px, 1fr) 150px 150px 62px 34px;
+  grid-template-columns: 32px minmax(0, 1fr) minmax(0, 150px) minmax(0, 150px) 62px 34px;
   gap: 8px;
   align-items: end;
   padding: 9px;
@@ -1037,12 +1039,30 @@ main {
 }
 .dynamic-card {
   min-width: 0;
+  max-width: 100%;
   display: grid;
   gap: 8px;
   padding: 10px;
   border: 1px solid var(--line-soft);
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.012);
+  container-type: inline-size;
+}
+.dynamic-card > *,
+.automation-rule-body > *,
+.visual-rule-row > *,
+.visual-action > *,
+.resource-recovery > *,
+.guided-row > *,
+.choice-card > *,
+.rule-grid > *,
+.expression-editor > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.dynamic-card :is(input, select, textarea) {
+  min-width: 0;
+  max-width: 100%;
 }
 .dynamic-card.table-value {
   grid-column: 1 / -1;
@@ -1171,7 +1191,7 @@ main {
 }
 .rule-create-tools {
   display: grid;
-  grid-template-columns: minmax(240px, 360px) 132px;
+  grid-template-columns: minmax(0, 360px) minmax(0, 132px);
   align-items: end;
   gap: 10px;
   flex: 0 1 510px;
@@ -1260,8 +1280,8 @@ main {
 }
 .visual-rule-row {
   display: grid;
-  grid-template-columns: 28px minmax(220px, 1fr) minmax(140px, 0.55fr) minmax(
-      220px,
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 0.55fr) minmax(
+      0,
       1fr
     ) 34px;
   align-items: end;
@@ -1271,7 +1291,7 @@ main {
 }
 .visual-action {
   display: grid;
-  grid-template-columns: repeat(4, minmax(130px, 1fr)) 34px;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) 34px;
   align-items: end;
   gap: 8px;
   padding: 9px;
@@ -1327,13 +1347,13 @@ main {
 }
 .choice-checks {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 7px;
 }
 .resource-recovery {
   display: grid;
-  grid-template-columns: minmax(160px, 0.8fr) minmax(150px, 0.6fr) minmax(
-      260px,
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 0.6fr) minmax(
+      0,
       1.5fr
     ) 34px;
   align-items: end;
@@ -1343,14 +1363,28 @@ main {
 }
 .damage-component {
   display: grid;
-  grid-template-columns: 28px repeat(3, minmax(150px, 1fr)) 34px;
-  align-items: end;
+  grid-template-columns: 28px minmax(0, 1fr) 34px;
+  align-items: start;
   gap: 8px;
   padding: 10px 0;
   border-top: 1px solid var(--line-soft);
 }
-.damage-component .expression-editor {
-  grid-column: span 2;
+.damage-fields {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  align-items: end;
+  gap: 8px;
+}
+.damage-fields > *,
+.damage-fields .field,
+.damage-fields select,
+.damage-fields input {
+  min-width: 0;
+  max-width: 100%;
+}
+.damage-fields > .expression-editor {
+  grid-column: 1 / -1;
 }
 .choice-card {
   padding: 10px;
@@ -1433,7 +1467,7 @@ main {
 .influence-list summary {
   min-height: 58px;
   display: grid;
-  grid-template-columns: 32px minmax(140px, 0.6fr) minmax(180px, 1fr) 34px;
+  grid-template-columns: 32px minmax(0, 0.6fr) minmax(0, 1fr) 34px;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
@@ -1457,13 +1491,13 @@ main {
 }
 .effect-picker {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 7px;
 }
 .dependency-list article {
   min-height: 62px;
   display: grid;
-  grid-template-columns: 10px minmax(180px, 1fr) auto auto 34px;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto 34px;
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
@@ -1663,6 +1697,84 @@ main {
   font-style: normal;
 }
 
+/* Editor cards can be much narrower than the viewport because of the sidebar,
+   collection list, and nested rule blocks. Respond to the actual card width so
+   every control stays inside its own frame at every nesting depth. */
+@container (max-width: 760px) {
+  .rule-set-heading,
+  .subsection-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+  .rule-set-heading > .button,
+  .subsection-head > .button {
+    width: 100%;
+  }
+  .rule-create-tools {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    flex-basis: 100%;
+  }
+  .visual-rule-row {
+    grid-template-columns: 28px minmax(0, 1fr) 34px;
+  }
+  .visual-rule-row > :not(.step):not(.icon-button) {
+    grid-column: 2;
+  }
+  .visual-rule-row > .icon-button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .visual-action {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 34px;
+  }
+  .visual-action > .icon-button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .resource-recovery {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 34px;
+  }
+  .resource-recovery > .icon-button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .locale-grid,
+  .form-grid.three,
+  .form-grid.four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 480px) {
+  .rule-grid,
+  .expression-editor,
+  .damage-fields,
+  .guided-grid,
+  .structured-grid,
+  .locale-grid,
+  .form-grid.two,
+  .form-grid.three,
+  .form-grid.four,
+  .choice-checks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .visual-action,
+  .resource-recovery {
+    grid-template-columns: minmax(0, 1fr) 34px;
+  }
+  .visual-action > :not(.icon-button),
+  .resource-recovery > :not(.icon-button) {
+    grid-column: 1;
+  }
+  .visual-action > .icon-button,
+  .resource-recovery > .icon-button {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
 @media (max-width: 1200px) {
   :root {
     --sidebar: 242px;
@@ -1783,9 +1895,6 @@ main {
   }
   .damage-component {
     grid-template-columns: 28px minmax(0, 1fr) 34px;
-  }
-  .damage-component > :not(.step):not(.icon-button) {
-    grid-column: 2;
   }
   .damage-component > .icon-button {
     grid-column: 3;
