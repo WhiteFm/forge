@@ -77,6 +77,8 @@ export interface ValueExpression {
   grouped?: boolean;
   number?: number;
   atomicId?: string;
+  /** Numeric field when the selected atomic value is a record. */
+  atomicField?: string;
   ability?:
     | "strength"
     | "dexterity"
@@ -130,6 +132,7 @@ export type RuleActionType =
   | "add"
   | "subtract"
   | "multiply"
+  | "divide"
   | "set"
   | "set_minimum"
   | "set_maximum"
@@ -173,7 +176,11 @@ export interface RuleAction {
   type: RuleActionType;
   target: RuleTarget;
   atomicId?: string;
+  /** Optional field when the selected atomic value is a record. */
+  atomicField?: string;
   value?: ValueExpression;
+  /** Used by division effects; division can never leave rounding undefined. */
+  rounding?: RoundingMode;
   damageTypeId?: string;
   conditionId?: string;
   proficiencyId?: string;
@@ -412,6 +419,7 @@ export const RULE_ACTIONS: RuleCatalogEntry<RuleActionType>[] = [
   entry("add", "Add value", "Добавить значение"),
   entry("subtract", "Subtract value", "Вычесть значение"),
   entry("multiply", "Multiply value", "Умножить значение"),
+  entry("divide", "Divide value", "Разделить значение"),
   entry("set", "Set value", "Установить значение"),
   entry("set_minimum", "Set minimum", "Установить минимум"),
   entry("set_maximum", "Set maximum", "Установить максимум"),
@@ -647,6 +655,15 @@ export const DEFAULT_RULE_ENGINE: RuleEngineDefinition = {
       description: tr(
         "Immunity is resolved first; otherwise resistance and vulnerability are applied to each damage component by type.",
         "Сначала применяется иммунитет; затем сопротивление или уязвимость отдельно к каждому компоненту урона.",
+      ),
+      locked: true,
+    },
+    {
+      id: "finesse_weapon",
+      name: tr("Finesse weapon ability", "Характеристика фехтовального оружия"),
+      description: tr(
+        "A finesse weapon stores two allowed attack abilities. At runtime, the attack and normal damage use the higher of their current modifiers.",
+        "Фехтовальное оружие хранит две допустимые характеристики атаки. Во время игры атака и обычный урон используют больший из их текущих модификаторов.",
       ),
       locked: true,
     },

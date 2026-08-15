@@ -724,8 +724,82 @@ main {
   border-inline: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.008);
 }
+.wizard-section-intro {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.42fr) minmax(260px, 1fr);
+  align-items: end;
+  gap: 18px;
+  margin-bottom: 14px;
+  padding: 0 2px 13px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.wizard-section-intro span {
+  color: var(--gold);
+  font: 10px Consolas, monospace;
+}
+.wizard-section-intro h3 {
+  margin-top: 2px;
+  font: 700 25px "Cormorant Garamond", serif;
+}
+.wizard-section-intro p {
+  max-width: 680px;
+  justify-self: end;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.wizard-name-card {
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface);
+}
 .wizard-fields {
   margin-top: 14px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: start;
+}
+.wizard-field {
+  min-width: 0;
+  grid-column: span 6;
+}
+.wizard-field > * {
+  height: 100%;
+}
+.wizard-field:is(
+  .parameter-description,
+  .parameter-item_tags,
+  .parameter-weapon_tags,
+  .parameter-wearable_tags,
+  .parameter-object_tags,
+  .parameter-tool_tags,
+  .parameter-substance_tags,
+  .parameter-effects,
+  .parameter-curse_effects,
+  .parameter-primary_damage,
+  .parameter-additional_damage,
+  .parameter-versatile_damage,
+  .parameter-conditional_damage
+) {
+  grid-column: 1 / -1;
+}
+.wizard-field:is(.parameter-stack_units, .parameter-unit_weight) {
+  grid-column: span 3;
+}
+.wizard-field.parameter-unit_cost {
+  grid-column: span 6;
+}
+.wizard-field .dynamic-card {
+  padding: 12px;
+}
+.primary-damage-note {
+  margin: 0;
+  padding: 9px 11px;
+  border-left: 3px solid var(--gold);
+  color: var(--gold-soft);
+  font-size: 12px;
+  line-height: 1.4;
+  background: rgba(217, 198, 95, 0.045);
 }
 .simple-rule-set .automation-rule-body > .locale-grid,
 .simple-rule-set .automation-rule-body > .rule-timing,
@@ -1429,6 +1503,9 @@ main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+.dynamic-form.wizard-fields {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
 .dynamic-card {
   min-width: 0;
   max-width: 100%;
@@ -1731,21 +1808,32 @@ main {
 }
 .formula-sequence {
   min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  display: grid;
+  align-items: stretch;
   gap: 8px;
 }
 .formula-segment {
-  min-width: min(100%, 260px);
-  flex: 1 1 280px;
+  min-width: 0;
   display: grid;
-  grid-template-columns: minmax(92px, 0.34fr) minmax(0, 1fr);
+  grid-template-columns: minmax(130px, 0.28fr) minmax(150px, 0.32fr) minmax(0, 1fr);
   align-items: end;
   gap: 8px;
 }
 .formula-segment:first-child {
   grid-template-columns: minmax(0, 1fr);
+}
+.equipped-effect-editor {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) 34px;
+  align-items: end;
+}
+.equipped-effect-editor > .icon-button {
+  grid-column: 4;
+  grid-row: 1;
+}
+.equipped-formula {
+  display: grid;
+  gap: 6px;
+  padding-top: 4px;
 }
 .formula-operand {
   min-width: 0;
@@ -2431,6 +2519,16 @@ main {
     grid-column: 3;
     grid-row: 1;
   }
+  .wizard-fields > .wizard-field {
+    grid-column: 1 / -1;
+  }
+  .wizard-section-intro {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .wizard-section-intro p {
+    justify-self: start;
+  }
 }
 
 @media (max-width: 620px) {
@@ -2537,6 +2635,12 @@ main {
   }
   .wizard-body {
     padding: 12px;
+  }
+  .wizard-name-card {
+    padding: 9px;
+  }
+  .wizard-field .dynamic-card {
+    padding: 9px;
   }
   .wizard-footer {
     padding: 10px 12px;

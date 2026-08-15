@@ -17,10 +17,10 @@ async function withModel(run) {
   }
 }
 
-test("starts with schema 18, the site reference, and no entities", async () => {
+test("starts with schema 19, the site reference, and no entities", async () => {
   await withModel(async (model) => {
     const project = model.createCleanProject();
-    assert.equal(project.catalogVersion, 18);
+    assert.equal(project.catalogVersion, 19);
     assert.equal(project.ruleEngine.roundSeconds, 6);
     assert.equal(project.ruleEngine.gridUnitFeet, 2.5);
     assert.ok(project.categories.length > 20);
@@ -121,6 +121,21 @@ test("starts with schema 18, the site reference, and no entities", async () => {
     const weapon = project.templates.find((item) => item.name.en === "Weapon");
     const versatile = project.references.find((item) => item.key === "versatile_damage");
     assert.ok(weapon.fields.some((field) => field.referenceId === versatile.id));
+    for (const key of [
+      "finesse_attack_ability",
+      "requires_identification",
+      "curse",
+      "curse_effects",
+    ]) {
+      const reference = project.references.find((item) => item.key === key);
+      assert.ok(reference, `missing ${key}`);
+      assert.ok(
+        weapon.fields.some((field) => field.referenceId === reference.id),
+        `weapon is missing ${key}`,
+      );
+    }
+    assert.ok(project.ruleEngine.actions.some((item) => item.id === "divide"));
+    assert.ok(project.ruleEngine.coreRules.some((item) => item.id === "finesse_weapon"));
     const potion = project.templates.find((item) => item.name.en === "Potion");
     const potionUse = potion.fields.find((field) => field.referenceId === activation.id);
     assert.equal(potionUse.defaultValue.usage_mode, "single_use");
@@ -250,7 +265,7 @@ test("upgrading an old executable-string project starts a clean safe project", a
       },
     ];
     const upgraded = model.upgradeProjectCatalog(oldProject);
-    assert.equal(upgraded.catalogVersion, 18);
+    assert.equal(upgraded.catalogVersion, 19);
     assert.equal(upgraded.entities.length, 0);
     assert.equal(upgraded.ruleEngine.roundSeconds, 6);
   });
@@ -284,7 +299,7 @@ test("upgrading schema 17 preserves local reference names and migrates damage li
     const upgradedLimit = upgraded.references.find(
       (item) => item.key === "extra_damage_limit",
     );
-    assert.equal(upgraded.catalogVersion, 18);
+    assert.equal(upgraded.catalogVersion, 19);
     assert.equal(upgradedLimit.name.en, "My damage usage");
     assert.equal(upgradedLimit.propertyType, "guided");
     assert.deepEqual(upgraded.entities[0].values[upgradedLimit.id], {
@@ -311,6 +326,7 @@ test("visual formulas preserve arithmetic precedence and paired nested groups", 
         { kind: "number", number: 4, grouped: true },
       ],
       operators: ["sum", "multiply"],
+      roundings: ["none", "none"],
     };
     const expression = formulas.formulaSequenceToExpression(sequence);
     assert.equal(expression.operation, "sum");
@@ -319,9 +335,53 @@ test("visual formulas preserve arithmetic precedence and paired nested groups", 
     const rebuilt = formulas.expressionToFormulaSequence(expression);
     assert.equal(rebuilt.operators[0], "sum");
     assert.equal(rebuilt.terms[1].operation, "multiply");
+    const divided = formulas.formulaSequenceToExpression({
+      terms: [
+        { kind: "number", number: 5 },
+        { kind: "number", number: 2 },
+      ],
+      operators: ["divide"],
+      roundings: ["up"],
+    });
+    assert.equal(divided.operation, "divide");
+    assert.equal(divided.rounding, "up");
   } finally {
     await server.close();
   }
+});
+
+test("schema 18 projects receive the new weapon fields without losing entities", async () => {
+  await withModel(async (model) => {
+    const project = model.createCleanProject();
+    project.catalogVersion = 18;
+    const weapon = project.templates.find((item) => item.name.en === "Weapon");
+    const removedKeys = new Set(["finesse_attack_ability", "curse", "curse_effects"]);
+    const removedIds = new Set(
+      project.references
+        .filter((item) => removedKeys.has(item.key))
+        .map((item) => item.id),
+    );
+    project.references = project.references.filter((item) => !removedIds.has(item.id));
+    weapon.fields = weapon.fields.filter((field) => !removedIds.has(field.referenceId));
+    project.entities.push({
+      id: "mygame.item.kept_weapon",
+      key: "kept_weapon",
+      type: "item",
+      templateId: weapon.id,
+      name: { en: "Kept Weapon" },
+      values: {},
+      previousIds: [],
+    });
+    const upgraded = model.upgradeProjectCatalog(project);
+    assert.equal(upgraded.catalogVersion, 19);
+    assert.equal(upgraded.entities.length, 1);
+    const upgradedWeapon = upgraded.templates.find((item) => item.id.endsWith(".temp.weapon"));
+    for (const key of removedKeys) {
+      const reference = upgraded.references.find((item) => item.key === key);
+      assert.ok(reference);
+      assert.ok(upgradedWeapon.fields.some((field) => field.referenceId === reference.id));
+    }
+  });
 });
 
 test("restoring the site reference preserves pack and entities", async () => {

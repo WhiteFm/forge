@@ -1,10 +1,15 @@
-import type { ValueExpression, ValueOperation } from "./rule-system";
+import type {
+  RoundingMode,
+  ValueExpression,
+  ValueOperation,
+} from "./rule-system";
 
 export type ArithmeticOperator = "sum" | "subtract" | "multiply" | "divide";
 
 export interface FormulaSequence {
   terms: ValueExpression[];
   operators: ArithmeticOperator[];
+  roundings: RoundingMode[];
 }
 
 const arithmeticOperations = new Set<ValueOperation>([
@@ -32,6 +37,7 @@ function collectSameOperation(
   operation: ArithmeticOperator,
   terms: ValueExpression[],
   operators: ArithmeticOperator[],
+  roundings: RoundingMode[],
   first = true,
 ) {
   if (
@@ -56,12 +62,16 @@ function collectSameOperation(
         operation,
         terms,
         operators,
+        roundings,
         first && index === 0,
       );
     } else {
       terms.push(operand);
     }
-    if (index < expression.operands!.length - 1) operators.push(operation);
+    if (index < expression.operands!.length - 1) {
+      operators.push(operation);
+      roundings.push(expression.rounding ?? "none");
+    }
   });
 }
 
@@ -76,31 +86,38 @@ export function expressionToFormulaSequence(
     !arithmeticOperations.has(source.operation) ||
     !source.operands?.length
   )
-    return { terms: [source], operators: [] };
+    return { terms: [source], operators: [], roundings: [] };
 
   const terms: ValueExpression[] = [];
   const operators: ArithmeticOperator[] = [];
+  const roundings: RoundingMode[] = [];
   collectSameOperation(
     source,
     source.operation as ArithmeticOperator,
     terms,
     operators,
+    roundings,
   );
   return terms.length
-    ? { terms, operators: operators.slice(0, Math.max(0, terms.length - 1)) }
-    : { terms: [defaultFormulaTerm()], operators: [] };
+    ? {
+        terms,
+        operators: operators.slice(0, Math.max(0, terms.length - 1)),
+        roundings: roundings.slice(0, Math.max(0, terms.length - 1)),
+      }
+    : { terms: [defaultFormulaTerm()], operators: [], roundings: [] };
 }
 
 function operationExpression(
   operation: ArithmeticOperator,
   left: ValueExpression,
   right: ValueExpression,
+  rounding: RoundingMode,
 ): ValueExpression {
   return {
     kind: "operation",
     operation,
     operands: [left, right],
-    rounding: "none",
+    rounding: operation === "divide" ? rounding : "none",
   };
 }
 
@@ -111,25 +128,34 @@ export function formulaSequenceToExpression(
     ? sequence.terms
     : [defaultFormulaTerm()];
   const operators = sequence.operators.slice(0, terms.length - 1);
+  const roundings = (sequence.roundings ?? []).slice(0, terms.length - 1);
   const valueStack: ValueExpression[] = [terms[0]];
-  const operatorStack: ArithmeticOperator[] = [];
+  const operatorStack: Array<{
+    operator: ArithmeticOperator;
+    rounding: RoundingMode;
+  }> = [];
 
   const applyTop = () => {
-    const operator = operatorStack.pop();
+    const entry = operatorStack.pop();
     const right = valueStack.pop();
     const left = valueStack.pop();
-    if (!operator || !left || !right) return;
-    valueStack.push(operationExpression(operator, left, right));
+    if (!entry || !left || !right) return;
+    valueStack.push(
+      operationExpression(entry.operator, left, right, entry.rounding),
+    );
   };
 
   operators.forEach((operator, index) => {
     while (
       operatorStack.length &&
-      precedence[operatorStack[operatorStack.length - 1]] >=
+      precedence[operatorStack[operatorStack.length - 1].operator] >=
         precedence[operator]
     )
       applyTop();
-    operatorStack.push(operator);
+    operatorStack.push({
+      operator,
+      rounding: roundings[index] ?? (operator === "divide" ? "down" : "none"),
+    });
     valueStack.push(terms[index + 1] ?? defaultFormulaTerm());
   });
   while (operatorStack.length) applyTop();
@@ -156,6 +182,10 @@ export function addFormulaTerm(
   return {
     terms: [...sequence.terms, defaultFormulaTerm()],
     operators: [...sequence.operators, operator],
+    roundings: [
+      ...(sequence.roundings ?? []),
+      operator === "divide" ? "down" : "none",
+    ],
   };
 }
 
@@ -164,10 +194,13 @@ export function removeFormulaTerm(
   index: number,
 ): FormulaSequence {
   if (sequence.terms.length <= 1)
-    return { terms: [defaultFormulaTerm()], operators: [] };
+    return { terms: [defaultFormulaTerm()], operators: [], roundings: [] };
   return {
     terms: sequence.terms.filter((_, current) => current !== index),
     operators: sequence.operators.filter((_, current) =>
+      index === 0 ? current !== 0 : current !== index - 1,
+    ),
+    roundings: (sequence.roundings ?? []).filter((_, current) =>
       index === 0 ? current !== 0 : current !== index - 1,
     ),
   };

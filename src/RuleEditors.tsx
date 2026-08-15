@@ -570,6 +570,16 @@ function FormulaSequenceEditor({
                           ? (operator as ArithmeticOperator)
                           : item,
                       ),
+                      roundings: sequence.operators.map((item, current) =>
+                        current === index - 1
+                          ? operator === "divide"
+                            ? sequence.roundings[current] === "up"
+                              ? "up"
+                              : "down"
+                            : "none"
+                          : sequence.roundings[current] ??
+                            (item === "divide" ? "down" : "none"),
+                      ),
                     })
                   }
                 >
@@ -578,6 +588,38 @@ function FormulaSequenceEditor({
                       {item.symbol} · {text(locale, item.en, item.ru, item.sv)}
                     </option>
                   ))}
+                </Select>
+              </Field>
+            )}
+            {index > 0 && sequence.operators[index - 1] === "divide" && (
+              <Field
+                label={text(
+                  locale,
+                  "Division rounding",
+                  "Округление деления",
+                  "Avrundning vid division",
+                )}
+              >
+                <Select
+                  value={sequence.roundings[index - 1] ?? "down"}
+                  onChange={(rounding) =>
+                    commit({
+                      ...sequence,
+                      roundings: sequence.operators.map((operator, current) =>
+                        current === index - 1
+                          ? (rounding as "down" | "up")
+                          : sequence.roundings[current] ??
+                            (operator === "divide" ? "down" : "none"),
+                      ),
+                    })
+                  }
+                >
+                  <option value="down">
+                    {text(locale, "Round down", "Округлить вниз", "Avrunda nedåt")}
+                  </option>
+                  <option value="up">
+                    {text(locale, "Round up", "Округлить вверх", "Avrunda uppåt")}
+                  </option>
                 </Select>
               </Field>
             )}
@@ -644,9 +686,18 @@ function FormulaOperandEditor({
 }) {
   const grouped = Boolean(value.grouped || value.kind === "operation");
   const visibleKind = grouped ? "group" : value.kind;
-  const numericAtomics = project.atomics.filter((item) =>
-    ["integer", "decimal"].includes(item.dataType),
-  );
+  const numericAtomics = project.atomics.flatMap((item) => {
+    const direct = ["integer", "decimal"].includes(item.dataType)
+      ? [{ value: item.id, label: localized(item.name, locale) }]
+      : [];
+    const fields = (item.fields ?? [])
+      .filter((field) => ["integer", "decimal"].includes(field.dataType))
+      .map((field) => ({
+        value: `${item.id}::${field.key}`,
+        label: `${localized(item.name, locale)} — ${localized(field.name, locale)}`,
+      }));
+    return [...direct, ...fields];
+  });
   const dice = project.atomics.filter((item) => item.dataType === "die");
   const tables = project.references.filter(
     (item) => item.kind === "parameter" && item.propertyType === "table",
@@ -702,12 +753,23 @@ function FormulaOperandEditor({
           label={text(locale, "Game value", "Игровое значение", "Spelvärde")}
         >
           <Select
-            value={value.atomicId ?? numericAtomics[0]?.id ?? ""}
-            onChange={(atomicId) => onChange({ ...value, atomicId })}
+          value={
+            value.atomicId
+              ? `${value.atomicId}${value.atomicField ? `::${value.atomicField}` : ""}`
+              : numericAtomics[0]?.value ?? ""
+          }
+            onChange={(selected) => {
+              const [atomicId, atomicField] = selected.split("::");
+              onChange({
+                ...value,
+                atomicId,
+                atomicField: atomicField || undefined,
+              });
+            }}
           >
             {numericAtomics.map((item) => (
-              <option key={item.id} value={item.id}>
-                {localized(item.name, locale)}
+              <option key={item.value} value={item.value}>
+                {item.label}
               </option>
             ))}
           </Select>
@@ -1150,6 +1212,7 @@ function actionProblemCount(action: RuleAction) {
     "add",
     "subtract",
     "multiply",
+    "divide",
     "set",
     "set_minimum",
     "set_maximum",
@@ -1181,6 +1244,7 @@ function actionProblemCount(action: RuleAction) {
   ];
   if (atomicActions.includes(action.type) && !action.atomicId) count += 1;
   if (amountActions.includes(action.type) && expressionIsIncomplete(action.value)) count += 1;
+  if (action.type === "divide" && !["down", "up"].includes(action.rounding ?? "")) count += 1;
   if (action.type === "deal_damage" && !action.damageTypeId) count += 1;
   if (["make_saving_throw", "make_ability_check"].includes(action.type) && (!action.ability || expressionIsIncomplete(action.difficulty))) count += 1;
   if (["grant_condition", "remove_condition", "grant_condition_immunity"].includes(action.type) && !action.conditionId) count += 1;
@@ -1203,11 +1267,247 @@ function ruleProblemCount(rule: AutomationRule) {
   );
 }
 
+function EquippedEffectEditor({
+  action,
+  project,
+  locale,
+  onChange,
+  remove,
+}: {
+  action: RuleAction;
+  project: ForgeProject;
+  locale: Locale;
+  onChange: (value: RuleAction) => void;
+  remove: () => void;
+}) {
+  const numericTypes: RuleActionType[] = [
+    "add",
+    "subtract",
+    "multiply",
+    "divide",
+  ];
+  const numericTargets = project.atomics.flatMap((item) => {
+    const direct = ["integer", "decimal"].includes(item.dataType)
+      ? [{ value: `${item.id}::`, label: localized(item.name, locale) }]
+      : [];
+    const fields = (item.fields ?? [])
+      .filter((field) => ["integer", "decimal"].includes(field.dataType))
+      .map((field) => ({
+        value: `${item.id}::${field.key}`,
+        label: `${localized(item.name, locale)} — ${localized(field.name, locale)}`,
+      }));
+    return [...direct, ...fields];
+  });
+  const logicalEffects: Array<{
+    type: RuleActionType;
+    en: string;
+    ru: string;
+    sv: string;
+  }> = [
+    { type: "grant_advantage", en: "Advantage", ru: "Преимущество", sv: "Fördel" },
+    { type: "grant_disadvantage", en: "Disadvantage", ru: "Помеха", sv: "Nackdel" },
+    { type: "grant_resistance", en: "Damage Resistance", ru: "Сопротивление урону", sv: "Skademotstånd" },
+    { type: "grant_vulnerability", en: "Damage Vulnerability", ru: "Уязвимость к урону", sv: "Skadesårbarhet" },
+    { type: "grant_damage_immunity", en: "Damage Immunity", ru: "Иммунитет к урону", sv: "Skadeimmunitet" },
+    { type: "grant_condition_immunity", en: "Condition Immunity", ru: "Иммунитет к состоянию", sv: "Tillståndsimmunitet" },
+    { type: "grant_condition", en: "Apply Condition", ru: "Наложить состояние", sv: "Tillämpa tillstånd" },
+    { type: "grant_sense", en: "Sense", ru: "Чувство", sv: "Sinne" },
+    { type: "grant_proficiency", en: "Proficiency", ru: "Владение", sv: "Färdighet" },
+    { type: "upgrade_proficiency", en: "Expertise", ru: "Экспертность", sv: "Expertis" },
+  ];
+  const isNumeric = numericTypes.includes(action.type);
+  const selected = isNumeric
+    ? action.atomicId
+      ? `${action.atomicId}::${action.atomicField ?? ""}`
+      : ""
+    : logicalEffects.some((entry) => entry.type === action.type)
+      ? `logical::${action.type}`
+      : "";
+  const values = (group: string) =>
+    project.references.filter(
+      (item) => item.kind === "value" && item.optionGroup === group,
+    );
+  const rollTargets = project.atomics.filter((item) =>
+    ["attack", "initiative", "skill", "ability_score"].includes(item.key),
+  );
+  const chooseEffect = (selection: string) => {
+    if (selection.startsWith("logical::")) {
+      const type = selection.slice("logical::".length) as RuleActionType;
+      const damageTypeId = values("damage_type")[0]?.id;
+      const conditionId = values("condition")[0]?.id;
+      const senseTypeId = values("sense_type")[0]?.id;
+      const proficiencyId = project.references.find(
+        (item) =>
+          item.kind === "value" &&
+          ["skill", "language", "tool_type", "proficiency_type"].includes(
+            item.optionGroup ?? "",
+          ),
+      )?.id;
+      onChange({
+        id: action.id,
+        type,
+        target: "self",
+        ...(type === "grant_advantage" || type === "grant_disadvantage"
+          ? { atomicId: rollTargets[0]?.id }
+          : {}),
+        ...(["grant_resistance", "grant_vulnerability", "grant_damage_immunity"].includes(type)
+          ? { damageTypeId }
+          : {}),
+        ...(["grant_condition", "grant_condition_immunity"].includes(type)
+          ? { conditionId }
+          : {}),
+        ...(type === "grant_sense"
+          ? { senseTypeId, value: { kind: "number", number: 30, rounding: "none" } as ValueExpression }
+          : {}),
+        ...(["grant_proficiency", "upgrade_proficiency"].includes(type)
+          ? { proficiencyId }
+          : {}),
+      });
+      return;
+    }
+    const [atomicId, atomicField] = selection.split("::");
+    onChange({
+      id: action.id,
+      type: "add",
+      target: "self",
+      atomicId,
+      atomicField: atomicField || undefined,
+      ability: atomicId.endsWith(".ability_score")
+        ? action.ability ?? "strength"
+        : undefined,
+      skillId: atomicId.endsWith(".skill") ? action.skillId : undefined,
+      value: action.value ?? { kind: "number", number: 1, rounding: "none" },
+    });
+  };
+  return (
+    <article className="visual-action equipped-effect-editor">
+      <Field label={text(locale, "What changes", "Что изменяется", "Vad ändras") }>
+        <Select value={selected} onChange={chooseEffect}>
+          <option value="">{text(locale, "Choose a game value…", "Выберите игровое значение…", "Välj ett spelvärde…")}</option>
+          <optgroup label={text(locale, "Numeric values", "Числовые значения", "Numeriska värden") }>
+            {numericTargets.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
+          </optgroup>
+          <optgroup label={text(locale, "Rules and states", "Правила и состояния", "Regler och tillstånd") }>
+            {logicalEffects.map((entry) => (
+              <option key={entry.type} value={`logical::${entry.type}`}>
+                {text(locale, entry.en, entry.ru, entry.sv)}
+              </option>
+            ))}
+          </optgroup>
+        </Select>
+      </Field>
+      {isNumeric && action.atomicId && (
+        <>
+          {action.atomicId.endsWith(".ability_score") && (
+            <Field label={text(locale, "Ability", "Характеристика", "Egenskap") }>
+              <Select
+                value={action.ability ?? "strength"}
+                onChange={(ability) => onChange({ ...action, ability: ability as RuleAction["ability"] })}
+              >
+                {abilities.map((ability) => (
+                  <option key={ability} value={ability}>
+                    {text(locale, ability[0].toUpperCase() + ability.slice(1), ({ strength: "Сила", dexterity: "Ловкость", constitution: "Телосложение", intelligence: "Интеллект", wisdom: "Мудрость", charisma: "Харизма" } as Record<string, string>)[ability])}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+          {action.atomicId.endsWith(".skill") && (
+            <Field label={text(locale, "Skill", "Навык", "Färdighet") }>
+              <Select value={action.skillId ?? ""} onChange={(skillId) => onChange({ ...action, skillId })}>
+                <option value="">—</option>
+                {values("skill").map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}
+              </Select>
+            </Field>
+          )}
+          <Field label={text(locale, "How it changes", "Как изменяется", "Hur det ändras") }>
+            <Select
+              value={action.type}
+              onChange={(type) => onChange({
+                ...action,
+                type: type as RuleActionType,
+                rounding: type === "divide" ? action.rounding === "up" ? "up" : "down" : undefined,
+              })}
+            >
+              <option value="add">+ · {text(locale, "Add", "Добавить", "Lägg till")}</option>
+              <option value="subtract">− · {text(locale, "Subtract", "Убавить", "Dra av")}</option>
+              <option value="multiply">× · {text(locale, "Multiply", "Умножить", "Multiplicera")}</option>
+              <option value="divide">÷ · {text(locale, "Divide", "Разделить", "Dividera")}</option>
+            </Select>
+          </Field>
+          {action.type === "divide" && (
+            <Field label={text(locale, "Rounding", "Округление", "Avrundning") }>
+              <Select value={action.rounding ?? "down"} onChange={(rounding) => onChange({ ...action, rounding: rounding as RuleAction["rounding"] })}>
+                <option value="down">{text(locale, "Down", "Вниз", "Nedåt")}</option>
+                <option value="up">{text(locale, "Up", "Вверх", "Uppåt")}</option>
+              </Select>
+            </Field>
+          )}
+          <div className="rule-wide equipped-formula">
+            <span className="dynamic-label">{text(locale, "Formula", "Формула", "Formel")}</span>
+            <ValueExpressionEditor value={action.value ?? { kind: "number", number: 1 }} project={project} locale={locale} onChange={(value) => onChange({ ...action, value })} />
+          </div>
+        </>
+      )}
+      {(action.type === "grant_advantage" || action.type === "grant_disadvantage") && (
+        <Field label={text(locale, "Which roll", "Какой бросок", "Vilket slag") }>
+          <Select value={action.atomicId ?? ""} onChange={(atomicId) => onChange({ ...action, atomicId })}>
+            <option value="">—</option>
+            {rollTargets.map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}
+          </Select>
+        </Field>
+      )}
+      {["grant_resistance", "grant_vulnerability", "grant_damage_immunity"].includes(action.type) && (
+        <Field label={text(locale, "Damage type", "Тип урона", "Skadetyp") }>
+          <Select value={action.damageTypeId ?? ""} onChange={(damageTypeId) => onChange({ ...action, damageTypeId })}>
+            <option value="">—</option>
+            {values("damage_type").map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}
+          </Select>
+        </Field>
+      )}
+      {["grant_condition", "grant_condition_immunity"].includes(action.type) && (
+        <Field label={text(locale, "Condition", "Состояние", "Tillstånd") }>
+          <Select value={action.conditionId ?? ""} onChange={(conditionId) => onChange({ ...action, conditionId })}>
+            <option value="">—</option>
+            {values("condition").map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}
+          </Select>
+        </Field>
+      )}
+      {action.type === "grant_sense" && (
+        <>
+          <Field label={text(locale, "Sense", "Чувство", "Sinne") }>
+            <Select value={action.senseTypeId ?? ""} onChange={(senseTypeId) => onChange({ ...action, senseTypeId })}>
+              <option value="">—</option>
+              {values("sense_type").map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}
+            </Select>
+          </Field>
+          <div className="rule-wide equipped-formula">
+            <span className="dynamic-label">{text(locale, "Range, ft", "Дальность, фт", "Räckvidd, ft")}</span>
+            <ValueExpressionEditor value={action.value ?? { kind: "number", number: 30 }} project={project} locale={locale} onChange={(value) => onChange({ ...action, value })} />
+          </div>
+        </>
+      )}
+      {["grant_proficiency", "upgrade_proficiency"].includes(action.type) && (
+        <Field label={text(locale, "Proficiency", "Владение", "Färdighet") }>
+          <Select value={action.proficiencyId ?? ""} onChange={(proficiencyId) => onChange({ ...action, proficiencyId })}>
+            <option value="">—</option>
+            {project.references.filter((item) => item.kind === "value" && ["skill", "language", "tool_type", "proficiency_type"].includes(item.optionGroup ?? "")).map((item) => <option key={item.id} value={item.id}>{localized(item.name, locale)}</option>)}
+          </Select>
+        </Field>
+      )}
+      <button className="icon-button danger" onClick={remove}>×</button>
+    </article>
+  );
+}
+
 function ActionEditor({
   action,
   project,
   locale,
   simple = false,
+  equipped = false,
   onChange,
   remove,
 }: {
@@ -1215,14 +1515,26 @@ function ActionEditor({
   project: ForgeProject;
   locale: Locale;
   simple?: boolean;
+  equipped?: boolean;
   onChange: (value: RuleAction) => void;
   remove: () => void;
 }) {
+  if (equipped)
+    return (
+      <EquippedEffectEditor
+        action={action}
+        project={project}
+        locale={locale}
+        onChange={onChange}
+        remove={remove}
+      />
+    );
   const needsValueFor = (type: RuleActionType) =>
     [
       "add",
       "subtract",
       "multiply",
+      "divide",
       "set",
       "set_minimum",
       "set_maximum",
@@ -1245,6 +1557,7 @@ function ActionEditor({
       "add",
       "subtract",
       "multiply",
+      "divide",
       "set",
       "set_minimum",
       "set_maximum",
@@ -1292,6 +1605,13 @@ function ActionEditor({
                 ? (action.value ?? emptyExpression())
                 : undefined,
               atomicId: needsAtomicFor(type) ? action.atomicId : undefined,
+              atomicField: needsAtomicFor(type) ? action.atomicField : undefined,
+              rounding:
+                type === "divide"
+                  ? action.rounding === "up"
+                    ? "up"
+                    : "down"
+                  : undefined,
               ability: requestsCheck
                 ? (action.ability ?? "constitution")
                 : undefined,
@@ -1380,6 +1700,22 @@ function ActionEditor({
                 {localized(item.name, locale)}
               </option>
             ))}
+          </Select>
+        </Field>
+      )}
+      {action.type === "divide" && (
+        <Field label={text(locale, "Rounding", "Округление", "Avrundning") }>
+          <Select
+            value={action.rounding ?? "down"}
+            onChange={(rounding) =>
+              onChange({
+                ...action,
+                rounding: rounding as RuleAction["rounding"],
+              })
+            }
+          >
+            <option value="down">{text(locale, "Round down", "Округлить вниз", "Avrunda nedåt")}</option>
+            <option value="up">{text(locale, "Round up", "Округлить вверх", "Avrunda uppåt")}</option>
           </Select>
         </Field>
       )}
@@ -1987,7 +2323,7 @@ export function RuleSetEditor({
                 <h3>
                   {text(locale, "Then do", "Затем выполнить", "Gör sedan")}
                 </h3>
-                {!simple && <button
+                {(!simple || rule.event === "equipped") && <button
                   className="button ghost compact"
                   onClick={() =>
                     updateRule(index, {
@@ -1998,7 +2334,7 @@ export function RuleSetEditor({
                           id: `action_${rule.actions.length + 1}`,
                           type: "add",
                           target: "self",
-                          value: emptyExpression(),
+                          value: { kind: "number", number: 1, rounding: "none" },
                         },
                       ],
                     })
@@ -2014,6 +2350,7 @@ export function RuleSetEditor({
                   project={project}
                   locale={locale}
                   simple={simple}
+                  equipped={simple && rule.event === "equipped"}
                   onChange={(next) =>
                     updateRule(index, {
                       ...rule,
@@ -2517,8 +2854,9 @@ export function DamageEditor({
   value,
   project,
   locale,
+  primary = false,
   onChange,
-}: Props<DamageComponent[]>) {
+}: Props<DamageComponent[]> & { primary?: boolean }) {
   const components = Array.isArray(value) ? value : [];
   const damageTypes = project.references.filter(
     (item) => item.kind === "value" && item.optionGroup === "damage_type",
@@ -2571,7 +2909,7 @@ export function DamageEditor({
               ))}
             </Select>
             </Field>
-            <Field label={text(locale, "Saving throw", "Спасбросок", "Räddningsslag") }>
+            {!primary && <Field label={text(locale, "Saving throw", "Спасбросок", "Räddningsslag") }>
               <Toggle
                 checked={component.requiresSavingThrow ?? false}
                 onChange={(requiresSavingThrow) =>
@@ -2596,8 +2934,8 @@ export function DamageEditor({
                 yes={text(locale, "Required", "Нужен", "Krävs")}
                 no={text(locale, "Not required", "Не нужен", "Krävs inte")}
               />
-            </Field>
-            <Field label={text(locale, "On miss against AC", "При промахе по КЗ", "Vid miss mot RK") }>
+            </Field>}
+            {!primary && <Field label={text(locale, "On miss against AC", "При промахе по КЗ", "Vid miss mot RK") }>
               <Select
                 value={component.missOutcome ?? "none"}
                 onChange={(missOutcome) =>
@@ -2618,8 +2956,18 @@ export function DamageEditor({
                 <option value="half">{text(locale, "Half damage", "Половина урона", "Halv skada")}</option>
                 <option value="full">{text(locale, "Full damage", "Полный урон", "Full skada")}</option>
               </Select>
-            </Field>
-            {component.requiresSavingThrow && (
+            </Field>}
+            {primary && (
+              <p className="primary-damage-note rule-wide">
+                {text(
+                  locale,
+                  "Applied automatically only when the attack meets or exceeds AC.",
+                  "Наносится автоматически, только когда атака равна КЗ или превышает его.",
+                  "Tillämpas automatiskt endast när attacken är lika med eller högre än RK.",
+                )}
+              </p>
+            )}
+            {!primary && component.requiresSavingThrow && (
               <>
                 <Field label={text(locale, "Saving throw ability", "Характеристика спасброска", "Räddningsslagets egenskap") }>
                   <Select
@@ -2825,7 +3173,7 @@ export function DamageEditor({
               </Field>
             </>
             )}
-            <div className="rule-wide">
+            {!primary && <div className="rule-wide">
               <ConditionSetEditor
                 label={text(
                   locale,
@@ -2844,7 +3192,7 @@ export function DamageEditor({
                   )
                 }
               />
-            </div>
+            </div>}
           </div>
           <button
             className="icon-button danger"

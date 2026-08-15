@@ -1402,6 +1402,24 @@ function entityParameterIsVisible(
   }
   if (parameter.key === "versatile_damage")
     return valueHasEquipmentTag(values, project, "weapon_tags", "versatile");
+  if (parameter.key === "finesse_attack_ability")
+    return valueHasEquipmentTag(values, project, "weapon_tags", "finesse");
+  if (parameter.key === "weapon_range")
+    return (
+      valueHasEquipmentTag(values, project, "weapon_tags", "ranged") ||
+      valueHasEquipmentTag(values, project, "weapon_tags", "thrown")
+    );
+  if (parameter.key === "weapon_reach")
+    return valueHasEquipmentTag(values, project, "weapon_tags", "melee");
+  if (parameter.key === "ammunition_rules")
+    return valueHasEquipmentTag(
+      values,
+      project,
+      "weapon_tags",
+      "uses_ammunition",
+    );
+  if (parameter.key === "returning_thrown")
+    return valueHasEquipmentTag(values, project, "weapon_tags", "thrown");
   return true;
 }
 
@@ -1675,38 +1693,59 @@ function SimpleEntityWizard({
         ))}
       </nav>
       <section className="wizard-body">
+        <div className="wizard-section-intro">
+          <div>
+            <span>{step + 1} / {steps.length}</span>
+            <h3>{steps[step]}</h3>
+          </div>
+          <p>
+            {[
+              wizardText(locale, "Name the item, describe it and set its inventory values.", "Назовите предмет, добавьте описание и задайте значения для инвентаря.", "Namnge föremålet, beskriv det och ange inventarievärden."),
+              wizardText(locale, "Only fields relevant to the selected tags are shown.", "Показываются только поля, которые относятся к выбранным тегам.", "Endast fält som hör till valda taggar visas."),
+              wizardText(locale, "Choose how and how often the item can be used.", "Укажите, как и сколько раз можно использовать предмет.", "Välj hur och hur ofta föremålet kan användas."),
+              wizardText(locale, "Add bonuses and game effects with prepared visual controls.", "Добавьте бонусы и игровые эффекты готовыми визуальными настройками.", "Lägg till bonusar och speleffekter med färdiga visuella kontroller."),
+              wizardText(locale, "Review required fields before finishing.", "Проверьте обязательные поля перед завершением.", "Kontrollera obligatoriska fält innan du slutför."),
+            ][step]}
+          </p>
+        </div>
         {step === 0 && (
-          <LocalizedFields
-            value={entity.name}
-            t={t}
-            onChange={(name) =>
-              updateProject((draft) => {
-                draft.entities.find((item) => item.id === entity.id)!.name =
-                  name;
-              })
-            }
-          />
+          <div className="wizard-name-card">
+            <LocalizedFields
+              value={entity.name}
+              t={t}
+              onChange={(name) =>
+                updateProject((draft) => {
+                  draft.entities.find((item) => item.id === entity.id)!.name =
+                    name;
+                })
+              }
+            />
+          </div>
         )}
         {step < 4 && (
           <div className="dynamic-form wizard-fields">
             {currentFields.map(({ field, parameter }) => (
-              <DynamicField
+              <div
+                className={`wizard-field parameter-${parameter.key}`}
                 key={field.id}
-                parameter={parameter}
-                value={entity.values[field.referenceId]}
-                locale={locale}
-                project={project}
-                required={field.required}
-                multiple={field.multiple}
-                labelOverride={entityParameterLabel(
-                  parameter,
-                  entity.values,
-                  project,
-                  locale,
-                )}
-                simple
-                onChange={(next) => setValue(field.referenceId, next)}
-              />
+              >
+                <DynamicField
+                  parameter={parameter}
+                  value={entity.values[field.referenceId]}
+                  locale={locale}
+                  project={project}
+                  required={field.required}
+                  multiple={field.multiple}
+                  labelOverride={entityParameterLabel(
+                    parameter,
+                    entity.values,
+                    project,
+                    locale,
+                  )}
+                  simple
+                  onChange={(next) => setValue(field.referenceId, next)}
+                />
+              </div>
             ))}
             {currentFields.length === 0 && (
               <div className="empty wizard-empty">
@@ -4204,6 +4243,7 @@ function DynamicField({
         value={value as DamageComponent[] | undefined}
         project={project}
         locale={locale}
+        primary={parameter.key === "primary_damage"}
         onChange={onChange}
       />
     );

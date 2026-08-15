@@ -239,7 +239,7 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 18;
+  catalogVersion: 19;
   namespace: string;
   version: string;
   defaultLocale: "en";
@@ -1258,7 +1258,7 @@ export function createCleanProject(): ForgeProject {
   const project: ForgeProject = {
     format: "wsg-forge-project",
     schemaVersion: 3,
-    catalogVersion: 18,
+    catalogVersion: 19,
     namespace,
     version: "1.0.0",
     defaultLocale: "en",
@@ -1305,7 +1305,7 @@ export function createCleanProject(): ForgeProject {
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 18 && project.ruleEngine) return project;
+  if (project.catalogVersion === 19 && project.ruleEngine) return project;
   // Projects predating the equipment-only catalog contained incompatible
   // executable-string records and are intentionally restarted safely.
   if (project.catalogVersion < 16 || !project.ruleEngine)
@@ -1459,7 +1459,53 @@ export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
         usage_mode: useOnce ? "single_use" : "unlimited",
       };
     }
-  next.catalogVersion = 18;
+  // Schema 19 adds conditional weapon fields and the friendly equipped-effect
+  // builder without replacing local reference names or existing entity data.
+  next.ruleEngine = structuredClone(DEFAULT_RULE_ENGINE);
+  const addedParameterKeys = [
+    "finesse_attack_ability",
+    "curse",
+    "curse_effects",
+    "requires_identification",
+  ];
+  for (const key of addedParameterKeys) {
+    if (next.references.some((item) => item.kind === "parameter" && item.key === key))
+      continue;
+    const siteParameter = site.references.find(
+      (item) => item.kind === "parameter" && item.key === key,
+    );
+    if (siteParameter) next.references.push(structuredClone(siteParameter));
+  }
+  const siteWeapon = site.templates.find((item) => item.id.endsWith(".temp.weapon"));
+  const weapon = next.templates.find((item) => item.id.endsWith(".temp.weapon"));
+  if (siteWeapon && weapon) {
+    const siteOrder = new Map<string, number>();
+    siteWeapon.fields.forEach((field, index) => {
+      const key = site.references.find((item) => item.id === field.referenceId)?.key;
+      if (key) siteOrder.set(key, index);
+    });
+    for (const siteField of siteWeapon.fields) {
+      const key = site.references.find((item) => item.id === siteField.referenceId)?.key;
+      const reference = next.references.find(
+        (item) => item.kind === "parameter" && item.key === key,
+      );
+      if (!reference || weapon.fields.some((item) => item.referenceId === reference.id))
+        continue;
+      weapon.fields.push({
+        ...structuredClone(siteField),
+        referenceId: reference.id,
+      });
+    }
+    weapon.fields.sort((left, right) => {
+      const leftKey = next.references.find((item) => item.id === left.referenceId)?.key ?? "";
+      const rightKey = next.references.find((item) => item.id === right.referenceId)?.key ?? "";
+      return (siteOrder.get(leftKey) ?? 999) - (siteOrder.get(rightKey) ?? 999);
+    });
+    weapon.fields.forEach((field, order) => {
+      field.order = order;
+    });
+  }
+  next.catalogVersion = 19;
   return recalculateProjectIds(next);
 }
 
@@ -1871,6 +1917,7 @@ function validateRuleSet(
     "add",
     "subtract",
     "multiply",
+    "divide",
     "set",
     "set_minimum",
     "set_maximum",
@@ -1942,6 +1989,17 @@ function validateRuleSet(
           severity: "error",
           code: "missing_action_value",
           message: `${owner}.${rule.id}: choose the game value changed by the action.`,
+          targetId: owner,
+        });
+      if (
+        strict &&
+        action.type === "divide" &&
+        !["down", "up"].includes(action.rounding ?? "")
+      )
+        issues.push({
+          severity: "error",
+          code: "missing_division_rounding",
+          message: `${owner}.${rule.id}: choose whether division rounds down or up.`,
           targetId: owner,
         });
       if (
