@@ -2935,7 +2935,7 @@ export function DamageEditor({
                 no={text(locale, "Not required", "Не нужен", "Krävs inte")}
               />
             </Field>}
-            {!primary && <Field label={text(locale, "On miss against AC", "При промахе по КЗ", "Vid miss mot RK") }>
+            <Field label={text(locale, "On miss against AC", "При промахе по КЗ", "Vid miss mot RK") }>
               <Select
                 value={component.missOutcome ?? "none"}
                 onChange={(missOutcome) =>
@@ -2956,14 +2956,14 @@ export function DamageEditor({
                 <option value="half">{text(locale, "Half damage", "Половина урона", "Halv skada")}</option>
                 <option value="full">{text(locale, "Full damage", "Полный урон", "Full skada")}</option>
               </Select>
-            </Field>}
+            </Field>
             {primary && (
               <p className="primary-damage-note rule-wide">
                 {text(
                   locale,
-                  "Applied automatically only when the attack meets or exceeds AC.",
-                  "Наносится автоматически, только когда атака равна КЗ или превышает его.",
-                  "Tillämpas automatiskt endast när attacken är lika med eller högre än RK.",
+                  "A hit deals full primary damage. On a miss, the selected miss result is used.",
+                  "При попадании наносится полный основной урон. При промахе используется выбранный результат.",
+                  "En träff ger full primär skada. Vid miss används det valda missresultatet.",
                 )}
               </p>
             )}
