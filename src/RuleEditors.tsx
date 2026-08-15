@@ -558,71 +558,79 @@ function FormulaSequenceEditor({
       <div className="formula-sequence">
         {sequence.terms.map((term, index) => (
           <div className="formula-segment" key={index}>
-            {index > 0 && (
-              <Field label={text(locale, "Operator", "Знак", "Operator") }>
-                <Select
-                  value={sequence.operators[index - 1] ?? "sum"}
-                  onChange={(operator) =>
-                    commit({
-                      ...sequence,
-                      operators: sequence.operators.map((item, current) =>
-                        current === index - 1
-                          ? (operator as ArithmeticOperator)
-                          : item,
-                      ),
-                      roundings: sequence.operators.map((item, current) =>
-                        current === index - 1
-                          ? operator === "divide"
-                            ? sequence.roundings[current] === "up"
-                              ? "up"
-                              : "down"
-                            : "none"
-                          : sequence.roundings[current] ??
-                            (item === "divide" ? "down" : "none"),
-                      ),
-                    })
-                  }
-                >
-                  {arithmeticOperators.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.symbol} · {text(locale, item.en, item.ru, item.sv)}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            )}
-            {index > 0 && sequence.operators[index - 1] === "divide" && (
-              <Field
-                label={text(
-                  locale,
-                  "Division rounding",
-                  "Округление деления",
-                  "Avrundning vid division",
-                )}
-              >
-                <Select
-                  value={sequence.roundings[index - 1] ?? "down"}
-                  onChange={(rounding) =>
-                    commit({
-                      ...sequence,
-                      roundings: sequence.operators.map((operator, current) =>
-                        current === index - 1
-                          ? (rounding as "down" | "up")
-                          : sequence.roundings[current] ??
-                            (operator === "divide" ? "down" : "none"),
-                      ),
-                    })
-                  }
-                >
-                  <option value="down">
-                    {text(locale, "Round down", "Округлить вниз", "Avrunda nedåt")}
-                  </option>
-                  <option value="up">
-                    {text(locale, "Round up", "Округлить вверх", "Avrunda uppåt")}
-                  </option>
-                </Select>
-              </Field>
-            )}
+            <div className={`formula-operator${index === 0 ? " start" : ""}`}>
+              {index === 0 ? (
+                <span>
+                  {text(locale, "Start with", "Начальное значение", "Börja med")}
+                </span>
+              ) : (
+                <>
+                  <Field label={text(locale, "Operation", "Операция", "Operation") }>
+                    <Select
+                      value={sequence.operators[index - 1] ?? "sum"}
+                      onChange={(operator) =>
+                        commit({
+                          ...sequence,
+                          operators: sequence.operators.map((item, current) =>
+                            current === index - 1
+                              ? (operator as ArithmeticOperator)
+                              : item,
+                          ),
+                          roundings: sequence.operators.map((item, current) =>
+                            current === index - 1
+                              ? operator === "divide"
+                                ? sequence.roundings[current] === "up"
+                                  ? "up"
+                                  : "down"
+                                : "none"
+                              : sequence.roundings[current] ??
+                                (item === "divide" ? "down" : "none"),
+                          ),
+                        })
+                      }
+                    >
+                      {arithmeticOperators.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.symbol} · {text(locale, item.en, item.ru, item.sv)}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  {sequence.operators[index - 1] === "divide" && (
+                    <Field
+                      label={text(
+                        locale,
+                        "Rounding",
+                        "Округление",
+                        "Avrundning",
+                      )}
+                    >
+                      <Select
+                        value={sequence.roundings[index - 1] ?? "down"}
+                        onChange={(rounding) =>
+                          commit({
+                            ...sequence,
+                            roundings: sequence.operators.map((operator, current) =>
+                              current === index - 1
+                                ? (rounding as "down" | "up")
+                                : sequence.roundings[current] ??
+                                  (operator === "divide" ? "down" : "none"),
+                            ),
+                          })
+                        }
+                      >
+                        <option value="down">
+                          {text(locale, "Down", "Вниз", "Nedåt")}
+                        </option>
+                        <option value="up">
+                          {text(locale, "Up", "Вверх", "Uppåt")}
+                        </option>
+                      </Select>
+                    </Field>
+                  )}
+                </>
+              )}
+            </div>
             <FormulaOperandEditor
               value={term}
               project={project}
@@ -637,28 +645,21 @@ function FormulaSequenceEditor({
           </div>
         ))}
       </div>
-      <label className="formula-add">
-        <span>{text(locale, "Next arithmetic sign", "Следующий арифметический знак", "Nästa räknesätt")}</span>
-        <select
-          value=""
-          onChange={(event) => {
-            if (!event.target.value) return;
-            commit(
-              addFormulaTerm(
-                sequence,
-                event.target.value as ArithmeticOperator,
-              ),
-            );
-          }}
-        >
-          <option value="">+ − × ÷</option>
+      <div className="formula-add">
+        <span>{text(locale, "Add operation", "Добавить операцию", "Lägg till operation")}</span>
+        <div>
           {arithmeticOperators.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.symbol} · {text(locale, item.en, item.ru, item.sv)}
-            </option>
+            <button
+              type="button"
+              key={item.id}
+              onClick={() => commit(addFormulaTerm(sequence, item.id))}
+            >
+              <b>{item.symbol}</b>
+              <span>{text(locale, item.en, item.ru, item.sv)}</span>
+            </button>
           ))}
-        </select>
-      </label>
+        </div>
+      </div>
       <p className="formula-validity">
         {text(
           locale,
@@ -704,30 +705,32 @@ function FormulaOperandEditor({
   );
   return (
     <div className={`formula-operand${grouped ? " grouped" : ""}`}>
-      <Field
-        label={text(locale, "Value", "Значение", "Värde")}
-      >
-        <Select
-          value={visibleKind}
-          onChange={(kind) =>
-            onChange(expressionForKind(kind as ValueKind | "group", project))
-          }
+      <div className="formula-operand-head">
+        <Field
+          label={text(locale, "Value type", "Тип значения", "Värdetyp")}
         >
-          {VALUE_KINDS.filter((entry) => entry.id !== "operation").map((entry) => (
-            <option key={entry.id} value={entry.id}>
-              {optionText(entry.name, locale)}
+          <Select
+            value={visibleKind}
+            onChange={(kind) =>
+              onChange(expressionForKind(kind as ValueKind | "group", project))
+            }
+          >
+            {VALUE_KINDS.filter((entry) => entry.id !== "operation").map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {optionText(entry.name, locale)}
+              </option>
+            ))}
+            <option value="group">
+              {text(locale, "Brackets ( … )", "Скобки ( … )", "Parenteser ( … )")}
             </option>
-          ))}
-          <option value="group">
-            {text(locale, "Brackets ( … )", "Скобки ( … )", "Parenteser ( … )")}
-          </option>
-        </Select>
-      </Field>
-      {remove && (
-        <button className="icon-button danger formula-remove" onClick={remove}>
-          ×
-        </button>
-      )}
+          </Select>
+        </Field>
+        {remove && (
+          <button className="icon-button danger formula-remove" onClick={remove}>
+            ×
+          </button>
+        )}
+      </div>
       {grouped && (
         <div className="formula-bracket-pair">
           <strong aria-hidden="true">(</strong>
@@ -740,6 +743,7 @@ function FormulaOperandEditor({
           <strong aria-hidden="true">)</strong>
         </div>
       )}
+      {!grouped && <div className="formula-value-config">
       {!grouped && value.kind === "number" && (
         <Field label={text(locale, "Number", "Число", "Tal")}>
           <NumberInput
@@ -917,6 +921,7 @@ function FormulaOperandEditor({
           </Select>
         </Field>
       )}
+      </div>}
     </div>
   );
 }

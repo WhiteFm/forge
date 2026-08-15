@@ -1805,6 +1805,7 @@ main {
   border: 1px solid var(--line-soft);
   border-radius: 7px;
   background: rgba(0, 0, 0, 0.12);
+  container-type: inline-size;
 }
 .formula-sequence {
   min-width: 0;
@@ -1815,12 +1816,33 @@ main {
 .formula-segment {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(130px, 0.28fr) minmax(150px, 0.32fr) minmax(0, 1fr);
-  align-items: end;
-  gap: 8px;
+  grid-template-columns: minmax(160px, 200px) minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.014);
 }
-.formula-segment:first-child {
-  grid-template-columns: minmax(0, 1fr);
+.formula-operator {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+.formula-operator.start {
+  align-self: stretch;
+}
+.formula-operator.start > span {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-left: 3px solid var(--gold);
+  border-radius: 4px;
+  color: var(--gold-soft);
+  font-size: 11px;
+  line-height: 1.25;
+  background: rgba(217, 198, 95, 0.045);
 }
 .equipped-effect-editor {
   grid-template-columns: repeat(3, minmax(0, 1fr)) 34px;
@@ -1838,29 +1860,36 @@ main {
 .formula-operand {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(120px, 0.7fr) minmax(100px, 1fr) 34px;
-  align-items: end;
-  gap: 7px;
-  padding: 7px;
+  gap: 8px;
+  padding: 9px;
   border: 1px solid var(--line-soft);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.018);
+  background: rgba(0, 0, 0, 0.15);
 }
-.formula-operand:not(:has(.formula-remove)) {
-  grid-template-columns: minmax(120px, 0.7fr) minmax(100px, 1fr);
+.formula-operand-head {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(180px, 360px) 34px;
+  align-items: end;
+  gap: 8px;
 }
-.formula-operand.grouped {
-  grid-template-columns: minmax(150px, 1fr) 34px;
+.formula-operand-head:not(:has(.formula-remove)) {
+  grid-template-columns: minmax(180px, 360px);
 }
-.formula-operand.grouped:not(:has(.formula-remove)) {
-  grid-template-columns: minmax(150px, 1fr);
+.formula-value-config {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  align-items: end;
+  gap: 8px;
 }
-.formula-operand > :is(.field, .formula-bracket-pair) {
+.formula-value-config :is(input, select) {
+  width: 100%;
+  min-width: 0;
+}
+.formula-operand > .formula-bracket-pair {
   min-width: 0;
   max-width: 100%;
-}
-.formula-operand.grouped > .formula-bracket-pair {
-  grid-column: 1 / -1;
 }
 .formula-remove {
   align-self: end;
@@ -1880,9 +1909,13 @@ main {
   font-weight: 400;
 }
 .formula-add {
-  width: min(310px, 100%);
+  width: 100%;
   display: grid;
-  gap: 5px;
+  gap: 7px;
+  padding: 9px;
+  border: 1px dashed rgba(217, 198, 95, 0.38);
+  border-radius: 7px;
+  background: rgba(217, 198, 95, 0.02);
 }
 .formula-add > span,
 .formula-validity {
@@ -1890,8 +1923,38 @@ main {
   font-size: 10px;
   line-height: 1.35;
 }
-.formula-add select {
-  width: 100%;
+.formula-add > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(100px, 1fr));
+  gap: 6px;
+}
+.formula-add button {
+  min-width: 0;
+  height: 38px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink);
+  background: var(--black);
+}
+.formula-add button:hover {
+  border-color: var(--gold);
+  color: var(--gold-soft);
+}
+.formula-add button b {
+  color: var(--gold);
+  font-size: 18px;
+}
+.formula-add button span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: clamp(9px, 0.75vw, 12px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .formula-validity {
   margin: 0;
@@ -2345,6 +2408,15 @@ main {
   .form-grid.four {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .formula-segment {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .formula-operator.start > span {
+    min-height: 0;
+  }
+  .formula-add > div {
+    grid-template-columns: repeat(2, minmax(100px, 1fr));
+  }
 }
 
 @container (max-width: 480px) {
@@ -2386,6 +2458,16 @@ main {
   .formula-remove,
   .condition-card-head > .icon-button {
     justify-self: end;
+  }
+  .formula-operand-head,
+  .formula-operand-head:not(:has(.formula-remove)) {
+    grid-template-columns: minmax(0, 1fr) 34px;
+  }
+  .formula-operand-head:not(:has(.formula-remove)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .formula-add > div {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
