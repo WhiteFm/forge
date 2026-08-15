@@ -707,11 +707,19 @@ const COMMON_PARAMETERS: ReferenceRecord[] = [
     ],
   }),
   parameter("unit_weight", tr("Unit Weight, lb", "Вес Одного Предмета, фнт", "Styckvikt, lb"), tr("Weight of one unit in pounds.", "Вес одной единицы в фунтах.", "Vikt för en enhet i pund."), "item_common", "decimal", { required: true, minimum: 0, defaultValue: 0 }),
-  parameter("activation", tr("Activation", "Активация", "Aktivering"), tr("Action cost or whole-round activation time.", "Стоимость действием или время активации в целых раундах.", "Handlingskostnad eller aktiveringstid i hela rundor."), "item_common", "guided", {
+  parameter("activation", tr("Use", "Использование", "Användning"), tr("Choose whether the item is reusable without limits, consumed after one use, or spends charges; then set its action cost or whole-round activation time.", "Выберите бесконечное использование, расход предмета после одного применения или расход зарядов; затем укажите действие или время активации в целых раундах.", "Välj obegränsad användning, förbrukning efter en användning eller laddningar; ange sedan handlingskostnad eller aktiveringstid i hela rundor."), "item_common", "guided", {
+    required: true,
+    defaultValue: {
+      usage_mode: "unlimited",
+      type: "action",
+      rounds: 0,
+      charges_spent: 1,
+    },
     uiFields: [
+      guided("usage_mode", "Uses", "Разовость", "Användningar", "select", { optionGroup: "usage_mode", defaultValue: "unlimited" }),
       guided("type", "Type", "Тип", "Typ", "select", { optionGroup: "activation_type" }),
-      guided("rounds", "Rounds", "Раунды", "Rundor", "number", { minimum: 0, defaultValue: 0 }),
-      guided("charges_spent", "Charges spent", "Расход зарядов", "Förbrukade laddningar", "number", { minimum: 0, defaultValue: 0 }),
+      guided("rounds", "Rounds", "Раунды", "Rundor", "number", { minimum: 1, defaultValue: 1, visibleWhen: { key: "type", equals: "rounds" } }),
+      guided("charges_spent", "Charges spent", "Расход зарядов", "Förbrukade laddningar", "number", { minimum: 1, defaultValue: 1, visibleWhen: { key: "usage_mode", equals: "charges" } }),
     ],
   }),
   parameter("charges", tr("Charges", "Заряды", "Laddningar"), tr("Maximum charges and recovery events; current charges belong to the character-owned instance.", "Максимум зарядов и события восстановления; текущие заряды принадлежат экземпляру у персонажа.", "Maximala laddningar och återhämtning; aktuella laddningar tillhör det ägda exemplaret."), "item_common", "resource"),
@@ -749,7 +757,6 @@ const WEAPON_PARAMETERS: ReferenceRecord[] = [
   parameter("additional_damage", tr("Additional Damage", "Добавочный Урон", "Ytterligare skada"), tr("Any additional damage components applied by the weapon.", "Дополнительные компоненты урона оружия.", "Ytterligare skadekomponenter från vapnet."), "item_weapons", "damage"),
   parameter("versatile_damage", tr("Versatile Damage", "Универсальный Урон", "Mångsidig skada"), tr("Damage used in the versatile two-handed mode when that tag is present.", "Урон двуручного универсального режима при наличии соответствующего тега.", "Skada i mångsidigt tvåhandsläge när taggen finns."), "item_weapons", "damage"),
   parameter("conditional_damage", tr("Conditional Damage", "Урон с Условием", "Villkorlig skada"), tr("Damage whose trigger, target, save, frequency, duration, and ending are defined visually in Effects.", "Урон, чьи триггер, цель, спасбросок, частота, длительность и завершение задаются визуально в эффектах.", "Skada vars utlösare, mål, räddning, frekvens, varaktighet och slut anges visuellt i Effekter."), "item_weapons", "damage"),
-  parameter("periodic_damage", tr("Periodic Damage", "Периодический Урон", "Periodisk skada"), tr("Repeated damage with first application, start- or end-of-turn timing, interval, duration, and successful-save result.", "Повторяющийся урон с первым применением, моментом начала или конца хода, интервалом, длительностью и результатом успешного спасброска.", "Upprepad skada med första tillämpning, turstart eller turslut, intervall, varaktighet och räddningsresultat."), "item_weapons", "damage"),
   parameter("weapon_hands", tr("Allowed Hand Modes", "Допустимые Режимы Рук", "Tillåtna handlägen"), tr("Check whether the weapon can be used one-handed, two-handed, or both.", "Отметьте использование одной рукой, двумя руками или обоими способами.", "Markera om vapnet kan användas med en hand, två händer eller båda."), "item_weapons", "guided", {
     uiFields: [
       guided("one_handed", "One-handed", "Одноручное", "Enhands", "boolean", { defaultValue: true }),
@@ -762,7 +769,7 @@ const WEAPON_PARAMETERS: ReferenceRecord[] = [
       guided("maximum", "Maximum, ft", "Максимальная, фт", "Maximal, ft", "number", { minimum: 0 }),
     ],
   }),
-  parameter("extended_reach", tr("Extended Reach, ft", "Увеличенная Досягаемость, фт", "Utökad räckvidd, ft"), tr("Reach used when the Reach tag is selected.", "Досягаемость при выбранном теге «Досягаемость».", "Räckvidd när taggen Räckvidd är vald."), "item_weapons", "integer", { minimum: 0 }),
+  parameter("weapon_reach", tr("Reach, ft", "Досягаемость, фт", "Räckvidd, ft"), tr("Melee reach in feet. When the Reach tag is selected, the same field becomes Extended Reach.", "Досягаемость оружия в футах. При выбранном теге «Досягаемость» это же поле становится «Улучшенной досягаемостью».", "Närstridsräckvidd i fot. När taggen Räckvidd väljs blir samma fält Utökad räckvidd."), "item_weapons", "integer", { required: true, minimum: 0, defaultValue: 5 }),
   parameter("ammunition_rules", tr("Ammunition and Magazine", "Боеприпасы и Магазин", "Ammunition och magasin"), tr("Required ammunition, units per attack, magazine capacity, and reload cost.", "Требуемый боеприпас, расход за атаку, вместимость магазина и стоимость перезарядки.", "Krävd ammunition, förbrukning per attack, magasinkapacitet och omladdningskostnad."), "item_weapons", "guided", {
     uiFields: [
       guided("ammunition", "Ammunition", "Боеприпас", "Ammunition", "entity", { allowedEntityTypes: ["item"] }),
@@ -781,7 +788,14 @@ const WEAPON_PARAMETERS: ReferenceRecord[] = [
     ],
   }),
   parameter("returning_thrown", tr("Thrown Weapon Returns", "Метательное Оружие Возвращается", "Kastvapen återvänder"), tr("Returns to the user after the configured thrown attack resolves.", "Возвращается к владельцу после завершения настроенной метательной атаки.", "Återvänder till användaren efter att kastattacken avgjorts."), "item_weapons", "boolean"),
-  parameter("extra_damage_limit", tr("Additional Damage Limit", "Ограничение Добавочного Урона", "Gräns för extra skada"), tr("Limits the additional damage to once per attack, turn, round, or target.", "Ограничивает добавочный урон одним срабатыванием за атаку, ход, раунд или цель.", "Begränsar extra skada till en gång per attack, tur, runda eller mål."), "item_weapons", "select", { optionGroup: "frequency" }),
+  parameter("extra_damage_limit", tr("Additional Damage Use", "Использование Добавочного Урона", "Användning av extra skada"), tr("Sets how many times additional damage can be used during the selected period. With automatic application disabled, CCL or VTT asks the player before adding the damage.", "Задаёт количество применений добавочного урона за выбранный период. Если автоприменение выключено, CCL или VTT запрашивает согласие игрока перед добавлением урона.", "Anger hur många gånger extra skada kan användas under vald period. När automatisk användning är avstängd frågar CCL eller VTT spelaren innan skadan läggs till."), "item_weapons", "guided", {
+    defaultValue: { amount: 1, period: "per_attack", auto_apply: true },
+    uiFields: [
+      guided("amount", "Uses", "Количество применений", "Antal användningar", "number", { minimum: 1, defaultValue: 1 }),
+      guided("period", "Period", "Период", "Period", "select", { optionGroup: "extra_damage_period", defaultValue: "per_attack" }),
+      guided("auto_apply", "Apply automatically", "Автоприменение", "Använd automatiskt", "boolean", { defaultValue: true }),
+    ],
+  }),
 ];
 
 const AMMUNITION_PARAMETERS: ReferenceRecord[] = [
@@ -864,6 +878,11 @@ const VALUES: ReferenceRecord[] = [
     ["pp", "Platinum Piece (pp)", "Платиновая монета (пм)", "Platinamynt (pm)", 1000],
   ].map(([key, en, ru, sv, cp]) => option("currency", String(key), tr(String(en), String(ru), String(sv)), "reference_values", { cp })),
   ...[
+    ["unlimited", "Unlimited", "Бесконечное", "Obegränsad"],
+    ["single_use", "One use — item is consumed", "Одно использование — предмет расходуется", "En användning — föremålet förbrukas"],
+    ["charges", "Limited by charges", "Ограничено зарядами", "Begränsad av laddningar"],
+  ].map(([key, en, ru, sv]) => option("usage_mode", key, tr(en, ru, sv))),
+  ...[
     ["action", "Action", "Действие", "Handling"],
     ["bonus_action", "Bonus Action", "Бонусное действие", "Bonushandling"],
     ["reaction", "Reaction", "Реакция", "Reaktion"],
@@ -877,6 +896,13 @@ const VALUES: ReferenceRecord[] = [
     ["once_per_target", "Once per target", "Раз на цель", "En gång per mål"],
     ["every_time", "Every time", "Каждый раз", "Varje gång"],
   ].map(([key, en, ru, sv]) => option("frequency", key, tr(en, ru, sv))),
+  ...[
+    ["per_attack", "Per attack", "За атаку", "Per attack"],
+    ["per_turn", "Per turn", "За ход", "Per tur"],
+    ["per_combat", "Per combat", "За бой", "Per strid"],
+    ["until_short_rest", "Until a Short Rest", "До короткого отдыха", "Till kort vila"],
+    ["until_long_rest", "Until a Long Rest", "До долгого отдыха", "Till lång vila"],
+  ].map(([key, en, ru, sv]) => option("extra_damage_period", key, tr(en, ru, sv))),
   ...[
     ["normal", "Normal", "Обычный", "Normal"],
     ["resistance", "Resistance", "Сопротивление", "Motstånd"],
@@ -948,6 +974,7 @@ const VALUES: ReferenceRecord[] = [
   ...[
     ["blinded", "Blinded", "Ослеплён", "Blind"], ["charmed", "Charmed", "Очарован", "Charmed"], ["deafened", "Deafened", "Оглох", "Döv"],
     ["frightened", "Frightened", "Испуган", "Skrämd"], ["grappled", "Grappled", "Схвачен", "Grapplad"], ["incapacitated", "Incapacitated", "Недееспособен", "Oförmögen"],
+    ["hidden", "Hidden", "Скрыт", "Dold"],
     ["invisible", "Invisible", "Невидим", "Osynlig"], ["paralyzed", "Paralyzed", "Парализован", "Paralyserad"], ["petrified", "Petrified", "Окаменел", "Förstenad"],
     ["poisoned", "Poisoned", "Отравлен", "Förgiftad"], ["prone", "Prone", "Сбит с ног", "Liggande"], ["restrained", "Restrained", "Опутан", "Fasthållen"],
     ["stunned", "Stunned", "Оглушён", "Bedövad"], ["unconscious", "Unconscious", "Без сознания", "Medvetslös"],
@@ -978,12 +1005,13 @@ type TemplateSpec = {
   category: string;
   fields: string[];
   defaultTags: string[];
+  usageMode?: "unlimited" | "single_use" | "charges";
 };
 
 const templateSpecs: TemplateSpec[] = [
   { key: "item", name: tr("Item", "Предмет", "Föremål"), category: "template_objects", fields: ["object_tags", "container_allowed_items", "container_allowed_tags", "container_capacity", "contents_weight_counts", "food_points", "bright_light_radius"], defaultTags: ["object"] },
   { key: "tool", name: tr("Tool", "Инструмент", "Verktyg"), category: "template_tools", fields: ["tool_tags", "tool_ability", "tool_use_mode", "tool_crafting_mode"], defaultTags: ["tool"] },
-  { key: "weapon", name: tr("Weapon", "Оружие", "Vapen"), category: "template_weapons", fields: ["weapon_tags", "weapon_mastery", "attack_ability", "attack_bonus", "damage_bonus", "primary_damage", "additional_damage", "versatile_damage", "conditional_damage", "periodic_damage", "weapon_hands", "weapon_range", "extended_reach", "ammunition_rules", "attack_targets", "attack_area", "critical_rules", "returning_thrown", "extra_damage_limit"], defaultTags: ["weapon"] },
+  { key: "weapon", name: tr("Weapon", "Оружие", "Vapen"), category: "template_weapons", fields: ["weapon_tags", "weapon_mastery", "attack_ability", "attack_bonus", "damage_bonus", "primary_damage", "additional_damage", "versatile_damage", "conditional_damage", "weapon_hands", "weapon_range", "weapon_reach", "ammunition_rules", "attack_targets", "attack_area", "critical_rules", "returning_thrown", "extra_damage_limit"], defaultTags: ["weapon"] },
   { key: "ammunition", name: tr("Ammunition", "Боеприпасы", "Ammunition"), category: "template_ammunition", fields: ["required_container", "ammunition_attack_bonus", "ammunition_damage", "ammunition_hit_effects"], defaultTags: ["ammunition"] },
   { key: "armor", name: tr("Armor", "Доспех", "Rustning"), category: "template_wearables", fields: ["wearable_tags", "armor_class_rules", "wearable_requirements", "stealth_disadvantage", "curse", "other_creature_roll_range", "exhaustion_every_second", "curse_effects"], defaultTags: ["armor"] },
   { key: "shield", name: tr("Shield", "Щит", "Sköld"), category: "template_wearables", fields: ["wearable_tags", "armor_class_rules", "wearable_requirements", "stealth_disadvantage", "curse", "other_creature_roll_range", "exhaustion_every_second", "curse_effects"], defaultTags: ["shield"] },
@@ -994,8 +1022,8 @@ const templateSpecs: TemplateSpec[] = [
   { key: "cloak", name: tr("Cloak", "Плащ", "Mantel"), category: "template_wearables", fields: ["wearable_tags", "wearable_requirements", "curse", "other_creature_roll_range", "exhaustion_every_second", "curse_effects"], defaultTags: ["cloak"] },
   { key: "amulet", name: tr("Amulet", "Амулет", "Amulett"), category: "template_wearables", fields: ["wearable_tags", "wearable_requirements", "curse", "other_creature_roll_range", "exhaustion_every_second", "curse_effects"], defaultTags: ["amulet"] },
   { key: "ring", name: tr("Ring", "Кольцо", "Ring"), category: "template_wearables", fields: ["wearable_tags", "wearable_requirements", "curse", "other_creature_roll_range", "exhaustion_every_second", "curse_effects"], defaultTags: ["ring"] },
-  { key: "potion", name: tr("Potion", "Зелье", "Dryck"), category: "template_substances", fields: ["substance_tags", "application_method", "doses_spent", "application_rounds", "delay_rounds", "substance_target", "inhaled_area", "coating_hits", "coating_affects_ammunition", "substance_effects"], defaultTags: ["potion", "consumable"] },
-  { key: "poison", name: tr("Poison", "Яд", "Gift"), category: "template_substances", fields: ["substance_tags", "application_method", "doses_spent", "application_rounds", "delay_rounds", "substance_target", "inhaled_area", "coating_hits", "coating_affects_ammunition", "substance_effects"], defaultTags: ["poison", "consumable"] },
+  { key: "potion", name: tr("Potion", "Зелье", "Dryck"), category: "template_substances", fields: ["substance_tags", "application_method", "doses_spent", "application_rounds", "delay_rounds", "substance_target", "inhaled_area", "coating_hits", "coating_affects_ammunition", "substance_effects"], defaultTags: ["potion", "consumable"], usageMode: "single_use" },
+  { key: "poison", name: tr("Poison", "Яд", "Gift"), category: "template_substances", fields: ["substance_tags", "application_method", "doses_spent", "application_rounds", "delay_rounds", "substance_target", "inhaled_area", "coating_hits", "coating_affects_ammunition", "substance_effects"], defaultTags: ["poison", "consumable"], usageMode: "single_use" },
   { key: "substance", name: tr("Substance", "Вещество", "Substans"), category: "template_substances", fields: ["substance_tags", "application_method", "doses_spent", "application_rounds", "delay_rounds", "substance_target", "inhaled_area", "coating_hits", "coating_affects_ammunition", "substance_effects"], defaultTags: ["substance"] },
   { key: "kit", name: tr("Equipment Kit", "Набор Снаряжения", "Utrustningspaket"), category: "template_kits", fields: ["kit_contents", "kit_container", "kit_calculated_cost", "kit_calculated_weight"], defaultTags: ["kit"] },
 ];
@@ -1022,7 +1050,12 @@ function buildTemplates(references: ReferenceRecord[]): EntityTemplate[] {
           defaultValue:
             key === "item_tags"
               ? spec.defaultTags.map((tag) => valueId("item_tag", tag))
-              : reference.defaultValue,
+              : key === "activation"
+                ? {
+                    ...(reference.defaultValue as Record<string, unknown>),
+                    usage_mode: spec.usageMode ?? "unlimited",
+                  }
+                : reference.defaultValue,
         };
       }),
     };

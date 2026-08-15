@@ -73,6 +73,8 @@ export type RoundingMode = "none" | "down" | "up" | "nearest";
 
 export interface ValueExpression {
   kind: ValueKind;
+  /** UI grouping marker. Consumers evaluate the expression normally. */
+  grouped?: boolean;
   number?: number;
   atomicId?: string;
   ability?:
@@ -110,9 +112,13 @@ export type PredicateOperator =
 
 export interface RulePredicate {
   id: string;
+  kind?: "value_comparison" | "has_condition";
+  target?: RuleTarget;
   left: ValueExpression;
   operator: PredicateOperator;
   right: ValueExpression;
+  conditionId?: string;
+  conditionExpected?: "active" | "inactive";
 }
 
 export interface ConditionGroup {
@@ -297,11 +303,16 @@ export interface DamageComponent {
   dice: ValueExpression;
   damageTypeId: string;
   saveOutcome: "full" | "half" | "none";
+  missOutcome: "full" | "half" | "none";
+  requiresSavingThrow: boolean;
+  savingThrowAbility?: RuleAction["ability"];
+  savingThrowDifficulty?: ValueExpression;
   periodic: boolean;
   trigger: RuleEvent;
   intervalRounds: number;
   durationRounds: number;
   frequency: "once_per_turn" | "once_per_round" | "every_time";
+  conditions: ConditionGroup;
 }
 
 export interface ChoiceDefinition {
@@ -718,11 +729,16 @@ export const emptyDamage = (index = 1): DamageComponent => ({
   dice: { kind: "die_roll", dieId: "wsg.atomic.d6", diceCount: 1 },
   damageTypeId: "",
   saveOutcome: "full",
+  missOutcome: "none",
+  requiresSavingThrow: false,
+  savingThrowAbility: "constitution",
+  savingThrowDifficulty: { kind: "number", number: 10 },
   periodic: false,
   trigger: "damage_dealt",
   intervalRounds: 1,
   durationRounds: 0,
   frequency: "once_per_turn",
+  conditions: emptyConditions(),
 });
 export const emptyChoice = (index = 1): ChoiceDefinition => ({
   id: `choice_${index}`,

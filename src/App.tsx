@@ -39,6 +39,7 @@ import {
   createCleanProject,
   localized,
   recalculateProjectIds,
+  restoreSiteReference,
   slugify,
   upgradeProjectCatalog,
   validateProject,
@@ -195,6 +196,10 @@ const labels = {
     next: "Next",
     finish: "Finish",
     savedAutomatically: "Changes are saved automatically in this browser.",
+    restoreReference: "Restore reference from site",
+    confirmRestoreReference:
+      "Replace only the local reference, atomics, categories and templates with the current site version? Pack settings and created entities stay, but links to deleted custom reference records may require review.",
+    referenceRestored: "The site reference has been restored.",
   },
   ru: {
     create: "Создать",
@@ -315,6 +320,10 @@ const labels = {
     next: "Далее",
     finish: "Завершить",
     savedAutomatically: "Изменения автоматически сохраняются в этом браузере.",
+    restoreReference: "Восстановить справочник с сайта",
+    confirmRestoreReference:
+      "Заменить только локальный справочник, атомарные значения, категории и шаблоны текущей версией с сайта? Настройки пака и созданные сущности останутся, но связи с удалёнными пользовательскими записями потребуется проверить.",
+    referenceRestored: "Справочник восстановлен до версии с сайта.",
   },
   sv: {
     create: "Skapa",
@@ -433,6 +442,10 @@ const labels = {
     next: "Nästa",
     finish: "Slutför",
     savedAutomatically: "Ändringar sparas automatiskt i den här webbläsaren.",
+    restoreReference: "Återställ referensen från webbplatsen",
+    confirmRestoreReference:
+      "Ersätt endast den lokala referensen, atomära värden, kategorier och mallar med webbplatsens aktuella version? Paketinställningar och skapade entiteter behålls, men länkar till borttagna anpassade poster kan behöva granskas.",
+    referenceRestored: "Webbplatsens referens har återställts.",
   },
 } as const;
 
@@ -894,6 +907,12 @@ function App() {
     setPage("create");
     setNotice(t("clean"));
   };
+  const resetReference = () => {
+    if (!window.confirm(t("confirmRestoreReference"))) return;
+    setProject((current) => restoreSiteReference(current));
+    setSelectedId("");
+    setNotice(t("referenceRestored"));
+  };
 
   async function importFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -1170,6 +1189,7 @@ function App() {
               setDeveloperMode={setDeveloperMode}
               updateProject={updateProject}
               onAdvanced={() => setDialog("settings")}
+              onRestoreReference={resetReference}
               onClean={resetProject}
             />
           )}
@@ -1343,6 +1363,65 @@ function wizardStepFor(parameter: ReferenceRecord) {
     return 3;
   if (USE_FIELD_KEYS.has(parameter.key)) return 2;
   return 1;
+}
+
+function valueHasEquipmentTag(
+  values: Record<string, unknown>,
+  project: ForgeProject,
+  parameterKey: string,
+  tagKey: string,
+) {
+  const tagParameter = project.references.find(
+    (item) => item.kind === "parameter" && item.key === parameterKey,
+  );
+  if (!tagParameter) return false;
+  const selected = values[tagParameter.id];
+  if (!Array.isArray(selected)) return false;
+  const tag = project.references.find(
+    (item) =>
+      item.kind === "value" &&
+      item.optionGroup === "item_tag" &&
+      item.key === tagKey,
+  );
+  return Boolean(tag && selected.includes(tag.id));
+}
+
+function entityParameterIsVisible(
+  parameter: ReferenceRecord,
+  values: Record<string, unknown>,
+  project: ForgeProject,
+) {
+  if (parameter.key === "charges") {
+    const activation = project.references.find(
+      (item) => item.kind === "parameter" && item.key === "activation",
+    );
+    const use = activation
+      ? (values[activation.id] as Record<string, unknown> | undefined)
+      : undefined;
+    return (use?.usage_mode ?? "unlimited") === "charges";
+  }
+  if (parameter.key === "versatile_damage")
+    return valueHasEquipmentTag(values, project, "weapon_tags", "versatile");
+  return true;
+}
+
+function entityParameterLabel(
+  parameter: ReferenceRecord,
+  values: Record<string, unknown>,
+  project: ForgeProject,
+  locale: Locale,
+) {
+  if (
+    parameter.key === "weapon_reach" &&
+    valueHasEquipmentTag(values, project, "weapon_tags", "reach")
+  )
+    return wizardText(
+      locale,
+      "Extended Reach, ft",
+      "Улучшенная досягаемость, фт",
+      "Utökad räckvidd, ft",
+    );
+  return undefined;
 }
 
 function valueIsEmpty(value: unknown) {
@@ -1541,10 +1620,13 @@ function SimpleEntityWizard({
     );
     return parameter ? [{ field, parameter }] : [];
   });
-  const currentFields = resolvedFields.filter(
+  const visibleFields = resolvedFields.filter(({ parameter }) =>
+    entityParameterIsVisible(parameter, entity.values, project),
+  );
+  const currentFields = visibleFields.filter(
     ({ parameter }) => wizardStepFor(parameter) === step,
   );
-  const missing = resolvedFields.filter(
+  const missing = visibleFields.filter(
     ({ field }) => field.required && valueIsEmpty(entity.values[field.referenceId]),
   );
   const setValue = (referenceId: string, value: unknown) =>
@@ -1616,6 +1698,12 @@ function SimpleEntityWizard({
                 project={project}
                 required={field.required}
                 multiple={field.multiple}
+                labelOverride={entityParameterLabel(
+                  parameter,
+                  entity.values,
+                  project,
+                  locale,
+                )}
                 simple
                 onChange={(next) => setValue(field.referenceId, next)}
               />
@@ -1792,6 +1880,7 @@ function SimpleProjectSettings({
   setDeveloperMode,
   updateProject,
   onAdvanced,
+  onRestoreReference,
   onClean,
 }: {
   project: ForgeProject;
@@ -1801,6 +1890,7 @@ function SimpleProjectSettings({
   setDeveloperMode: (value: boolean) => void;
   updateProject: (recipe: (draft: ForgeProject) => void) => void;
   onAdvanced: () => void;
+  onRestoreReference: () => void;
   onClean: () => void;
 }) {
   return (
@@ -1851,6 +1941,9 @@ function SimpleProjectSettings({
         </button>
       </section>
       <div className="settings-actions">
+        <button className="button ghost" onClick={onRestoreReference}>
+          {t("restoreReference")}
+        </button>
         <button className="button ghost" onClick={onAdvanced}>
           {wizardText(locale, "Advanced project settings", "Расширенные настройки проекта", "Avancerade projektinställningar")}
         </button>
@@ -3972,6 +4065,8 @@ function EntityEditor({
                   Missing: {field.referenceId}
                 </div>
               );
+            if (!entityParameterIsVisible(parameter, entity.values, project))
+              return null;
             const value = entity.values[field.referenceId];
             return (
               <DynamicField
@@ -3982,6 +4077,12 @@ function EntityEditor({
                 project={project}
                 required={field.required}
                 multiple={field.multiple}
+                labelOverride={entityParameterLabel(
+                  parameter,
+                  entity.values,
+                  project,
+                  locale,
+                )}
                 onChange={(next) => setValue(field.referenceId, next)}
               />
             );
@@ -3999,6 +4100,7 @@ function DynamicField({
   project,
   required,
   multiple,
+  labelOverride,
   simple = false,
   onChange,
 }: {
@@ -4008,10 +4110,11 @@ function DynamicField({
   project: ForgeProject;
   required: boolean;
   multiple: boolean;
+  labelOverride?: string;
   simple?: boolean;
   onChange: (value: unknown) => void;
 }) {
-  const label = `${localized(parameter.name, locale)}${required ? " *" : ""}`;
+  const label = `${labelOverride ?? localized(parameter.name, locale)}${required ? " *" : ""}`;
   if (
     parameter.propertyType === "rule_set" ||
     parameter.propertyType === "effect"

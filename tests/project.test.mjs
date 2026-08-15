@@ -17,10 +17,10 @@ async function withModel(run) {
   }
 }
 
-test("starts with schema 16, the new equipment rules catalog, and no entities", async () => {
+test("starts with schema 18, the site reference, and no entities", async () => {
   await withModel(async (model) => {
     const project = model.createCleanProject();
-    assert.equal(project.catalogVersion, 16);
+    assert.equal(project.catalogVersion, 18);
     assert.equal(project.ruleEngine.roundSeconds, 6);
     assert.equal(project.ruleEngine.gridUnitFeet, 2.5);
     assert.ok(project.categories.length > 20);
@@ -78,6 +78,52 @@ test("starts with schema 16, the new equipment rules catalog, and no entities", 
     assert.ok(
       tagValues.every((item) => item.categoryId.startsWith("wsg.category.tag_")),
     );
+    const activation = project.references.find((item) => item.key === "activation");
+    assert.equal(activation.required, true);
+    assert.equal(
+      activation.uiFields.find((item) => item.key === "usage_mode").optionGroup,
+      "usage_mode",
+    );
+    assert.deepEqual(
+      project.references
+        .filter((item) => item.kind === "value" && item.optionGroup === "usage_mode")
+        .map((item) => item.key),
+      ["unlimited", "single_use", "charges"],
+    );
+    const extraDamageUse = project.references.find(
+      (item) => item.key === "extra_damage_limit",
+    );
+    assert.equal(extraDamageUse.propertyType, "guided");
+    assert.deepEqual(extraDamageUse.defaultValue, {
+      amount: 1,
+      period: "per_attack",
+      auto_apply: true,
+    });
+    assert.deepEqual(
+      project.references
+        .filter(
+          (item) =>
+            item.kind === "value" &&
+            item.optionGroup === "extra_damage_period",
+        )
+        .map((item) => item.key),
+      [
+        "per_attack",
+        "per_turn",
+        "per_combat",
+        "until_short_rest",
+        "until_long_rest",
+      ],
+    );
+    assert.equal(project.references.some((item) => item.key === "periodic_damage"), false);
+    assert.equal(project.references.some((item) => item.key === "extended_reach"), false);
+    assert.ok(project.references.some((item) => item.key === "weapon_reach"));
+    const weapon = project.templates.find((item) => item.name.en === "Weapon");
+    const versatile = project.references.find((item) => item.key === "versatile_damage");
+    assert.ok(weapon.fields.some((field) => field.referenceId === versatile.id));
+    const potion = project.templates.find((item) => item.name.en === "Potion");
+    const potionUse = potion.fields.find((field) => field.referenceId === activation.id);
+    assert.equal(potionUse.defaultValue.usage_mode, "single_use");
     assert.deepEqual(
       model
         .validateProject(project)
@@ -204,9 +250,111 @@ test("upgrading an old executable-string project starts a clean safe project", a
       },
     ];
     const upgraded = model.upgradeProjectCatalog(oldProject);
-    assert.equal(upgraded.catalogVersion, 16);
+    assert.equal(upgraded.catalogVersion, 18);
     assert.equal(upgraded.entities.length, 0);
     assert.equal(upgraded.ruleEngine.roundSeconds, 6);
+  });
+});
+
+test("upgrading schema 17 preserves local reference names and migrates damage limits", async () => {
+  await withModel(async (model) => {
+    const project = model.createCleanProject();
+    project.catalogVersion = 17;
+    const limit = project.references.find(
+      (item) => item.key === "extra_damage_limit",
+    );
+    limit.propertyType = "select";
+    limit.optionGroup = "frequency";
+    limit.uiFields = undefined;
+    limit.name.en = "My damage usage";
+    const weapon = project.templates.find((item) => item.name.en === "Weapon");
+    project.entities.push({
+      id: "wsg.item.test_weapon",
+      key: "test_weapon",
+      type: "item",
+      templateId: weapon.id,
+      name: { en: "Test weapon" },
+      previousIds: [],
+      values: {
+        [limit.id]: "wsg.ref.value.frequency.once_per_turn",
+      },
+    });
+
+    const upgraded = model.upgradeProjectCatalog(project);
+    const upgradedLimit = upgraded.references.find(
+      (item) => item.key === "extra_damage_limit",
+    );
+    assert.equal(upgraded.catalogVersion, 18);
+    assert.equal(upgradedLimit.name.en, "My damage usage");
+    assert.equal(upgradedLimit.propertyType, "guided");
+    assert.deepEqual(upgraded.entities[0].values[upgradedLimit.id], {
+      amount: 1,
+      period: "per_turn",
+      auto_apply: true,
+    });
+  });
+});
+
+test("visual formulas preserve arithmetic precedence and paired nested groups", async () => {
+  const { createServer } = await import("vite");
+  const server = await createServer({
+    root: fileURLToPath(new URL("..", import.meta.url)),
+    server: { middlewareMode: true },
+    appType: "custom",
+  });
+  try {
+    const formulas = await server.ssrLoadModule("/src/formula-sequence.ts");
+    const sequence = {
+      terms: [
+        { kind: "number", number: 2 },
+        { kind: "number", number: 3 },
+        { kind: "number", number: 4, grouped: true },
+      ],
+      operators: ["sum", "multiply"],
+    };
+    const expression = formulas.formulaSequenceToExpression(sequence);
+    assert.equal(expression.operation, "sum");
+    assert.equal(expression.operands[1].operation, "multiply");
+    assert.equal(expression.operands[1].operands[1].grouped, true);
+    const rebuilt = formulas.expressionToFormulaSequence(expression);
+    assert.equal(rebuilt.operators[0], "sum");
+    assert.equal(rebuilt.terms[1].operation, "multiply");
+  } finally {
+    await server.close();
+  }
+});
+
+test("restoring the site reference preserves pack and entities", async () => {
+  await withModel(async (model) => {
+    const project = model.createCleanProject();
+    project.pack.name.en = "My pack";
+    project.references.push({
+      id: "mygame.ref.value.custom_value",
+      key: "custom_value",
+      kind: "value",
+      name: { en: "Custom value" },
+      description: { en: "" },
+      categoryId: "wsg.category.custom",
+      locked: false,
+      previousIds: [],
+    });
+    project.entities.push({
+      id: "mygame.item.saved",
+      key: "saved",
+      type: "item",
+      templateId: project.templates[0].id,
+      name: { en: "Saved" },
+      values: {},
+      previousIds: [],
+    });
+    const restored = model.restoreSiteReference(project);
+    assert.equal(restored.pack.name.en, "My pack");
+    assert.equal(restored.entities.length, 1);
+    assert.equal(
+      restored.references.some((item) => item.key === "custom_value"),
+      false,
+    );
+    assert.ok(restored.references.some((item) => item.key === "activation"));
   });
 });
 

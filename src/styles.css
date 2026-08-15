@@ -1719,6 +1719,126 @@ main {
   align-items: end;
   gap: 7px;
 }
+.formula-builder {
+  min-width: 0;
+  max-width: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.12);
+}
+.formula-sequence {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.formula-segment {
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  display: grid;
+  grid-template-columns: minmax(92px, 0.34fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 8px;
+}
+.formula-segment:first-child {
+  grid-template-columns: minmax(0, 1fr);
+}
+.formula-operand {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(100px, 1fr) 34px;
+  align-items: end;
+  gap: 7px;
+  padding: 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.018);
+}
+.formula-operand:not(:has(.formula-remove)) {
+  grid-template-columns: minmax(120px, 0.7fr) minmax(100px, 1fr);
+}
+.formula-operand.grouped {
+  grid-template-columns: minmax(150px, 1fr) 34px;
+}
+.formula-operand.grouped:not(:has(.formula-remove)) {
+  grid-template-columns: minmax(150px, 1fr);
+}
+.formula-operand > :is(.field, .formula-bracket-pair) {
+  min-width: 0;
+  max-width: 100%;
+}
+.formula-operand.grouped > .formula-bracket-pair {
+  grid-column: 1 / -1;
+}
+.formula-remove {
+  align-self: end;
+}
+.formula-bracket-pair {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 22px;
+  align-items: stretch;
+  gap: 4px;
+}
+.formula-bracket-pair > strong {
+  display: grid;
+  place-items: center;
+  color: var(--gold);
+  font-size: 30px;
+  font-weight: 400;
+}
+.formula-add {
+  width: min(310px, 100%);
+  display: grid;
+  gap: 5px;
+}
+.formula-add > span,
+.formula-validity {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.formula-add select {
+  width: 100%;
+}
+.formula-validity {
+  margin: 0;
+  color: #cabf83;
+}
+.condition-card {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.014);
+}
+.condition-card + .condition-card {
+  margin-top: 8px;
+}
+.condition-card-head {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 28px repeat(2, minmax(0, 1fr)) 34px;
+  align-items: end;
+  gap: 8px;
+}
+.condition-state-row,
+.condition-comparison-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+}
+.condition-comparison-row {
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 0.28fr) minmax(0, 1fr);
+}
 .hp-step {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
@@ -1775,7 +1895,7 @@ main {
   min-width: 0;
   max-width: 100%;
 }
-.damage-fields > .expression-editor {
+.damage-fields > :is(.expression-editor, .formula-builder) {
   grid-column: 1 / -1;
 }
 .choice-card {
@@ -2164,6 +2284,20 @@ main {
   .resource-recovery > .icon-button {
     grid-column: 2;
     grid-row: 1;
+  }
+  .formula-segment,
+  .formula-operand,
+  .formula-operand:not(:has(.formula-remove)),
+  .formula-operand.grouped,
+  .formula-operand.grouped:not(:has(.formula-remove)),
+  .condition-card-head,
+  .condition-state-row,
+  .condition-comparison-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .formula-remove,
+  .condition-card-head > .icon-button {
+    justify-self: end;
   }
 }
 

@@ -1,6 +1,16 @@
 import type { ForgeProject, GuidedField, Locale, LocalText } from "./model";
 import { localized } from "./model";
 import {
+  addFormulaTerm,
+  defaultFormulaTerm,
+  expressionToFormulaSequence,
+  formulaSequenceToExpression,
+  removeFormulaTerm,
+  updateFormulaTerm,
+  type ArithmeticOperator,
+  type FormulaSequence,
+} from "./formula-sequence";
+import {
   RULE_ACTIONS,
   RULE_EVENTS,
   RULE_TARGETS,
@@ -463,61 +473,239 @@ export function ValueExpressionEditor({
   locale,
   onChange,
 }: Omit<Props<ValueExpression>, "label">) {
-  const expression = value ?? emptyExpression();
-  const setKind = (kind: ValueKind) =>
-    onChange(
-      kind === "operation"
-        ? {
-            kind,
-            operation: "sum",
-            operands: [emptyExpression(), emptyExpression()],
-            rounding: "none",
-          }
-        : kind === "die_roll"
-          ? { kind, dieId: "wsg.atomic.d6", diceCount: 1, rounding: "none" }
-          : {
-              kind,
-              number: kind === "number" ? 0 : undefined,
-              rounding: "none",
-            },
-    );
+  return (
+    <FormulaSequenceEditor
+      value={value ?? emptyExpression()}
+      project={project}
+      locale={locale}
+      onChange={onChange}
+    />
+  );
+}
+
+const arithmeticOperators: Array<{
+  id: ArithmeticOperator;
+  symbol: string;
+  en: string;
+  ru: string;
+  sv: string;
+}> = [
+  { id: "sum", symbol: "+", en: "Add", ru: "Сложить", sv: "Addera" },
+  {
+    id: "subtract",
+    symbol: "−",
+    en: "Subtract",
+    ru: "Вычесть",
+    sv: "Subtrahera",
+  },
+  {
+    id: "multiply",
+    symbol: "×",
+    en: "Multiply",
+    ru: "Умножить",
+    sv: "Multiplicera",
+  },
+  { id: "divide", symbol: "÷", en: "Divide", ru: "Разделить", sv: "Dividera" },
+];
+
+function expressionForKind(
+  kind: ValueKind | "group",
+  project: ForgeProject,
+): ValueExpression {
+  if (kind === "group") return { ...defaultFormulaTerm(), grouped: true };
+  if (kind === "number") return defaultFormulaTerm();
+  if (kind === "atomic")
+    return {
+      kind,
+      atomicId: project.atomics[0]?.id ?? "",
+      rounding: "none",
+    };
+  if (kind === "ability_score" || kind === "ability_modifier")
+    return { kind, ability: "constitution", rounding: "none" };
+  if (kind === "class_level")
+    return { kind, classSelector: "source_class", rounding: "none" };
+  if (kind === "die_roll")
+    return {
+      kind,
+      dieId: "wsg.atomic.d6",
+      diceCount: 1,
+      rounding: "none",
+    };
+  if (kind === "die_average" || kind === "die_maximum")
+    return { kind, dieId: "wsg.atomic.d6", rounding: "none" };
+  if (kind === "count")
+    return { kind, countOf: "character_levels", rounding: "none" };
+  if (kind === "table_lookup") return { kind, tableId: "", tableKey: "", rounding: "none" };
+  return { kind, rounding: "none" };
+}
+
+function FormulaSequenceEditor({
+  value,
+  project,
+  locale,
+  onChange,
+}: {
+  value: ValueExpression;
+  project: ForgeProject;
+  locale: Locale;
+  onChange: (value: ValueExpression) => void;
+}) {
+  const sequence = expressionToFormulaSequence(value);
+  const commit = (next: FormulaSequence) =>
+    onChange(formulaSequenceToExpression(next));
+  return (
+    <div className="formula-builder">
+      <div className="formula-sequence">
+        {sequence.terms.map((term, index) => (
+          <div className="formula-segment" key={index}>
+            {index > 0 && (
+              <Field label={text(locale, "Operator", "Знак", "Operator") }>
+                <Select
+                  value={sequence.operators[index - 1] ?? "sum"}
+                  onChange={(operator) =>
+                    commit({
+                      ...sequence,
+                      operators: sequence.operators.map((item, current) =>
+                        current === index - 1
+                          ? (operator as ArithmeticOperator)
+                          : item,
+                      ),
+                    })
+                  }
+                >
+                  {arithmeticOperators.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.symbol} · {text(locale, item.en, item.ru, item.sv)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+            <FormulaOperandEditor
+              value={term}
+              project={project}
+              locale={locale}
+              onChange={(next) => commit(updateFormulaTerm(sequence, index, next))}
+              remove={
+                sequence.terms.length > 1
+                  ? () => commit(removeFormulaTerm(sequence, index))
+                  : undefined
+              }
+            />
+          </div>
+        ))}
+      </div>
+      <label className="formula-add">
+        <span>{text(locale, "Next arithmetic sign", "Следующий арифметический знак", "Nästa räknesätt")}</span>
+        <select
+          value=""
+          onChange={(event) => {
+            if (!event.target.value) return;
+            commit(
+              addFormulaTerm(
+                sequence,
+                event.target.value as ArithmeticOperator,
+              ),
+            );
+          }}
+        >
+          <option value="">+ − × ÷</option>
+          {arithmeticOperators.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.symbol} · {text(locale, item.en, item.ru, item.sv)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="formula-validity">
+        {text(
+          locale,
+          "Values and signs always alternate. Brackets are created and closed as one pair.",
+          "Значения и знаки всегда чередуются. Скобки создаются и закрываются одной парой.",
+          "Värden och operatorer alternerar alltid. Parenteser skapas och stängs som ett par.",
+        )}
+      </p>
+    </div>
+  );
+}
+
+function FormulaOperandEditor({
+  value,
+  project,
+  locale,
+  onChange,
+  remove,
+}: {
+  value: ValueExpression;
+  project: ForgeProject;
+  locale: Locale;
+  onChange: (value: ValueExpression) => void;
+  remove?: () => void;
+}) {
+  const grouped = Boolean(value.grouped || value.kind === "operation");
+  const visibleKind = grouped ? "group" : value.kind;
+  const numericAtomics = project.atomics.filter((item) =>
+    ["integer", "decimal"].includes(item.dataType),
+  );
   const dice = project.atomics.filter((item) => item.dataType === "die");
   const tables = project.references.filter(
     (item) => item.kind === "parameter" && item.propertyType === "table",
   );
   return (
-    <div className="expression-editor">
+    <div className={`formula-operand${grouped ? " grouped" : ""}`}>
       <Field
-        label={text(locale, "Value source", "Источник значения", "Värdekälla")}
+        label={text(locale, "Value", "Значение", "Värde")}
       >
         <Select
-          value={expression.kind}
-          onChange={(kind) => setKind(kind as ValueKind)}
+          value={visibleKind}
+          onChange={(kind) =>
+            onChange(expressionForKind(kind as ValueKind | "group", project))
+          }
         >
-          {VALUE_KINDS.map((entry) => (
+          {VALUE_KINDS.filter((entry) => entry.id !== "operation").map((entry) => (
             <option key={entry.id} value={entry.id}>
               {optionText(entry.name, locale)}
             </option>
           ))}
+          <option value="group">
+            {text(locale, "Brackets ( … )", "Скобки ( … )", "Parenteser ( … )")}
+          </option>
         </Select>
       </Field>
-      {expression.kind === "number" && (
+      {remove && (
+        <button className="icon-button danger formula-remove" onClick={remove}>
+          ×
+        </button>
+      )}
+      {grouped && (
+        <div className="formula-bracket-pair">
+          <strong aria-hidden="true">(</strong>
+          <FormulaSequenceEditor
+            value={{ ...value, grouped: false }}
+            project={project}
+            locale={locale}
+            onChange={(next) => onChange({ ...next, grouped: true })}
+          />
+          <strong aria-hidden="true">)</strong>
+        </div>
+      )}
+      {!grouped && value.kind === "number" && (
         <Field label={text(locale, "Number", "Число", "Tal")}>
           <NumberInput
-            value={expression.number ?? 0}
-            onChange={(number) => onChange({ ...expression, number })}
+            value={value.number ?? 0}
+            onChange={(number) => onChange({ ...value, number })}
           />
         </Field>
       )}
-      {expression.kind === "atomic" && (
+      {!grouped && value.kind === "atomic" && (
         <Field
           label={text(locale, "Game value", "Игровое значение", "Spelvärde")}
         >
           <Select
-            value={expression.atomicId ?? project.atomics[0]?.id ?? ""}
-            onChange={(atomicId) => onChange({ ...expression, atomicId })}
+            value={value.atomicId ?? numericAtomics[0]?.id ?? ""}
+            onChange={(atomicId) => onChange({ ...value, atomicId })}
           >
-            {project.atomics.map((item) => (
+            {numericAtomics.map((item) => (
               <option key={item.id} value={item.id}>
                 {localized(item.name, locale)}
               </option>
@@ -525,13 +713,13 @@ export function ValueExpressionEditor({
           </Select>
         </Field>
       )}
-      {["ability_score", "ability_modifier"].includes(expression.kind) && (
+      {!grouped && ["ability_score", "ability_modifier"].includes(value.kind) && (
         <Field label={text(locale, "Ability", "Характеристика", "Egenskap")}>
           <Select
-            value={expression.ability ?? "constitution"}
+            value={value.ability ?? "constitution"}
             onChange={(ability) =>
               onChange({
-                ...expression,
+                ...value,
                 ability: ability as ValueExpression["ability"],
               })
             }
@@ -557,14 +745,14 @@ export function ValueExpressionEditor({
           </Select>
         </Field>
       )}
-      {expression.kind === "class_level" && (
+      {!grouped && value.kind === "class_level" && (
         <Field
           label={text(locale, "Which class", "Какой класс", "Vilken klass")}
         >
           <Select
-            value={expression.classSelector ?? "source_class"}
+            value={value.classSelector ?? "source_class"}
             onChange={(classSelector) =>
-              onChange({ ...expression, classSelector })
+              onChange({ ...value, classSelector })
             }
           >
             <option value="source_class">
@@ -594,12 +782,12 @@ export function ValueExpressionEditor({
           </Select>
         </Field>
       )}
-      {["die_roll", "die_average", "die_maximum"].includes(expression.kind) && (
+      {!grouped && ["die_roll", "die_average", "die_maximum"].includes(value.kind) && (
         <>
           <Field label={text(locale, "Die", "Кость", "Tärning")}>
             <Select
-              value={expression.dieId ?? dice[0]?.id ?? ""}
-              onChange={(dieId) => onChange({ ...expression, dieId })}
+              value={value.dieId ?? dice[0]?.id ?? ""}
+              onChange={(dieId) => onChange({ ...value, dieId })}
             >
               {dice.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -608,7 +796,7 @@ export function ValueExpressionEditor({
               ))}
             </Select>
           </Field>
-          {expression.kind === "die_roll" && (
+          {value.kind === "die_roll" && (
             <Field
               label={text(
                 locale,
@@ -619,18 +807,18 @@ export function ValueExpressionEditor({
             >
               <NumberInput
                 min={1}
-                value={expression.diceCount ?? 1}
-                onChange={(diceCount) => onChange({ ...expression, diceCount })}
+                value={value.diceCount ?? 1}
+                onChange={(diceCount) => onChange({ ...value, diceCount })}
               />
             </Field>
           )}
         </>
       )}
-      {expression.kind === "table_lookup" && (
+      {!grouped && value.kind === "table_lookup" && (
         <Field label={text(locale, "Table", "Таблица", "Tabell")}>
           <Select
-            value={expression.tableId ?? tables[0]?.id ?? ""}
-            onChange={(tableId) => onChange({ ...expression, tableId })}
+            value={value.tableId ?? tables[0]?.id ?? ""}
+            onChange={(tableId) => onChange({ ...value, tableId })}
           >
             {tables.map((item) => (
               <option key={item.id} value={item.id}>
@@ -640,13 +828,13 @@ export function ValueExpressionEditor({
           </Select>
         </Field>
       )}
-      {expression.kind === "count" && (
+      {!grouped && value.kind === "count" && (
         <Field label={text(locale, "Count", "Что считать", "Räkna")}>
           <Select
-            value={expression.countOf ?? "character_levels"}
+            value={value.countOf ?? "character_levels"}
             onChange={(countOf) =>
               onChange({
-                ...expression,
+                ...value,
                 countOf: countOf as ValueExpression["countOf"],
               })
             }
@@ -667,78 +855,6 @@ export function ValueExpressionEditor({
           </Select>
         </Field>
       )}
-      {expression.kind === "operation" && (
-        <div className="rule-wide calculation-block">
-          <Field label={text(locale, "Calculation", "Расчёт", "Beräkning")}>
-            <Select
-              value={expression.operation ?? "sum"}
-              onChange={(operation) =>
-                onChange({
-                  ...expression,
-                  operation: operation as ValueExpression["operation"],
-                })
-              }
-            >
-              {[
-                ["sum", "Add", "Сложить"],
-                ["subtract", "Subtract", "Вычесть"],
-                ["multiply", "Multiply", "Умножить"],
-                ["divide", "Divide", "Разделить"],
-                ["minimum", "Use lowest", "Взять наименьшее"],
-                ["maximum", "Use highest", "Взять наибольшее"],
-                ["clamp", "Limit range", "Ограничить диапазоном"],
-              ].map(([id, en, ru]) => (
-                <option key={id} value={id}>
-                  {text(locale, en, ru)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <div className="calculation-operands">
-            {(expression.operands ?? []).map((operand, index) => (
-              <div className="calculation-operand" key={index}>
-                <ValueExpressionEditor
-                  value={operand}
-                  project={project}
-                  locale={locale}
-                  onChange={(next) =>
-                    onChange({
-                      ...expression,
-                      operands: (expression.operands ?? []).map(
-                        (item, current) => (current === index ? next : item),
-                      ),
-                    })
-                  }
-                />
-                <button
-                  className="icon-button danger"
-                  onClick={() =>
-                    onChange({
-                      ...expression,
-                      operands: (expression.operands ?? []).filter(
-                        (_, current) => current !== index,
-                      ),
-                    })
-                  }
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-          <button
-            className="button ghost compact"
-            onClick={() =>
-              onChange({
-                ...expression,
-                operands: [...(expression.operands ?? []), emptyExpression()],
-              })
-            }
-          >
-            + {text(locale, "Value", "Значение", "Värde")}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -751,6 +867,19 @@ export function ConditionSetEditor({
   onChange,
 }: Props<ConditionGroup>) {
   const group = value ?? emptyConditions();
+  const conditionOptions = project.references.filter(
+    (item) => item.kind === "value" && item.optionGroup === "condition",
+  );
+  const updatePredicate = (
+    index: number,
+    patch: Partial<ConditionGroup["predicates"][number]>,
+  ) =>
+    onChange({
+      ...group,
+      predicates: group.predicates.map((item, current) =>
+        current === index ? { ...item, ...patch } : item,
+      ),
+    });
   return (
     <section className="dynamic-card rule-editor">
       <span className="dynamic-label">{label}</span>
@@ -774,80 +903,136 @@ export function ConditionSetEditor({
           </Select>
         </Field>
       </div>
-      {group.predicates.map((predicate, index) => (
-        <article className="visual-rule-row" key={predicate.id}>
-          <span className="step">{index + 1}</span>
-          <ValueExpressionEditor
-            value={predicate.left}
-            project={project}
-            locale={locale}
-            onChange={(left) =>
-              onChange({
-                ...group,
-                predicates: group.predicates.map((item, current) =>
-                  current === index ? { ...item, left } : item,
-                ),
-              })
-            }
-          />
-          <Field label={text(locale, "Comparison", "Сравнение", "Jämförelse")}>
-            <Select
-              value={predicate.operator}
-              onChange={(operator) =>
-                onChange({
-                  ...group,
-                  predicates: group.predicates.map((item, current) =>
-                    current === index
-                      ? { ...item, operator: operator as typeof item.operator }
-                      : item,
-                  ),
-                })
-              }
-            >
-              {[
-                ["equals", "Equals", "Равно"],
-                ["not_equals", "Not equal", "Не равно"],
-                ["greater_than", "Greater than", "Больше"],
-                ["at_least", "At least", "Не меньше"],
-                ["less_than", "Less than", "Меньше"],
-                ["at_most", "At most", "Не больше"],
-                ["contains", "Contains", "Содержит"],
-                ["not_contains", "Does not contain", "Не содержит"],
-              ].map(([id, en, ru]) => (
-                <option key={id} value={id}>
-                  {text(locale, en, ru)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <ValueExpressionEditor
-            value={predicate.right}
-            project={project}
-            locale={locale}
-            onChange={(right) =>
-              onChange({
-                ...group,
-                predicates: group.predicates.map((item, current) =>
-                  current === index ? { ...item, right } : item,
-                ),
-              })
-            }
-          />
-          <button
-            className="icon-button danger"
-            onClick={() =>
-              onChange({
-                ...group,
-                predicates: group.predicates.filter(
-                  (_, current) => current !== index,
-                ),
-              })
-            }
-          >
-            ×
-          </button>
-        </article>
-      ))}
+      {group.predicates.map((predicate, index) => {
+        const kind = predicate.kind ?? "value_comparison";
+        return (
+          <article className="condition-card" key={predicate.id}>
+            <div className="condition-card-head">
+              <span className="step">{index + 1}</span>
+              <Field label={text(locale, "Condition type", "Тип условия", "Villkorstyp") }>
+                <Select
+                  value={kind}
+                  onChange={(nextKind) =>
+                    updatePredicate(index, {
+                      kind: nextKind as typeof kind,
+                      target: predicate.target ?? "self",
+                    })
+                  }
+                >
+                  <option value="value_comparison">
+                    {text(locale, "Compare values", "Сравнить значения", "Jämför värden")}
+                  </option>
+                  <option value="has_condition">
+                    {text(locale, "Has a condition", "Имеет состояние", "Har ett tillstånd")}
+                  </option>
+                </Select>
+              </Field>
+              <Field label={text(locale, "Whose value", "Чьё значение", "Vems värde") }>
+                <Select
+                  value={predicate.target ?? "self"}
+                  onChange={(target) =>
+                    updatePredicate(index, { target: target as RuleTarget })
+                  }
+                >
+                  {RULE_TARGETS.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {optionText(entry.name, locale)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <button
+                className="icon-button danger"
+                onClick={() =>
+                  onChange({
+                    ...group,
+                    predicates: group.predicates.filter(
+                      (_, current) => current !== index,
+                    ),
+                  })
+                }
+              >
+                ×
+              </button>
+            </div>
+            {kind === "has_condition" ? (
+              <div className="condition-state-row">
+                <Field label={text(locale, "Condition", "Состояние", "Tillstånd") }>
+                  <Select
+                    value={predicate.conditionId ?? ""}
+                    onChange={(conditionId) =>
+                      updatePredicate(index, { conditionId })
+                    }
+                  >
+                    <option value="">—</option>
+                    {conditionOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {localized(item.name, locale)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label={text(locale, "State", "Проверка", "Status") }>
+                  <Select
+                    value={predicate.conditionExpected ?? "active"}
+                    onChange={(conditionExpected) =>
+                      updatePredicate(index, {
+                        conditionExpected:
+                          conditionExpected as "active" | "inactive",
+                      })
+                    }
+                  >
+                    <option value="active">
+                      {text(locale, "Is active", "Есть у цели", "Är aktivt")}
+                    </option>
+                    <option value="inactive">
+                      {text(locale, "Is not active", "Нет у цели", "Är inte aktivt")}
+                    </option>
+                  </Select>
+                </Field>
+              </div>
+            ) : (
+              <div className="condition-comparison-row">
+                <ValueExpressionEditor
+                  value={predicate.left}
+                  project={project}
+                  locale={locale}
+                  onChange={(left) => updatePredicate(index, { left })}
+                />
+                <Field label={text(locale, "Comparison", "Сравнение", "Jämförelse")}>
+                  <Select
+                    value={predicate.operator}
+                    onChange={(operator) =>
+                      updatePredicate(index, {
+                        operator: operator as typeof predicate.operator,
+                      })
+                    }
+                  >
+                    {[
+                      ["equals", "Equals", "Равно"],
+                      ["not_equals", "Not equal", "Не равно"],
+                      ["greater_than", "Greater than", "Больше"],
+                      ["at_least", "At least", "Не меньше"],
+                      ["less_than", "Less than", "Меньше"],
+                      ["at_most", "At most", "Не больше"],
+                    ].map(([id, en, ru]) => (
+                      <option key={id} value={id}>
+                        {text(locale, en, ru)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <ValueExpressionEditor
+                  value={predicate.right}
+                  project={project}
+                  locale={locale}
+                  onChange={(right) => updatePredicate(index, { right })}
+                />
+              </div>
+            )}
+          </article>
+        );
+      })}
       <button
         className="button ghost compact"
         onClick={() =>
@@ -857,6 +1042,8 @@ export function ConditionSetEditor({
               ...group.predicates,
               {
                 id: `condition_${group.predicates.length + 1}`,
+                kind: "value_comparison",
+                target: "self",
                 left: emptyExpression(),
                 operator: "equals",
                 right: emptyExpression(),
@@ -947,8 +1134,10 @@ function expressionIsIncomplete(value: ValueExpression | undefined) {
   if (!value) return true;
   if (value.kind === "number") return !Number.isFinite(value.number) || value.number === 0;
   if (value.kind === "atomic") return !value.atomicId;
-  if (["die_roll", "die_average", "die_maximum"].includes(value.kind))
+  if (value.kind === "die_roll")
     return !value.dieId || !value.diceCount || value.diceCount < 1;
+  if (["die_average", "die_maximum"].includes(value.kind))
+    return !value.dieId;
   if (value.kind === "table_lookup") return !value.tableId || !value.tableKey;
   if (value.kind === "operation")
     return !value.operation || !value.operands?.length || value.operands.some(expressionIsIncomplete);
@@ -1083,7 +1272,7 @@ function ActionEditor({
           )}
         </div>
       )}
-      {!simple && <Field label={text(locale, "Action", "Действие", "Åtgärd")}>
+      {!simple && <Field label={text(locale, "How it changes", "Как влияет", "Hur det ändras")}>
         <Select
           value={action.type}
           onChange={(nextType) => {
@@ -1179,7 +1368,7 @@ function ActionEditor({
       )}
       {needsAtomic && (
         <Field
-          label={text(locale, "Game value", "Игровое значение", "Spelvärde")}
+          label={text(locale, "What is affected", "На что влияет", "Vad påverkas")}
         >
           <Select
             value={action.atomicId ?? ""}
@@ -1478,7 +1667,7 @@ function ActionEditor({
       {needsValue && (
         <div className="rule-wide">
           <span className="dynamic-label">
-            {text(locale, "How much", "Сколько", "Hur mycket")}
+            {text(locale, "Formula", "Формула", "Formel")}
           </span>
           <ValueExpressionEditor
             value={action.value ?? emptyExpression()}
@@ -2382,41 +2571,137 @@ export function DamageEditor({
               ))}
             </Select>
             </Field>
-            <Field
-            label={text(
-              locale,
-              "On successful save",
-              "При успешном спасброске",
-              "Vid lyckat räddningsslag",
-            )}
-          >
-            <Select
-              value={component.saveOutcome}
-              onChange={(saveOutcome) =>
-                onChange(
-                  components.map((item, current) =>
-                    current === index
-                      ? {
-                          ...item,
-                          saveOutcome:
-                            saveOutcome as DamageComponent["saveOutcome"],
-                        }
-                      : item,
-                  ),
-                )
-              }
-            >
-              <option value="full">
-                {text(locale, "Full damage", "Полный урон")}
-              </option>
-              <option value="half">
-                {text(locale, "Half damage", "Половина урона")}
-              </option>
-              <option value="none">
-                {text(locale, "No damage", "Без урона")}
-              </option>
-            </Select>
+            <Field label={text(locale, "Saving throw", "Спасбросок", "Räddningsslag") }>
+              <Toggle
+                checked={component.requiresSavingThrow ?? false}
+                onChange={(requiresSavingThrow) =>
+                  onChange(
+                    components.map((item, current) =>
+                      current === index
+                        ? {
+                            ...item,
+                            requiresSavingThrow,
+                            savingThrowAbility:
+                              item.savingThrowAbility ?? "constitution",
+                            savingThrowDifficulty:
+                              item.savingThrowDifficulty ?? {
+                                kind: "number",
+                                number: 10,
+                              },
+                          }
+                        : item,
+                    ),
+                  )
+                }
+                yes={text(locale, "Required", "Нужен", "Krävs")}
+                no={text(locale, "Not required", "Не нужен", "Krävs inte")}
+              />
             </Field>
+            <Field label={text(locale, "On miss against AC", "При промахе по КЗ", "Vid miss mot RK") }>
+              <Select
+                value={component.missOutcome ?? "none"}
+                onChange={(missOutcome) =>
+                  onChange(
+                    components.map((item, current) =>
+                      current === index
+                        ? {
+                            ...item,
+                            missOutcome:
+                              missOutcome as DamageComponent["missOutcome"],
+                          }
+                        : item,
+                    ),
+                  )
+                }
+              >
+                <option value="none">{text(locale, "No damage", "Без урона", "Ingen skada")}</option>
+                <option value="half">{text(locale, "Half damage", "Половина урона", "Halv skada")}</option>
+                <option value="full">{text(locale, "Full damage", "Полный урон", "Full skada")}</option>
+              </Select>
+            </Field>
+            {component.requiresSavingThrow && (
+              <>
+                <Field label={text(locale, "Saving throw ability", "Характеристика спасброска", "Räddningsslagets egenskap") }>
+                  <Select
+                    value={component.savingThrowAbility ?? "constitution"}
+                    onChange={(savingThrowAbility) =>
+                      onChange(
+                        components.map((item, current) =>
+                          current === index
+                            ? {
+                                ...item,
+                                savingThrowAbility:
+                                  savingThrowAbility as DamageComponent["savingThrowAbility"],
+                              }
+                            : item,
+                        ),
+                      )
+                    }
+                  >
+                    {abilities.map((ability) => (
+                      <option key={ability} value={ability}>
+                        {text(
+                          locale,
+                          ability[0].toUpperCase() + ability.slice(1),
+                          ({
+                            strength: "Сила",
+                            dexterity: "Ловкость",
+                            constitution: "Телосложение",
+                            intelligence: "Интеллект",
+                            wisdom: "Мудрость",
+                            charisma: "Харизма",
+                          } as Record<string, string>)[ability],
+                        )}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label={text(locale, "On successful save", "При успешном спасброске", "Vid lyckat räddningsslag") }>
+                  <Select
+                    value={component.saveOutcome}
+                    onChange={(saveOutcome) =>
+                      onChange(
+                        components.map((item, current) =>
+                          current === index
+                            ? {
+                                ...item,
+                                saveOutcome:
+                                  saveOutcome as DamageComponent["saveOutcome"],
+                              }
+                            : item,
+                        ),
+                      )
+                    }
+                  >
+                    <option value="full">{text(locale, "Full damage", "Полный урон")}</option>
+                    <option value="half">{text(locale, "Half damage", "Половина урона")}</option>
+                    <option value="none">{text(locale, "No damage", "Без урона")}</option>
+                  </Select>
+                </Field>
+                <div className="rule-wide">
+                  <span className="dynamic-label">
+                    {text(locale, "Saving throw difficulty", "Сложность спасброска", "Räddningsslagets svårighet")}
+                  </span>
+                  <ValueExpressionEditor
+                    value={component.savingThrowDifficulty ?? {
+                      kind: "number",
+                      number: 10,
+                    }}
+                    project={project}
+                    locale={locale}
+                    onChange={(savingThrowDifficulty) =>
+                      onChange(
+                        components.map((item, current) =>
+                          current === index
+                            ? { ...item, savingThrowDifficulty }
+                            : item,
+                        ),
+                      )
+                    }
+                  />
+                </div>
+              </>
+            )}
             <Field label={text(locale, "Periodic", "Периодический", "Periodisk")}>
             <Toggle
               checked={component.periodic}
@@ -2540,6 +2825,26 @@ export function DamageEditor({
               </Field>
             </>
             )}
+            <div className="rule-wide">
+              <ConditionSetEditor
+                label={text(
+                  locale,
+                  "Apply this damage only when",
+                  "Наносить этот урон только если",
+                  "Tillämpa denna skada endast när",
+                )}
+                value={component.conditions ?? emptyConditions()}
+                project={project}
+                locale={locale}
+                onChange={(conditions) =>
+                  onChange(
+                    components.map((item, current) =>
+                      current === index ? { ...item, conditions } : item,
+                    ),
+                  )
+                }
+              />
+            </div>
           </div>
           <button
             className="icon-button danger"
@@ -2827,11 +3132,22 @@ function GuidedRow({
   locale: Locale;
   onChange: (value: Record<string, unknown>) => void;
 }) {
+  const optionKey = (raw: unknown) =>
+    project.references.find(
+      (item) => item.kind === "value" && item.id === String(raw ?? ""),
+    )?.key ?? raw;
   return (
     <div className="guided-grid">
       {fields.map((field) => {
         const label = localized(field.name, locale);
         const current = value[field.key] ?? field.defaultValue;
+        if (field.visibleWhen) {
+          const accepted = Array.isArray(field.visibleWhen.equals)
+            ? field.visibleWhen.equals
+            : [field.visibleWhen.equals];
+          if (!accepted.includes(optionKey(value[field.visibleWhen.key])))
+            return null;
+        }
         if (field.type === "boolean")
           return (
             <Field key={field.key} label={label}>
@@ -2863,12 +3179,17 @@ function GuidedRow({
           return (
             <Field key={field.key} label={label}>
               <Select
-                value={String(current ?? "")}
+                value={String(
+                  field.type === "select" ? optionKey(current) : current ?? "",
+                )}
                 onChange={(next) => onChange({ ...value, [field.key]: next })}
               >
                 <option value="">—</option>
                 {options.map((item) => (
-                  <option key={item.id} value={item.id}>
+                  <option
+                    key={item.id}
+                    value={field.type === "select" ? item.key : item.id}
+                  >
                     {localized(item.name, locale)}
                   </option>
                 ))}

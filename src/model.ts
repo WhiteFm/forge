@@ -85,6 +85,7 @@ export interface GuidedField {
   minimum?: number;
   maximum?: number;
   defaultValue?: unknown;
+  visibleWhen?: { key: string; equals: unknown | unknown[] };
 }
 
 export interface Category {
@@ -238,7 +239,7 @@ export interface Dependency {
 export interface ForgeProject {
   format: "wsg-forge-project";
   schemaVersion: 3;
-  catalogVersion: 16;
+  catalogVersion: 18;
   namespace: string;
   version: string;
   defaultLocale: "en";
@@ -1257,7 +1258,7 @@ export function createCleanProject(): ForgeProject {
   const project: ForgeProject = {
     format: "wsg-forge-project",
     schemaVersion: 3,
-    catalogVersion: 16,
+    catalogVersion: 18,
     namespace,
     version: "1.0.0",
     defaultLocale: "en",
@@ -1304,10 +1305,178 @@ export function createCleanProject(): ForgeProject {
 }
 
 export function upgradeProjectCatalog(project: ForgeProject): ForgeProject {
-  if (project.catalogVersion === 16 && project.ruleEngine) return project;
-  // Schema 16 replaces every earlier catalog with the approved equipment-only
-  // atomics, references, and templates. Old records must not leak into the reset.
-  return createCleanProject();
+  if (project.catalogVersion === 18 && project.ruleEngine) return project;
+  // Projects predating the equipment-only catalog contained incompatible
+  // executable-string records and are intentionally restarted safely.
+  if (project.catalogVersion < 16 || !project.ruleEngine)
+    return createCleanProject();
+
+  // Schema 18 is additive. Keep every local reference edit, while installing
+  // the new usage-mode choices and replacing the duplicate extended-reach
+  // field with the single Reach field used by the current site reference.
+  const next = structuredClone(project);
+  const site = createCleanProject();
+  const siteActivation = site.references.find(
+    (item) => item.kind === "parameter" && item.key === "activation",
+  );
+  const activation = next.references.find(
+    (item) => item.kind === "parameter" && item.key === "activation",
+  );
+  if (activation && siteActivation) {
+    activation.required = true;
+    activation.defaultValue ??= structuredClone(siteActivation.defaultValue);
+    const fields = activation.uiFields ?? [];
+    for (const siteField of siteActivation.uiFields ?? []) {
+      const existing = fields.find((item) => item.key === siteField.key);
+      if (existing) {
+        if (siteField.visibleWhen)
+          existing.visibleWhen = structuredClone(siteField.visibleWhen);
+        if (siteField.key === "charges_spent") {
+          existing.minimum = 1;
+          existing.defaultValue = 1;
+        }
+      } else fields.push(structuredClone(siteField));
+    }
+    activation.uiFields = fields.sort(
+      (left, right) =>
+        (siteActivation.uiFields?.findIndex((item) => item.key === left.key) ??
+          999) -
+        (siteActivation.uiFields?.findIndex((item) => item.key === right.key) ??
+          999),
+    );
+  }
+  for (const siteValue of site.references.filter(
+    (item) => item.kind === "value" && item.optionGroup === "usage_mode",
+  ))
+    if (!next.references.some((item) => item.id === siteValue.id))
+      next.references.push(structuredClone(siteValue));
+
+  // The additional-damage limit is a shared guided value so the same rule can
+  // later be reused by features without duplicating the weapon implementation.
+  const siteExtraDamageLimit = site.references.find(
+    (item) => item.kind === "parameter" && item.key === "extra_damage_limit",
+  );
+  const extraDamageLimit = next.references.find(
+    (item) => item.kind === "parameter" && item.key === "extra_damage_limit",
+  );
+  if (siteExtraDamageLimit && extraDamageLimit) {
+    const hadSiteName =
+      extraDamageLimit.name.en === "Additional Damage Limit" &&
+      (!extraDamageLimit.name.ru ||
+        extraDamageLimit.name.ru === "Ограничение Добавочного Урона");
+    extraDamageLimit.propertyType = siteExtraDamageLimit.propertyType;
+    extraDamageLimit.optionGroup = undefined;
+    extraDamageLimit.defaultValue = structuredClone(
+      siteExtraDamageLimit.defaultValue,
+    );
+    extraDamageLimit.uiFields = structuredClone(siteExtraDamageLimit.uiFields);
+    if (hadSiteName) {
+      extraDamageLimit.name = structuredClone(siteExtraDamageLimit.name);
+      extraDamageLimit.description = structuredClone(
+        siteExtraDamageLimit.description,
+      );
+    }
+    const oldPeriods: Record<string, string> = {
+      once_per_attack: "per_attack",
+      once_per_turn: "per_turn",
+      once_per_round: "per_turn",
+      once_per_target: "per_attack",
+      every_time: "per_attack",
+    };
+    for (const entity of next.entities) {
+      const oldValue = entity.values[extraDamageLimit.id];
+      if (typeof oldValue !== "string") continue;
+      const oldKey =
+        next.references.find((item) => item.id === oldValue)?.key ?? oldValue;
+      entity.values[extraDamageLimit.id] = {
+        amount: 1,
+        period: oldPeriods[oldKey] ?? "per_attack",
+        auto_apply: true,
+      };
+    }
+  }
+  for (const siteValue of site.references.filter(
+    (item) =>
+      item.kind === "value" && item.optionGroup === "extra_damage_period",
+  ))
+    if (!next.references.some((item) => item.id === siteValue.id))
+      next.references.push(structuredClone(siteValue));
+
+  const oldReach = next.references.find(
+    (item) => item.kind === "parameter" && item.key === "extended_reach",
+  );
+  const siteReach = site.references.find(
+    (item) => item.kind === "parameter" && item.key === "weapon_reach",
+  );
+  if (siteReach) {
+    const reach = next.references.find(
+      (item) => item.kind === "parameter" && item.key === "weapon_reach",
+    );
+    if (!reach) next.references.push(structuredClone(siteReach));
+    if (oldReach) {
+      for (const template of next.templates)
+        for (const field of template.fields)
+          if (field.referenceId === oldReach.id)
+            field.referenceId = siteReach.id;
+      for (const entity of next.entities)
+        if (oldReach.id in entity.values) {
+          entity.values[siteReach.id] = entity.values[oldReach.id];
+          delete entity.values[oldReach.id];
+        }
+      next.references = next.references.filter((item) => item.id !== oldReach.id);
+    }
+  }
+
+  const obsoletePeriodicDamage = next.references.find(
+    (item) => item.kind === "parameter" && item.key === "periodic_damage",
+  );
+  if (obsoletePeriodicDamage) {
+    for (const template of next.templates)
+      template.fields = template.fields.filter(
+        (field) => field.referenceId !== obsoletePeriodicDamage.id,
+      );
+    for (const entity of next.entities)
+      delete entity.values[obsoletePeriodicDamage.id];
+    next.references = next.references.filter(
+      (item) => item.id !== obsoletePeriodicDamage.id,
+    );
+  }
+
+  const activationId = activation?.id ?? siteActivation?.id;
+  if (activationId)
+    for (const template of next.templates) {
+      const field = template.fields.find(
+        (item) => item.referenceId === activationId,
+      );
+      if (!field) continue;
+      field.required = true;
+      const useOnce = /potion|poison/i.test(template.id);
+      field.defaultValue = {
+        ...((field.defaultValue ?? siteActivation?.defaultValue ?? {}) as Record<
+          string,
+          unknown
+        >),
+        usage_mode: useOnce ? "single_use" : "unlimited",
+      };
+    }
+  next.catalogVersion = 18;
+  return recalculateProjectIds(next);
+}
+
+/** Replace only the editable reference layer with the reference shipped by the site. */
+export function restoreSiteReference(project: ForgeProject): ForgeProject {
+  const site = createCleanProject();
+  site.namespace = project.namespace;
+  const baseline = recalculateProjectIds(site);
+  const next = structuredClone(project);
+  next.catalogVersion = baseline.catalogVersion;
+  next.ruleEngine = structuredClone(baseline.ruleEngine);
+  next.reference = structuredClone(baseline.reference);
+  next.categories = structuredClone(baseline.categories);
+  next.atomics = structuredClone(baseline.atomics);
+  next.references = structuredClone(baseline.references);
+  next.templates = structuredClone(baseline.templates);
+  return recalculateProjectIds(next);
 }
 
 export function recalculateProjectIds(project: ForgeProject): ForgeProject {
@@ -1675,8 +1844,10 @@ function expressionIsIncomplete(value: ValueExpression | undefined): boolean {
   if (value.kind === "number")
     return !Number.isFinite(value.number) || value.number === 0;
   if (value.kind === "atomic") return !value.atomicId;
-  if (["die_roll", "die_average", "die_maximum"].includes(value.kind))
+  if (value.kind === "die_roll")
     return !value.dieId || !value.diceCount || value.diceCount < 1;
+  if (["die_average", "die_maximum"].includes(value.kind))
+    return !value.dieId;
   if (value.kind === "table_lookup") return !value.tableId || !value.tableKey;
   if (value.kind === "operation")
     return (
