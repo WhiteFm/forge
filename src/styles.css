@@ -2882,3 +2882,77 @@ main {
 .advanced-settings .form-grid {
   padding: 14px;
 }
+.generated-rule {
+  border-color: color-mix(in srgb, var(--gold) 42%, var(--line));
+  background: color-mix(in srgb, var(--gold) 4%, var(--surface-2));
+}
+
+.generated-rule summary {
+  cursor: default;
+}
+
+.generated-rule-lock {
+  color: var(--gold);
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+
+.generated-rule-body {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.generated-rule-description {
+  margin: 0;
+  max-width: 92ch;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+.generated-rule-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.generated-rule-flow > span {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.generated-rule-flow strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.generated-rule-flow > b {
+  align-self: center;
+  color: var(--gold);
+}
+
+.generated-rule-note {
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .generated-rule-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .generated-rule-flow > b {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+}

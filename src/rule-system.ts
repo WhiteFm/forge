@@ -86,6 +86,8 @@ export interface ValueExpression {
     | "intelligence"
     | "wisdom"
     | "charisma";
+  /** Resolve the ability dynamically from the attack that triggered the rule. */
+  abilitySource?: "attack_ability_used";
   classSelector?: "source_class" | "base_class" | "all_caster_classes" | string;
   dieId?: string;
   diceCount?: number;
@@ -161,6 +163,7 @@ export type RuleActionType =
   | "make_attack_roll"
   | "make_saving_throw"
   | "make_ability_check"
+  | "change_action_cost"
   | "roll_dice"
   | "reroll_die"
   | "replace_roll"
@@ -202,6 +205,43 @@ export interface RuleAction {
   targetCount?: number;
   rangeFeet?: number;
   requiresLineOfSight?: boolean;
+  /** Use the damage type of the weapon that triggered this rule. */
+  damageTypeSource?: "source_weapon";
+  /** Limits which sources are allowed to increase a calculated damage result. */
+  damageIncreaseLimit?: "ability_modifier_only";
+  /** A follow-up weapon attack resolved from the triggering weapon. */
+  weaponAttack?: {
+    source: "this_weapon";
+    mode: "melee" | "same_as_trigger";
+    resolveDamageOnHit: boolean;
+    abilityModifierToDamage: "normal" | "negative_only" | "none";
+  };
+  /** Select a target relative to the creature from the triggering attack. */
+  targetRelation?: {
+    anchor: "attack_target";
+    maximumDistanceFeet: number;
+    requireWithinSourceReach: boolean;
+  };
+  movementDirection?: "straight_away_from_attacker";
+  maximumTargetSize?: "tiny" | "small" | "medium" | "large" | "huge" | "gargantuan";
+  /** Applies an advantage/disadvantage effect only to a specific future roll. */
+  rollFilter?: {
+    roll: "attack";
+    occurrence: "next";
+    against: "any_target" | "trigger_target";
+    deadline: "source_next_turn_start" | "source_next_turn_end";
+  };
+  actionCostChange?: {
+    appliesTo: "light_property_extra_attack";
+    from: "bonus_action";
+    to: "attack_action_part";
+  };
+  /** Actions resolved only after the requested check succeeds or fails. */
+  onSuccessActions?: RuleAction[];
+  onFailureActions?: RuleAction[];
+  /** Applies a numeric change to every movement mode in the Speed record. */
+  affectsAllSpeedModes?: boolean;
+  minimumResult?: number;
 }
 
 export interface RoundDuration {
@@ -222,6 +262,15 @@ export interface RoundDuration {
     | "area_exited"
     | "short_rest"
     | "long_rest";
+  /** Whose turn boundary controls until_turn_start/until_turn_end. */
+  turnOwner?: "source" | "target";
+}
+
+export interface RuleContextFilter {
+  source: "this_weapon" | "this_entity";
+  attackMode?: "melee" | "ranged" | "any";
+  requiresDamage?: boolean;
+  attackVariant?: "light_property_extra_attack";
 }
 
 export interface AutomationRule {
@@ -240,6 +289,14 @@ export interface AutomationRule {
   duration: RoundDuration;
   priority: number;
   stacking: "sum" | "highest" | "lowest" | "replace" | "unique_source";
+  description?: RuleText;
+  context?: RuleContextFilter;
+  generatedBy?: {
+    kind: "weapon_mastery";
+    referenceId: string;
+    key: string;
+    locked: true;
+  };
 }
 
 export interface RuleSet {
@@ -479,6 +536,11 @@ export const RULE_ACTIONS: RuleCatalogEntry<RuleActionType>[] = [
     "make_ability_check",
     "Request an ability check",
     "Запросить проверку характеристики",
+  ),
+  entry(
+    "change_action_cost",
+    "Change action cost",
+    "Изменить стоимость действия",
   ),
   entry("roll_dice", "Roll dice", "Бросить кости"),
   entry("reroll_die", "Reroll die", "Перебросить кость"),

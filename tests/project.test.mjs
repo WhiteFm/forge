@@ -17,10 +17,10 @@ async function withModel(run) {
   }
 }
 
-test("starts with schema 19, the site reference, and no entities", async () => {
+test("starts with schema 20, the site reference, and no entities", async () => {
   await withModel(async (model) => {
     const project = model.createCleanProject();
-    assert.equal(project.catalogVersion, 19);
+    assert.equal(project.catalogVersion, 20);
     assert.equal(project.ruleEngine.roundSeconds, 6);
     assert.equal(project.ruleEngine.gridUnitFeet, 2.5);
     assert.ok(project.categories.length > 20);
@@ -136,6 +136,29 @@ test("starts with schema 19, the site reference, and no entities", async () => {
     }
     assert.ok(project.ruleEngine.actions.some((item) => item.id === "divide"));
     assert.ok(project.ruleEngine.coreRules.some((item) => item.id === "finesse_weapon"));
+    const mastery = project.references.find((item) => item.key === "weapon_mastery");
+    const masteries = project.references.filter(
+      (item) => item.kind === "value" && item.optionGroup === "weapon_mastery",
+    );
+    assert.equal(mastery.propertyType, "reference");
+    assert.equal(mastery.optionGroup, "weapon_mastery");
+    assert.deepEqual(
+      masteries.map((item) => item.key),
+      ["cleave", "graze", "nick", "push", "sap", "slow", "topple", "vex"],
+    );
+    assert.ok(
+      masteries.every(
+        (item) =>
+          item.name.en &&
+          item.name.ru &&
+          item.name.sv &&
+          item.description.en &&
+          item.description.ru &&
+          item.description.sv &&
+          item.ruleSet?.rules.length === 1 &&
+          item.ruleSet.rules[0].generatedBy?.key === item.key,
+      ),
+    );
     const potion = project.templates.find((item) => item.name.en === "Potion");
     const potionUse = potion.fields.find((field) => field.referenceId === activation.id);
     assert.equal(potionUse.defaultValue.usage_mode, "single_use");
@@ -265,7 +288,7 @@ test("upgrading an old executable-string project starts a clean safe project", a
       },
     ];
     const upgraded = model.upgradeProjectCatalog(oldProject);
-    assert.equal(upgraded.catalogVersion, 19);
+    assert.equal(upgraded.catalogVersion, 20);
     assert.equal(upgraded.entities.length, 0);
     assert.equal(upgraded.ruleEngine.roundSeconds, 6);
   });
@@ -299,7 +322,7 @@ test("upgrading schema 17 preserves local reference names and migrates damage li
     const upgradedLimit = upgraded.references.find(
       (item) => item.key === "extra_damage_limit",
     );
-    assert.equal(upgraded.catalogVersion, 19);
+    assert.equal(upgraded.catalogVersion, 20);
     assert.equal(upgradedLimit.name.en, "My damage usage");
     assert.equal(upgradedLimit.propertyType, "guided");
     assert.deepEqual(upgraded.entities[0].values[upgradedLimit.id], {
@@ -373,7 +396,7 @@ test("schema 18 projects receive the new weapon fields without losing entities",
       previousIds: [],
     });
     const upgraded = model.upgradeProjectCatalog(project);
-    assert.equal(upgraded.catalogVersion, 19);
+    assert.equal(upgraded.catalogVersion, 20);
     assert.equal(upgraded.entities.length, 1);
     const upgradedWeapon = upgraded.templates.find((item) => item.id.endsWith(".temp.weapon"));
     for (const key of removedKeys) {
@@ -381,6 +404,181 @@ test("schema 18 projects receive the new weapon fields without losing entities",
       assert.ok(reference);
       assert.ok(upgradedWeapon.fields.some((field) => field.referenceId === reference.id));
     }
+  });
+});
+
+test("schema 19 projects receive all weapon masteries without losing local data", async () => {
+  await withModel(async (model) => {
+    const project = model.createCleanProject();
+    project.catalogVersion = 19;
+    project.references = project.references.filter(
+      (item) => item.optionGroup !== "weapon_mastery" || item.kind !== "value",
+    );
+    project.entities.push({
+      id: "mygame.item.kept_weapon",
+      key: "kept_weapon",
+      type: "item",
+      templateId: project.templates.find((item) => item.name.en === "Weapon").id,
+      name: { en: "Kept Weapon" },
+      values: {},
+      previousIds: [],
+    });
+
+    const upgraded = model.upgradeProjectCatalog(project);
+    const masteries = upgraded.references.filter(
+      (item) => item.kind === "value" && item.optionGroup === "weapon_mastery",
+    );
+    assert.equal(upgraded.catalogVersion, 20);
+    assert.equal(upgraded.entities.length, 1);
+    assert.deepEqual(
+      masteries.map((item) => item.key),
+      ["cleave", "graze", "nick", "push", "sap", "slow", "topple", "vex"],
+    );
+  });
+});
+
+test("selecting a weapon mastery generates its locked executable effect", async () => {
+  await withModel(async (model) => {
+    const project = model.createCleanProject();
+    const weapon = project.templates.find((item) => item.name.en === "Weapon");
+    const masteryParameter = project.references.find(
+      (item) => item.kind === "parameter" && item.key === "weapon_mastery",
+    );
+    const effectsParameter = project.references.find(
+      (item) => item.kind === "parameter" && item.key === "effects",
+    );
+    const entity = {
+      id: "mygame.item.mastery_weapon",
+      key: "mastery_weapon",
+      type: "item",
+      templateId: weapon.id,
+      name: { en: "Mastery Weapon" },
+      values: {},
+      previousIds: [],
+    };
+    project.entities.push(entity);
+
+    const expectedMechanics = {
+      cleave: (rule) =>
+        rule.event === "attack_hit" &&
+        rule.frequency === "once_per_turn" &&
+        rule.actions[0].weaponAttack?.abilityModifierToDamage === "negative_only" &&
+        rule.actions[0].targetRelation?.maximumDistanceFeet === 5,
+      graze: (rule) =>
+        rule.event === "attack_missed" &&
+        rule.actions[0].damageTypeSource === "source_weapon" &&
+        rule.actions[0].value?.abilitySource === "attack_ability_used",
+      nick: (rule) =>
+        rule.actions[0].type === "change_action_cost" &&
+        rule.actions[0].actionCostChange?.to === "attack_action_part",
+      push: (rule) =>
+        rule.actions[0].movementDirection === "straight_away_from_attacker" &&
+        rule.actions[0].maximumTargetSize === "large" &&
+        rule.actions[0].value?.number === 10,
+      sap: (rule) =>
+        rule.actions[0].rollFilter?.deadline === "source_next_turn_start" &&
+        rule.actions[0].rollFilter?.occurrence === "next",
+      slow: (rule) =>
+        rule.actions[0].atomicId === "wsg.atomic.speed" &&
+        rule.actions[0].value?.number === 10 &&
+        rule.stacking === "highest",
+      topple: (rule) =>
+        rule.actions[0].ability === "constitution" &&
+        rule.actions[0].difficulty?.operation === "sum" &&
+        rule.actions[0].onFailureActions?.[0].conditionId ===
+          "wsg.ref.value.condition.prone",
+      vex: (rule) =>
+        rule.actions[0].rollFilter?.against === "trigger_target" &&
+        rule.actions[0].rollFilter?.deadline === "source_next_turn_end",
+    };
+
+    for (const [key, matches] of Object.entries(expectedMechanics)) {
+      const mastery = project.references.find(
+        (item) =>
+          item.kind === "value" &&
+          item.optionGroup === "weapon_mastery" &&
+          item.key === key,
+      );
+      entity.values[masteryParameter.id] = mastery.id;
+      model.syncWeaponMasteryEffects(project, entity);
+      const generated = entity.values[effectsParameter.id].rules.filter(
+        (rule) => rule.generatedBy?.kind === "weapon_mastery",
+      );
+      assert.equal(generated.length, 1, key);
+      assert.equal(generated[0].generatedBy.key, key);
+      assert.equal(generated[0].generatedBy.locked, true);
+      assert.ok(matches(generated[0]), `${key} mechanics are incomplete`);
+      assert.deepEqual(
+        model
+          .validateProject(project)
+          .filter((issue) => issue.severity === "error"),
+        [],
+        `${key} generated an invalid effect`,
+      );
+    }
+
+    const manual = {
+      ...structuredClone(entity.values[effectsParameter.id].rules[0]),
+      id: "manual_rule",
+      generatedBy: undefined,
+    };
+    entity.values[effectsParameter.id].rules.unshift(manual);
+    const cleave = project.references.find((item) => item.key === "cleave");
+    entity.values[masteryParameter.id] = cleave.id;
+    model.syncWeaponMasteryEffects(project, entity);
+    assert.ok(
+      entity.values[effectsParameter.id].rules.some(
+        (rule) => rule.id === "manual_rule" && !rule.generatedBy,
+      ),
+    );
+    assert.equal(
+      entity.values[effectsParameter.id].rules.filter(
+        (rule) => rule.generatedBy?.kind === "weapon_mastery",
+      ).length,
+      1,
+    );
+    assert.deepEqual(
+      model
+        .validateProject(project)
+        .filter((issue) => issue.severity === "error"),
+      [],
+    );
+  });
+});
+
+test("schema 20 refresh restores missing mastery automation and synchronizes weapons", async () => {
+  await withModel(async (model) => {
+    const project = model.createCleanProject();
+    const weapon = project.templates.find((item) => item.name.en === "Weapon");
+    const masteryParameter = project.references.find((item) => item.key === "weapon_mastery");
+    const effectsParameter = project.references.find((item) => item.key === "effects");
+    const slow = project.references.find((item) => item.key === "slow");
+    for (const mastery of project.references.filter(
+      (item) => item.optionGroup === "weapon_mastery",
+    ))
+      mastery.ruleSet = undefined;
+    project.entities.push({
+      id: "mygame.item.slow_weapon",
+      key: "slow_weapon",
+      type: "item",
+      templateId: weapon.id,
+      name: { en: "Slow Weapon" },
+      values: { [masteryParameter.id]: slow.id },
+      previousIds: [],
+    });
+
+    const upgraded = model.upgradeProjectCatalog(project);
+    const generated = upgraded.entities[0].values[effectsParameter.id].rules[0];
+    assert.equal(generated.generatedBy.key, "slow");
+    assert.equal(generated.actions[0].value.number, 10);
+    assert.ok(
+      upgraded.references
+        .filter(
+          (item) =>
+            item.kind === "value" && item.optionGroup === "weapon_mastery",
+        )
+        .every((item) => item.ruleSet?.rules.length === 1),
+    );
   });
 });
 

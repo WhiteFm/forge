@@ -10,6 +10,13 @@ import type {
   ReferenceRecord,
   StorageMode,
 } from "./model";
+import type {
+  AutomationRule,
+  RuleAction,
+  RuleEvent,
+  RuleSet,
+  RuleText,
+} from "./rule-system";
 
 const tr = (en: string, ru: string, sv: string): LocalText => ({ en, ru, sv });
 const categoryId = (key: string) => `wsg.category.${key}`;
@@ -672,12 +679,13 @@ const option = (
   name: LocalText,
   categoryKey = "reference_values",
   value: unknown = key,
+  description: LocalText = { en: "", ru: "", sv: "" },
 ): ReferenceRecord => ({
   id: valueId(group, key),
   key,
   kind: "value",
   name,
-  description: { en: "", ru: "", sv: "" },
+  description,
   categoryId: categoryId(categoryKey),
   packId: "wsg",
   locked: true,
@@ -749,7 +757,7 @@ const TOOL_PARAMETERS: ReferenceRecord[] = [
 
 const WEAPON_PARAMETERS: ReferenceRecord[] = [
   parameter("weapon_tags", tr("Weapon Tags", "Теги Оружия", "Vapentaggar"), tr("Weapon section of the single equipment tag list.", "Раздел оружия единого списка тегов снаряжения.", "Vapendelen av den gemensamma tagglistan."), "item_weapons", "references", { optionGroup: "item_tag", allowedValueCategoryIds: [categoryId("tag_weapons")], multiple: true, required: true }),
-  parameter("weapon_mastery", tr("Mastery", "Искусность", "Vapenmästerskap"), tr("Mastery selected from project references; concrete masteries are added separately.", "Искусность из справочника проекта; конкретные искусности добавляются отдельно.", "Mästerskap från projektets referenser; konkreta mästerskap läggs till separat."), "item_weapons", "reference", { optionGroup: "weapon_mastery" }),
+  parameter("weapon_mastery", tr("Mastery", "Искусность", "Vapenmästerskap"), tr("Choose one of the prepared weapon masteries from the project reference.", "Выберите одну из подготовленных искусностей оружия в справочнике проекта.", "Välj ett av de förberedda vapenmästerskapen i projektets referens."), "item_weapons", "reference", { optionGroup: "weapon_mastery" }),
   parameter("attack_ability", tr("Primary Attack Ability", "Основная Характеристика Атаки", "Primär attackegenskap"), tr("Ability modifier used for attack and normal weapon damage. A finesse weapon compares it with the second ability and uses the higher modifier.", "Модификатор характеристики для атаки и обычного урона. Фехтовальное оружие сравнивает её со второй характеристикой и использует больший модификатор.", "Egenskapsmodifierare för attack och normal vapenskada. Ett finessvapen jämför med den andra egenskapen och använder den högre modifieraren."), "item_weapons", "select", { optionGroup: "ability", required: true }),
   parameter("finesse_attack_ability", tr("Finesse Attack Ability", "Вторая Характеристика Атаки", "Finessattackegenskap"), tr("Available only for a finesse weapon. The game automatically uses whichever of the two ability modifiers is higher.", "Доступна только фехтовальному оружию. Игра автоматически использует больший из двух модификаторов характеристик.", "Endast för finessvapen. Spelet använder automatiskt den högsta av de två egenskapsmodifierarna."), "item_weapons", "select", { optionGroup: "ability" }),
   parameter("attack_bonus", tr("Attack Bonus", "Бонус Атаки", "Attackbonus"), tr("Constant bonus applied to the weapon attack roll.", "Постоянный бонус к броску атаки оружием.", "Fast bonus på vapnets attackslag."), "item_weapons", "integer", { defaultValue: 0 }),
@@ -862,6 +870,253 @@ const KIT_PARAMETERS: ReferenceRecord[] = [
   parameter("kit_calculated_weight", tr("Calculated Total Weight", "Рассчитанный Общий Вес", "Beräknad totalvikt"), tr("Read-only sum of component unit weights multiplied by quantities.", "Нередактируемая сумма веса компонентов с учётом количества.", "Skrivskyddad summa av komponentvikter gånger antal."), "item_kits", "calculation"),
 ];
 
+const masteryRuleSet = (
+  key: string,
+  name: RuleText,
+  description: RuleText,
+): RuleSet => {
+  const referenceId = valueId("weapon_mastery", key);
+  const action = (
+    suffix: string,
+    value: Omit<RuleAction, "id">,
+  ): RuleAction => ({ id: `mastery_${key}_${suffix}`, ...value });
+  const number = (value: number) => ({
+    kind: "number" as const,
+    number: value,
+    rounding: "none" as const,
+  });
+  const duration = {
+    type: "instant" as const,
+    rounds: 0,
+    concentration: false,
+    expiration: "automatic" as const,
+  };
+  const rule = (
+    event: RuleEvent,
+    frequency: AutomationRule["frequency"],
+    actions: RuleAction[],
+    options: Partial<AutomationRule> = {},
+  ): RuleSet => ({
+    version: 1,
+    rules: [
+      {
+        id: `mastery_${key}`,
+        name,
+        description,
+        enabled: true,
+        event,
+        frequency,
+        conditions: { mode: "all", predicates: [] },
+        actions,
+        duration,
+        priority: 100,
+        stacking: "unique_source",
+        context: { source: "this_weapon", attackMode: "any" },
+        generatedBy: {
+          kind: "weapon_mastery",
+          referenceId,
+          key,
+          locked: true,
+        },
+        ...options,
+      },
+    ],
+  });
+
+  if (key === "cleave")
+    return rule(
+      "attack_hit",
+      "once_per_turn",
+      [
+        action("extra_attack", {
+          type: "make_attack_roll",
+          target: "selected_target",
+          targetCount: 1,
+          rangeFeet: 5,
+          requiresLineOfSight: true,
+          targetRelation: {
+            anchor: "attack_target",
+            maximumDistanceFeet: 5,
+            requireWithinSourceReach: true,
+          },
+          weaponAttack: {
+            source: "this_weapon",
+            mode: "melee",
+            resolveDamageOnHit: true,
+            abilityModifierToDamage: "negative_only",
+          },
+        }),
+      ],
+      { context: { source: "this_weapon", attackMode: "melee" } },
+    );
+  if (key === "graze")
+    return rule("attack_missed", "every_time", [
+      action("miss_damage", {
+        type: "deal_damage",
+        target: "attack_target",
+        value: {
+          kind: "ability_modifier",
+          abilitySource: "attack_ability_used",
+          rounding: "none",
+        },
+        damageTypeSource: "source_weapon",
+        damageIncreaseLimit: "ability_modifier_only",
+      }),
+    ]);
+  if (key === "nick")
+    return rule(
+      "always",
+      "once_per_turn",
+      [
+        action("action_cost", {
+          type: "change_action_cost",
+          target: "self",
+          actionCostChange: {
+            appliesTo: "light_property_extra_attack",
+            from: "bonus_action",
+            to: "attack_action_part",
+          },
+        }),
+      ],
+      {
+        context: {
+          source: "this_weapon",
+          attackMode: "any",
+          attackVariant: "light_property_extra_attack",
+        },
+        duration: {
+          ...duration,
+          type: "permanent",
+          expiration: "source_removed",
+        },
+      },
+    );
+  if (key === "push")
+    return rule("attack_hit", "every_time", [
+      action("push", {
+        type: "move_target",
+        target: "attack_target",
+        value: number(10),
+        movementDirection: "straight_away_from_attacker",
+        maximumTargetSize: "large",
+      }),
+    ]);
+  if (key === "sap")
+    return rule(
+      "attack_hit",
+      "every_time",
+      [
+        action("disadvantage", {
+          type: "grant_disadvantage",
+          target: "attack_target",
+          atomicId: atomicId("attack"),
+          rollFilter: {
+            roll: "attack",
+            occurrence: "next",
+            against: "any_target",
+            deadline: "source_next_turn_start",
+          },
+        }),
+      ],
+      {
+        duration: {
+          ...duration,
+          type: "until_turn_start",
+          rounds: 1,
+          turnOwner: "source",
+        },
+      },
+    );
+  if (key === "slow")
+    return rule(
+      "damage_dealt",
+      "every_time",
+      [
+        action("speed", {
+          type: "subtract",
+          target: "attack_target",
+          atomicId: atomicId("speed"),
+          value: number(10),
+          affectsAllSpeedModes: true,
+          minimumResult: 0,
+        }),
+      ],
+      {
+        context: {
+          source: "this_weapon",
+          attackMode: "any",
+          requiresDamage: true,
+        },
+        duration: {
+          ...duration,
+          type: "until_turn_start",
+          rounds: 1,
+          turnOwner: "source",
+        },
+        stacking: "highest",
+      },
+    );
+  if (key === "topple")
+    return rule("attack_hit", "every_time", [
+      action("save", {
+        type: "make_saving_throw",
+        target: "attack_target",
+        ability: "constitution",
+        difficulty: {
+          kind: "operation",
+          operation: "sum",
+          operands: [
+            number(8),
+            {
+              kind: "ability_modifier",
+              abilitySource: "attack_ability_used",
+              rounding: "none",
+            },
+            { kind: "proficiency_bonus", rounding: "none" },
+          ],
+          rounding: "none",
+        },
+        onFailureActions: [
+          action("prone", {
+            type: "grant_condition",
+            target: "attack_target",
+            conditionId: valueId("condition", "prone"),
+          }),
+        ],
+      }),
+    ]);
+  return rule(
+    "damage_dealt",
+    "every_time",
+    [
+      action("advantage", {
+        type: "grant_advantage",
+        target: "self",
+        atomicId: atomicId("attack"),
+        rollFilter: {
+          roll: "attack",
+          occurrence: "next",
+          against: "trigger_target",
+          deadline: "source_next_turn_end",
+        },
+      }),
+    ],
+    {
+      context: {
+        source: "this_weapon",
+        attackMode: "any",
+        requiresDamage: true,
+      },
+      duration: {
+        ...duration,
+        type: "until_turn_end",
+        rounds: 1,
+        turnOwner: "source",
+      },
+    },
+  );
+};
+
 const VALUES: ReferenceRecord[] = [
   ...[
     ["strength", "Strength", "Сила", "Styrka"],
@@ -871,6 +1126,94 @@ const VALUES: ReferenceRecord[] = [
     ["wisdom", "Wisdom", "Мудрость", "Visdom"],
     ["charisma", "Charisma", "Харизма", "Karisma"],
   ].map(([key, en, ru, sv]) => option("ability", key, tr(en, ru, sv))),
+  ...[
+    [
+      "cleave",
+      "Cleave",
+      "Рассечение",
+      "Klyvning",
+      "If you hit a creature with a melee attack roll using this weapon, you can make a melee attack roll with the weapon against a second creature within 5 feet of the first that is also within your reach. On a hit, the second creature takes the weapon’s damage, but don’t add your ability modifier to that damage unless that modifier is negative. You can make this extra attack only once per turn.",
+      "Если вы попали по существу рукопашной атакой этим оружием, вы можете совершить этим оружием рукопашную атаку по второму существу, которое находится в пределах 5 футов от первой цели и в пределах вашей досягаемости. При попадании второе существо получает урон оружия, но вы не добавляете к этому урону модификатор характеристики, если только он не отрицательный. Эту дополнительную атаку можно совершить только один раз за ход.",
+      "Om du träffar en varelse med ett närstridsattackslag med detta vapen kan du göra ett närstridsattackslag med vapnet mot en andra varelse som befinner sig inom 5 fot från den första och även inom din räckvidd. Vid en träff tar den andra varelsen vapnets skada, men lägg inte till din egenskapsmodifierare till skadan om modifieraren inte är negativ. Du kan göra denna extra attack endast en gång per tur.",
+    ],
+    [
+      "graze",
+      "Graze",
+      "Скользящий удар",
+      "Snuddträff",
+      "If your attack roll with this weapon misses a creature, you can deal damage to that creature equal to the ability modifier you used to make the attack roll. This damage is the same type dealt by the weapon, and the damage can be increased only by increasing the ability modifier.",
+      "Если ваша атака этим оружием промахнулась по существу, вы можете нанести ему урон, равный модификатору характеристики, использованному для броска атаки. Тип этого урона совпадает с типом урона оружия, и увеличить его можно только увеличением этого модификатора характеристики.",
+      "Om ditt attackslag med detta vapen missar en varelse kan du tillfoga varelsen skada lika med den egenskapsmodifierare du använde för attackslaget. Skadan har samma typ som vapnets skada och kan endast ökas genom att egenskapsmodifieraren ökas.",
+    ],
+    [
+      "nick",
+      "Nick",
+      "Надрез",
+      "Rispa",
+      "When you make the extra attack of the Light property, you can make it as part of the Attack action instead of as a Bonus Action. You can make this extra attack only once per turn.",
+      "Совершая дополнительную атаку от свойства «Лёгкое», вы можете выполнить её как часть действия «Атака», а не бонусным действием. Эту дополнительную атаку можно совершить только один раз за ход.",
+      "När du gör den extra attacken från egenskapen Lätt kan du göra den som en del av handlingen Attack i stället för som en bonushandling. Du kan göra denna extra attack endast en gång per tur.",
+    ],
+    [
+      "push",
+      "Push",
+      "Толчок",
+      "Knuff",
+      "If you hit a creature with this weapon, you can push the creature up to 10 feet straight away from yourself if it is Large or smaller.",
+      "Если вы попали по существу этим оружием, вы можете оттолкнуть его на расстояние до 10 футов по прямой от себя, если оно Большого размера или меньше.",
+      "Om du träffar en varelse med detta vapen kan du knuffa varelsen upp till 10 fot rakt bort från dig om den är Stor eller mindre.",
+    ],
+    [
+      "sap",
+      "Sap",
+      "Ослабление",
+      "Försvaga",
+      "If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn.",
+      "Если вы попали по существу этим оружием, оно получает помеху на следующий бросок атаки, совершённый до начала вашего следующего хода.",
+      "Om du träffar en varelse med detta vapen har varelsen Nackdel på sitt nästa attackslag före början av din nästa tur.",
+    ],
+    [
+      "slow",
+      "Slow",
+      "Замедление",
+      "Bromsa",
+      "If you hit a creature with this weapon and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. If the creature is hit more than once by weapons that have this property, the Speed reduction doesn’t exceed 10 feet.",
+      "Если вы попали по существу этим оружием и нанесли ему урон, вы можете уменьшить его Скорость на 10 футов до начала вашего следующего хода. Если по существу несколько раз попали оружием с этой искусностью, суммарное уменьшение Скорости не может превышать 10 футов.",
+      "Om du träffar en varelse med detta vapen och tillfogar den skada kan du minska dess Hastighet med 10 fot till början av din nästa tur. Om varelsen träffas mer än en gång av vapen med denna egenskap kan den totala minskningen av Hastighet inte överstiga 10 fot.",
+    ],
+    [
+      "topple",
+      "Topple",
+      "Опрокидывание",
+      "Fällning",
+      "If you hit a creature with this weapon, you can force the creature to make a Constitution saving throw (DC 8 plus the ability modifier used to make the attack roll and your Proficiency Bonus). On a failed save, the creature has the Prone condition.",
+      "Если вы попали по существу этим оружием, вы можете заставить его совершить спасбросок Телосложения (Сл 8 + модификатор характеристики, использованный для броска атаки, + ваш Бонус мастерства). При провале существо получает состояние «Сбит с ног».",
+      "Om du träffar en varelse med detta vapen kan du tvinga den att göra ett räddningsslag i Fysik (SG 8 + den egenskapsmodifierare som användes för attackslaget + din Färdighetsbonus). Vid ett misslyckat slag får varelsen tillståndet Liggande.",
+    ],
+    [
+      "vex",
+      "Vex",
+      "Изматывание",
+      "Pressa",
+      "If you hit a creature with this weapon and deal damage to the creature, you have Advantage on your next attack roll against that creature before the end of your next turn.",
+      "Если вы попали по существу этим оружием и нанесли ему урон, вы получаете преимущество на следующий бросок атаки по этому существу до конца вашего следующего хода.",
+      "Om du träffar en varelse med detta vapen och tillfogar den skada har du Fördel på ditt nästa attackslag mot den varelsen före slutet av din nästa tur.",
+    ],
+  ].map(([key, en, ru, sv, descriptionEn, descriptionRu, descriptionSv]) => {
+    const name = tr(en, ru, sv);
+    const description = tr(descriptionEn, descriptionRu, descriptionSv);
+    return {
+      ...option(
+      "weapon_mastery",
+      key,
+      name,
+      "reference_values",
+      key,
+      description,
+      ),
+      ruleSet: masteryRuleSet(key, name, description),
+    };
+  }),
   ...[
     ["cp", "Copper Piece (cp)", "Медная монета (мм)", "Kopparmynt (km)", 1],
     ["sp", "Silver Piece (sp)", "Серебряная монета (см)", "Silvermynt (sm)", 10],

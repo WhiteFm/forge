@@ -2120,6 +2120,69 @@ export function RuleSetEditor({
         </div>
       )}
       {set.rules.map((rule, index) => {
+        if (rule.generatedBy?.locked)
+          return (
+            <details
+              className="automation-rule generated-rule complete"
+              key={rule.id}
+              open
+            >
+              <summary>
+                <span className="step">{index + 1}</span>
+                <strong>{localized(rule.name as LocalText, locale)}</strong>
+                <em>
+                  {text(
+                    locale,
+                    "Added automatically by the selected mastery",
+                    "Добавлено автоматически выбранной искусностью",
+                    "Tillagt automatiskt av valt vapenmästerskap",
+                  )}
+                </em>
+                <span className="generated-rule-lock" aria-label="locked">◆</span>
+              </summary>
+              <div className="automation-rule-body generated-rule-body">
+                <p className="generated-rule-description">
+                  {optionText(rule.description ?? rule.name, locale)}
+                </p>
+                <div className="generated-rule-flow">
+                  <span>
+                    {text(locale, "Trigger", "Срабатывание", "Utlösare")}
+                    <strong>
+                      {optionText(
+                        RULE_EVENTS.find((item) => item.id === rule.event)?.name ?? {
+                          en: rule.event,
+                        },
+                        locale,
+                      )}
+                    </strong>
+                  </span>
+                  <b>→</b>
+                  <span>
+                    {text(locale, "Automatic effect", "Автоматический эффект", "Automatisk effekt")}
+                    <strong>
+                      {rule.actions
+                        .map((action) =>
+                          optionText(
+                            RULE_ACTIONS.find((item) => item.id === action.type)
+                              ?.name ?? { en: action.type },
+                            locale,
+                          ),
+                        )
+                        .join(", ")}
+                    </strong>
+                  </span>
+                </div>
+                <small className="generated-rule-note">
+                  {text(
+                    locale,
+                    "This rule is read-only. Change the Mastery field to replace it; your manually added effects are preserved.",
+                    "Это правило доступно только для чтения. Смените поле «Искусность», чтобы заменить его; добавленные вручную эффекты сохранятся.",
+                    "Regeln är skrivskyddad. Byt fältet Vapenmästerskap för att ersätta den; manuellt tillagda effekter bevaras.",
+                  )}
+                </small>
+              </div>
+            </details>
+          );
         const problems = ruleProblemCount(rule);
         return (
         <details className={`automation-rule${problems ? " incomplete" : " complete"}`} key={rule.id} open>

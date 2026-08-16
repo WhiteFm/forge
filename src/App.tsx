@@ -41,6 +41,7 @@ import {
   recalculateProjectIds,
   restoreSiteReference,
   slugify,
+  syncWeaponMasteryEffects,
   upgradeProjectCatalog,
   validateProject,
   type AtomicDataType,
@@ -1649,9 +1650,9 @@ function SimpleEntityWizard({
   );
   const setValue = (referenceId: string, value: unknown) =>
     updateProject((draft) => {
-      draft.entities.find((item) => item.id === entity.id)!.values[
-        referenceId
-      ] = value;
+      const target = draft.entities.find((item) => item.id === entity.id)!;
+      target.values[referenceId] = value;
+      syncWeaponMasteryEffects(draft, target);
     });
   const remove = () => {
     if (
@@ -4042,9 +4043,9 @@ function EntityEditor({
 }) {
   const setValue = (referenceId: string, value: unknown) =>
     updateProject((draft) => {
-      draft.entities.find((item) => item.id === entity.id)!.values[
-        referenceId
-      ] = value;
+      const target = draft.entities.find((item) => item.id === entity.id)!;
+      target.values[referenceId] = value;
+      syncWeaponMasteryEffects(draft, target);
     });
   const changeTemplate = (templateId: string) =>
     updateProject((draft) => {
@@ -4065,6 +4066,7 @@ function EntityEditor({
         ...initialEntityValues(nextTemplate, draft),
         ...preserved,
       };
+      syncWeaponMasteryEffects(draft, target);
     });
   return (
     <div className="editor-stack">
